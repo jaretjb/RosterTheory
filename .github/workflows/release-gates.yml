@@ -1,0 +1,95 @@
+name: release gates
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.12", "3.13"]
+        include:
+          - os: macos-latest
+            python: "3.13"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install package
+        run: python -m pip install .
+
+      - name: Compile production and release scripts
+        run: python -m compileall -q src scripts
+
+      - name: Run complete unit suite
+        run: python -m unittest discover -s tests
+
+  release-quality:
+    name: package, repository, and dependency gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install declared release tools
+        run: python -m pip install '.[dev]'
+
+      - name: Reject unsafe tracked artifacts
+        run: python scripts/release_gate.py repository
+
+      - name: Gate CLI discovery and output contracts
+        run: >-
+          python -m unittest
+          tests.test_cli_discovery
+          tests.test_doctor
+          tests.test_terminal_identity
+          tests.test_cli_output_contract
+
+      - name: Run declared static checks
+        run: python -m ruff check src tests scripts
+
+      - name: Audit runtime dependency set
+        run: python -m pip_audit --cache-dir build/pip-audit-cache .
+
+      - name: Build wheel and source distribution
+        run: python -m build
+
+      - name: Validate distribution contents
+        run: python scripts/release_gate.py distributions dist
+
+      - name: Smoke-test clean wheel install
+        run: python scripts/clean_install_smoke.py dist/*.whl
+
+  secret-scan:
+    name: full-history secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Scan Git history and working tree
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"

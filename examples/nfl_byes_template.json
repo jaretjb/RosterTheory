@@ -1,0 +1,17 @@
+{
+  "source": "Replace with an authorized schedule source",
+  "source_url_pattern": "https://example.invalid/replace-me/{season}",
+  "verified_at": "2099-01-01",
+  "seasons": {
+    "2099": {
+      "T01": 5, "T02": 5, "T03": 5, "T04": 5,
+      "T05": 6, "T06": 6, "T07": 6, "T08": 6,
+      "T09": 7, "T10": 7, "T11": 7, "T12": 7,
+      "T13": 8, "T14": 8, "T15": 8, "T16": 8,
+      "T17": 9, "T18": 9, "T19": 9, "T20": 9,
+      "T21": 10, "T22": 10, "T23": 10, "T24": 10,
+      "T25": 11, "T26": 11, "T27": 11, "T28": 11,
+      "T29": 12, "T30": 12, "T31": 12, "T32": 12
+    }
+  }
+}

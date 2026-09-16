@@ -1,0 +1,35 @@
+.venv/
+dist/
+build/
+*.egg-info/
+.git.codex-backup-*/
+.codex-remote-attachments/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+data/cache/
+data/exports/
+data/manual/
+
+# Local league configuration and generated/private evidence. Public examples
+# use synthetic identifiers; local inputs stay outside version control.
+config/leagues.json
+config/*_rollout_counterfactuals_*.json
+config/inseason_identity_overrides_*.csv
+config/waiver/*.decision-policy.json
+config/waiver/*.walk-forward.json
+config/waiver/*.ww-evidence.json
+docs/*_DRAFT_PREP.md
+docs/*_DRAFT_RESULT_*.md
+docs/*_MOCK_AUDIT_*.md
+docs/COMPLETED_*_DRAFT_ASSISTANT_MILESTONE.md
+docs/COMPLETED_*_DRAFT_DAY_GATE_MILESTONE.md
+docs/COMPLETED_*_DST_COUNTERFACTUAL.md
+docs/COMPLETED_*_MULTI_TURN_ROLLOUT_PROTOTYPE.md
+docs/COMPLETED_*_ROLLOUT_VALIDATION.md
+docs/COMPLETED_*_TURN_HORIZON_MILESTONE.md
+docs/COMPLETED_TRADE_ASSISTANT_PHASE_9.md
+docs/COMPLETED_WAIVER_ASSISTANT_*.md
+docs/TRADE_*_FORMAT_CAPABILITY_*.md
+docs/OPEN_SOURCE_FILE_INVENTORY.md

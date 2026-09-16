@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "product": "WAIVER ASSISTANT",
+  "league_key": "league_beta",
+  "version": "test-league-beta-shadow-v1",
+  "outcome_windows": [1, 2, 4],
+  "minimum_complete_samples": 24,
+  "minimum_samples_per_signal_class": 6,
+  "maximum_window_hit_rate_spread": 0.10,
+  "role_persistence_ratio": 0.75,
+  "breakout_utility_gain": 8.0,
+  "severe_miss_regret": 6.0
+}

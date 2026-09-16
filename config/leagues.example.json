@@ -1,0 +1,30 @@
+{
+  "owner": {
+    "sleeper_username": "your_username",
+    "sleeper_user_id": "your_sleeper_user_id"
+  },
+  "leagues": [
+    {
+      "key": "home_league",
+      "name": "Home League",
+      "league_id": "current_sleeper_league_id",
+      "draft_id": "current_sleeper_draft_id",
+      "season": "2026",
+      "user_team_name": "My Team",
+      "user_team_alias": "ME",
+      "user_roster_id": 1,
+      "team_count": 12,
+      "user_draft_slot": 1,
+      "history_league_ids": [],
+      "history_excluded_user_ids": [],
+      "policies": {
+        "draft_preferences": "policies/home_league/2026/draft-preferences.csv",
+        "trade_decision": "policies/home_league/2026/trade-decision.json",
+        "trade_search": "policies/home_league/2026/trade-search.json",
+        "waiver_decision": "policies/home_league/2026/waiver-decision.json",
+        "waiver_wire": "policies/home_league/2026/waiver-wire.json"
+      },
+      "notes": "Synthetic example only; replace every value for your league."
+    }
+  ]
+}

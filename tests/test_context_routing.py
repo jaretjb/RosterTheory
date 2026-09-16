@@ -1,0 +1,203 @@
+import json
+import re
+import tomllib
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).parents[1]
+
+
+def words(path: str) -> int:
+    return len(re.findall(r"\S+", (ROOT / path).read_text(encoding="utf-8")))
+
+
+class ContextRoutingTests(unittest.TestCase):
+    def test_always_loaded_context_stays_bounded(self):
+        self.assertLessEqual(words("AGENTS.md"), 300)
+        self.assertLessEqual(words(".codex/context/STEERING.md"), 400)
+        self.assertLessEqual(words(".codex/context/DEVELOPMENT_STATUS.md"), 150)
+        self.assertLessEqual(words(".codex/context/IMPLEMENTATION_POLICY.md"), 350)
+
+    def test_startup_loads_only_the_router(self):
+        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("At the start of a task, read only `.codex/context/STEERING.md`", agents)
+        self.assertRegex(
+            agents, r"Do\s+not read `.codex/context/DEVELOPMENT_STATUS\.md`"
+        )
+        self.assertIn(".codex/context/IMPLEMENTATION_POLICY.md", agents)
+
+    def test_router_targets_exist_and_track_status_stays_conditional(self):
+        router = (ROOT / ".codex/context/STEERING.md").read_text(encoding="utf-8")
+        for path in (
+            ".codex/context/status/DRAFT.md",
+            ".codex/context/status/TRADE.md",
+            ".codex/context/status/WAIVER.md",
+            ".codex/context/IMPLEMENTATION_POLICY.md",
+            "docs/OPEN_SOURCE_RELEASE_TASKS.md",
+        ):
+            self.assertIn(path, router)
+            self.assertTrue((ROOT / path).is_file())
+        for name in ("DRAFT", "TRADE", "WAIVER"):
+            self.assertLessEqual(words(f".codex/context/status/{name}.md"), 250)
+
+    def test_project_wide_next_task_routes_to_release_backlog(self):
+        router = (ROOT / ".codex/context/STEERING.md").read_text(encoding="utf-8")
+        status = (ROOT / ".codex/context/DEVELOPMENT_STATUS.md").read_text(encoding="utf-8")
+        self.assertIn("what's next?", router)
+        self.assertIn("docs/OPEN_SOURCE_RELEASE_TASKS.md", status)
+        self.assertIn("OS-001", status)
+
+    def test_draft_handoff_closes_2026_and_requires_new_future_milestone(self):
+        status = (ROOT / ".codex/context/status/DRAFT.md").read_text(encoding="utf-8")
+        tasks = (ROOT / "docs/OPEN_TASKS.md").read_text(encoding="utf-8")
+        self.assertIn("2026 drafts are complete", status)
+        self.assertIn("no Draft tasks remain open", tasks)
+        self.assertIn("BD-905 completed with a failed validation", tasks)
+        self.assertNotIn("### BD-906", tasks)
+        self.assertNotIn("### BD-907", tasks)
+        self.assertIn("a newly scoped task", status)
+
+    def test_public_surface_excludes_completed_league_experiments(self):
+        cli = (ROOT / "src/roster_theory/cli.py").read_text(encoding="utf-8")
+        for command in (
+            "league_beta-rollout-validation",
+            "league_beta-dst-counterfactual",
+            "positional-guardrail-comparison",
+            "provisional-ten-team-comparison",
+            "locked-ten-team-comparison",
+        ):
+            self.assertNotIn(command, cli)
+
+    def test_public_league_config_is_synthetic_and_local_config_is_ignored(self):
+        example = json.loads(
+            (ROOT / "config/leagues.example.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(example["leagues"][0]["key"], "home_league")
+        self.assertNotIn("league_beta", repr(example).lower())
+        ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn("config/leagues.json", ignore)
+
+    def test_mit_license_is_referenced_by_readme_and_package_metadata(self):
+        license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+        metadata_text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        metadata = tomllib.loads(metadata_text)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertTrue(license_text.startswith("MIT License\n"))
+        self.assertIn("Copyright (c) 2026 Jaret Brown", license_text)
+        self.assertEqual(metadata["project"]["license"], "MIT")
+        self.assertIn("LICENSE", metadata["project"]["license-files"])
+        self.assertEqual(metadata["project"]["readme"], "README.md")
+        self.assertIn("[MIT License](LICENSE)", readme)
+
+    def test_public_boundary_uses_only_synthetic_manager_identifiers(self):
+        retired_markers = (
+            "Boe" + "ing",
+            "retired_" + "identity_01",
+            "retired_" + "identity_02",
+            "retired_" + "identity_03",
+            "retired_" + "identity_04",
+            "retired_" + "identity_05",
+            "retired_" + "identity_06",
+            "retired_" + "identity_07",
+            "retired_" + "identity_08",
+            "retired_" + "identity_09",
+            "retired_" + "identity_10",
+            "retired_" + "identity_11",
+            "retired_" + "identity_12",
+            "retired_" + "identity_13",
+        )
+        private_doc_patterns = (
+            "*_DRAFT_PREP.md",
+            "*_DRAFT_RESULT_*.md",
+            "*_MOCK_AUDIT_*.md",
+            "COMPLETED_*_DRAFT_ASSISTANT_MILESTONE.md",
+            "COMPLETED_*_DRAFT_DAY_GATE_MILESTONE.md",
+            "COMPLETED_*_DST_COUNTERFACTUAL.md",
+            "COMPLETED_*_MULTI_TURN_ROLLOUT_PROTOTYPE.md",
+            "COMPLETED_*_ROLLOUT_VALIDATION.md",
+            "COMPLETED_*_TURN_HORIZON_MILESTONE.md",
+            "COMPLETED_TRADE_ASSISTANT_PHASE_9.md",
+            "COMPLETED_WAIVER_ASSISTANT_*.md",
+            "TRADE_*_FORMAT_CAPABILITY_*.md",
+            "OPEN_SOURCE_FILE_INVENTORY.md",
+        )
+        public_docs = [
+            path
+            for path in (ROOT / "docs").rglob("*.md")
+            if not any(path.match(pattern) for pattern in private_doc_patterns)
+        ]
+        public_files = [
+            ROOT / ".gitignore",
+            ROOT / "README.md",
+            ROOT / "pyproject.toml",
+            *(ROOT / "src").rglob("*.py"),
+            *(ROOT / "tests").rglob("*.py"),
+            *(ROOT / "config").glob("*.example.json"),
+            *public_docs,
+            *(ROOT / ".codex/context").rglob("*.md"),
+        ]
+        public_text = "\n".join(
+            path.read_text(encoding="utf-8") for path in public_files
+        ).lower()
+        for marker in retired_markers:
+            self.assertNotIn(marker.lower(), public_text)
+
+    def test_third_party_inventory_covers_every_public_data_file(self):
+        notice = (ROOT / "docs/THIRD_PARTY_NOTICES.md").read_text(
+            encoding="utf-8"
+        )
+        private_config_patterns = (
+            "leagues.json",
+            "*_rollout_counterfactuals_*.json",
+            "inseason_identity_overrides_*.csv",
+            "waiver/*.decision-policy.json",
+            "waiver/*.walk-forward.json",
+            "waiver/*.ww-evidence.json",
+        )
+        config_files = [
+            path
+            for path in (ROOT / "config").rglob("*")
+            if path.suffix in {".csv", ".json"}
+            and not any(
+                path.relative_to(ROOT / "config").match(pattern)
+                for pattern in private_config_patterns
+            )
+        ]
+        example_files = [
+            path
+            for path in (ROOT / "examples").rglob("*")
+            if path.suffix in {".csv", ".json"}
+        ]
+
+        for path in config_files + example_files:
+            relative = path.relative_to(ROOT).as_posix()
+            self.assertIn(f"`{relative}`", notice)
+
+    def test_provider_data_defaults_are_local_and_ignored(self):
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (ROOT / "src").rglob("*.py")
+        )
+        self.assertNotIn("config/expert_accuracy_", source)
+        self.assertNotIn("config/expert_pool_", source)
+        self.assertNotIn("config/trade/inseason_", source)
+        self.assertNotIn("config/trade/nfl_", source)
+        self.assertIn("data/manual/fantasypros/", source)
+        self.assertIn("data/manual/nfl/", source)
+
+    def test_waiver_input_script_has_one_generic_surface(self):
+        self.assertTrue((ROOT / "scripts/waiver_live_inputs.py").is_file())
+        self.assertFalse((ROOT / "scripts/wa006_live_inputs.py").exists())
+
+    def test_full_suite_policy_uses_compact_output(self):
+        policy = (ROOT / ".codex/context/IMPLEMENTATION_POLICY.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("python -m unittest discover -s tests", policy)
+        self.assertNotIn("python -m unittest discover -s tests -v", policy)
+
+
+if __name__ == "__main__":
+    unittest.main()

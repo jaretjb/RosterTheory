@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "product": "WAIVER ASSISTANT",
+  "league_key": "league_alpha",
+  "version": "test-league-alpha-shadow-v1",
+  "outcome_windows": [1, 2, 4],
+  "minimum_complete_samples": 20,
+  "minimum_samples_per_signal_class": 5,
+  "maximum_window_hit_rate_spread": 0.15,
+  "role_persistence_ratio": 0.70,
+  "breakout_utility_gain": 6.0,
+  "severe_miss_regret": 8.0
+}

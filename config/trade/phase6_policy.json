@@ -1,0 +1,27 @@
+{
+  "version": "phase6-scenario-fallback-v1",
+  "historical_evidence_mode": "SCENARIO_ONLY",
+  "historical_evidence_reason": "Available FantasyPros player-points evidence is one PPR season, not a complete multi-year half-PPR sample; player-pair correlation is therefore not calibrated.",
+  "scenario": {
+    "offense_downside_multiplier": 0.7,
+    "offense_upside_multiplier": 1.2
+  },
+  "decision": {
+    "user_selected_floor": 0.0,
+    "partner_market_floor": -5.0,
+    "postures": {
+      "CONSERVATIVE": {
+        "max_depth_loss": 10.0,
+        "max_downside_increase": 0.0
+      },
+      "BALANCED": {
+        "max_depth_loss": 25.0,
+        "max_downside_increase": 5.0
+      },
+      "CEILING": {
+        "max_depth_loss": 40.0,
+        "max_downside_increase": 10.0
+      }
+    }
+  }
+}

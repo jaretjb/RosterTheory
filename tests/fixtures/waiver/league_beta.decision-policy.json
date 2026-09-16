@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "product": "WAIVER ASSISTANT",
+  "league_key": "league_beta",
+  "version": "test-league-beta-emerging-upside-v1",
+  "calibration_mode": "CONTROLLED_FIXTURES",
+  "allow_watch_on_missing_news": true,
+  "special_teams": {
+    "current_week_weight": 4.0,
+    "kicker_current_week_gain_floor": 1.0,
+    "dst_current_week_gain_floor": 1.0,
+    "watch_current_week_gain_floor": 0.0,
+    "elite_dst_ros_rank_cutoff": 3,
+    "elite_dst_maximum_current_week_loss": 2.0,
+    "elite_dst_weighted_lineup_floor": 0.0
+  },
+  "qb_holding": {
+    "streaming_stress_rank": 3,
+    "starter_decision_margin": 1.5,
+    "net_hold_value_floor": 1.0,
+    "watch_net_hold_value_floor": -2.0,
+    "insurance_advantage_floor": 4.0,
+    "maximum_bench_slot_opportunity_cost": 8.0
+  },
+  "contingent_upside": {
+    "evidence_max_age_hours": 48.0,
+    "standalone_selected_value_floor": 12.0,
+    "standalone_market_value_floor": 10.0,
+    "material_lineup_ceiling_gain": 7.0,
+    "acquisition_incremental_value_gate": 5.0
+  },
+  "emerging_upside": {
+    "ww_support_mode": "MARKET_AND_SELECTED",
+    "market_ww_rank_cutoff": 10,
+    "selected_expert_rank_cutoff": 10,
+    "minimum_selected_expert_support": 2,
+    "maximum_miss_case_loss": 5.0,
+    "maximum_selected_value_deficit": 3.0,
+    "maximum_market_value_deficit": 3.0,
+    "maximum_raw_projection_deficit": 12.0,
+    "maximum_central_lineup_deficit": 1.0,
+    "minimum_incremental_option_value": 6.0,
+    "maximum_break_even_hit_rate": 0.35,
+    "evidence_max_age_hours": 24.0,
+    "minimum_role_signal_strength": 1.25,
+    "maximum_replacement_exposure": 18.0,
+    "maximum_current_week_loss": 1.0,
+    "maximum_offense_downside_increase": 2.0,
+    "near_threshold_fraction": 0.10
+  },
+  "validation_scope": {
+    "league": "league_beta",
+    "team_count": 12,
+    "policy_posture": "conservative-no-loss",
+    "fixture_classes": [
+      "immediate-lineup-upgrade",
+      "replacement-aware-qb-hold",
+      "protected-contingent-upside",
+      "emerging-upside-cheap-and-protected-drop",
+      "negative-required-drop",
+      "streaming-audit",
+      "protected-option-audit",
+      "pruned-equivalence-and-no-action"
+    ]
+  },
+  "thresholds": {
+    "selected_value_floor": 0.0,
+    "market_value_floor": 0.0,
+    "raw_projection_floor": 0.0,
+    "immediate_lineup_gain_floor": 1.0,
+    "insurance_selected_gain_floor": 6.0,
+    "insurance_market_gain_floor": 4.0,
+    "insurance_depth_floor": 0.0,
+    "maximum_current_week_loss": 0.0,
+    "maximum_depth_loss": 0.0,
+    "maximum_downside_increase": 2.0,
+    "watch_selected_value_floor": -2.0,
+    "watch_market_value_floor": -2.0,
+    "watch_raw_projection_floor": -10.0,
+    "watch_lineup_floor": -2.0,
+    "watch_maximum_current_week_loss": 4.0,
+    "watch_maximum_depth_loss": 15.0,
+    "watch_maximum_downside_increase": 10.0
+  }
+}

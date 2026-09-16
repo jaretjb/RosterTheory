@@ -1,0 +1,20 @@
+{
+  "owner": {
+    "sleeper_username": "synthetic_manager",
+    "sleeper_user_id": "123456789"
+  },
+  "leagues": [
+    {
+      "key": "synthetic_league",
+      "name": "Synthetic Example League",
+      "league_id": "123456789",
+      "draft_id": "123456789",
+      "season": "2026",
+      "user_roster_id": 1,
+      "user_draft_slot": 1,
+      "history_league_ids": [],
+      "policies": {},
+      "notes": "Synthetic IDs only. Replace them before any provider request. Offline doctor is safe."
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title description">
+  <title id="title">Roster Theory 1990s fantasy football arcade wordmark</title>
+  <desc id="description">ROSTER and THEORY rendered as two oversized rows of chunky bright-yellow pixel letters in a 1990s-inspired fantasy football video-game frame.</desc>
+  <defs>
+    <linearGradient id="cabinet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#090b12"/>
+      <stop offset="0.52" stop-color="#05070b"/>
+      <stop offset="1" stop-color="#0b0904"/>
+    </linearGradient>
+    <pattern id="scanlines" width="4" height="4" patternUnits="userSpaceOnUse">
+      <path d="M0 3.5 H4" stroke="#ffd700" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+    <filter id="gold-glow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Five-by-five cabinet glyphs. Explicit geometry avoids SVG whitespace
+         collapsing and does not depend on an installed font. The layered
+         rendering below gives each hard-edged block a 1990s arcade extrusion. -->
+    <g id="glyph-r">
+      <path d="M0 0h4v1H0z M0 1h1v1H0z M4 1h1v1H4z M0 2h4v1H0z M0 3h1v1H0z M3 3h1v1H3z M0 4h1v1H0z M4 4h1v1H4z"/>
+    </g>
+    <g id="glyph-o">
+      <path d="M1 0h3v1H1z M0 1h1v3H0z M4 1h1v3H4z M1 4h3v1H1z"/>
+    </g>
+    <g id="glyph-s">
+      <path d="M1 0h4v1H1z M0 1h1v1H0z M1 2h3v1H1z M4 3h1v1H4z M0 4h4v1H0z"/>
+    </g>
+    <g id="glyph-t">
+      <path d="M0 0h5v1H0z M2 1h1v4H2z"/>
+    </g>
+    <g id="glyph-e">
+      <path d="M0 0h5v1H0z M0 1h1v1H0z M0 2h4v1H0z M0 3h1v1H0z M0 4h5v1H0z"/>
+    </g>
+    <g id="glyph-h">
+      <path d="M0 0h1v5H0z M4 0h1v5H4z M1 2h3v1H1z"/>
+    </g>
+    <g id="glyph-y">
+      <path d="M0 0h1v1H0z M4 0h1v1H4z M1 1h1v1H1z M3 1h1v1H3z M2 2h1v3H2z"/>
+    </g>
+
+    <g id="word-roster">
+      <use href="#glyph-r" x="0"/>
+      <use href="#glyph-o" x="6"/>
+      <use href="#glyph-s" x="12"/>
+      <use href="#glyph-t" x="18"/>
+      <use href="#glyph-e" x="24"/>
+      <use href="#glyph-r" x="30"/>
+    </g>
+    <g id="word-theory">
+      <use href="#glyph-t" x="0"/>
+      <use href="#glyph-h" x="6"/>
+      <use href="#glyph-e" x="12"/>
+      <use href="#glyph-o" x="18"/>
+      <use href="#glyph-r" x="24"/>
+      <use href="#glyph-y" x="30"/>
+    </g>
+  </defs>
+
+  <rect width="1200" height="520" fill="url(#cabinet)"/>
+  <rect width="1200" height="520" fill="url(#scanlines)"/>
+  <g fill="none" shape-rendering="crispEdges">
+    <rect x="14" y="14" width="1172" height="492" stroke="#6f5410" stroke-width="2"/>
+    <rect x="24" y="24" width="1152" height="472" stroke="#ffd700" stroke-width="4"/>
+    <path d="M24 62 H78 L92 48 H1108 L1122 62 H1176" stroke="#ffb000" stroke-width="3"/>
+    <path d="M24 458 H78 L92 472 H350 M850 472 H1108 L1122 458 H1176" stroke="#ffb000" stroke-width="3"/>
+  </g>
+
+  <g fill="#ffd700" filter="url(#gold-glow)">
+    <path d="M62 24 L74 12 L86 24 L74 36 Z"/>
+    <path d="M1114 496 L1126 484 L1138 496 L1126 508 Z"/>
+  </g>
+
+  <g shape-rendering="crispEdges" stroke-linejoin="miter">
+    <g transform="translate(128 92) scale(27)">
+      <use href="#word-roster" transform="translate(.34 .40)" fill="#3b2600"/>
+      <use href="#word-roster" transform="translate(.17 .20)" fill="#d77b00"/>
+      <use href="#word-roster" fill="#ffd700" stroke="#fff0a0" stroke-width=".10"/>
+    </g>
+    <g transform="translate(128 252) scale(27)">
+      <use href="#word-theory" transform="translate(.34 .40)" fill="#3b2600"/>
+      <use href="#word-theory" transform="translate(.17 .20)" fill="#d77b00"/>
+      <use href="#word-theory" fill="#ffd700" stroke="#fff0a0" stroke-width=".10"/>
+    </g>
+  </g>
+
+  <path d="M596 245 L600 241 L604 245 L600 249 Z" fill="#fff8dc"/>
+  <text x="600" y="429" fill="#ffd700" font-family="Cascadia Mono, Consolas, DejaVu Sans Mono, monospace" font-size="20" font-weight="800" letter-spacing="6" text-anchor="middle">FANTASY FOOTBALL ASSISTANT</text>
+  <text x="600" y="468" fill="#fff8dc" font-family="Cascadia Mono, Consolas, DejaVu Sans Mono, monospace" font-size="15" font-weight="700" letter-spacing="5" text-anchor="middle">DRAFT  ◆  TRADE  ◆  WAIVER</text>
+</svg>

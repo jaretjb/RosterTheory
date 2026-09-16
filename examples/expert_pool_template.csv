@@ -1,0 +1,3 @@
+expert_name,expert_id,selected_for_export,current_available,last_updated,selection_role,status_note
+Expert Alpha,synthetic-1,true,true,2099-01-01,synthetic anchor,replace with authorized local evidence
+Expert Bravo,synthetic-2,true,true,2099-01-01,synthetic depth,replace with authorized local evidence

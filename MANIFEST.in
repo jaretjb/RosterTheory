@@ -1,0 +1,13 @@
+include LICENSE README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md CODE_OF_CONDUCT.md .env.example
+recursive-include config *.example.json
+recursive-include examples *.csv *.json
+recursive-include scripts *.py
+include docs/README.md docs/CLI_OUTPUT_CONTRACT.md docs/MANUAL_FANTASYPROS_IMPORT.md
+include docs/PRIVACY.md docs/THIRD_PARTY_NOTICES.md docs/OPEN_SOURCE_RELEASE_TASKS.md
+include docs/RELEASE_CHECKLIST.md
+include docs/RELEASE_NOTES_0.1.0-alpha.md
+recursive-include .codex/context *.md
+
+recursive-include src/roster_theory/resources *.json
+global-exclude .env *.pyc
+prune data

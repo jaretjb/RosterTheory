@@ -1,0 +1,5 @@
+expert_name,player_name,team,position,expert_rank,ecr,adp,projected_points,sleeper_id,fantasypros_id
+Expert Alpha,Example Running Back,AAA,RB,1,2,3.5,250.0,example-1,fp-example-1
+Expert Bravo,Example Running Back,AAA,RB,2,2,3.5,250.0,example-1,fp-example-1
+Expert Alpha,Example Wide Receiver,BBB,WR,1,1,2.0,245.0,example-2,fp-example-2
+Expert Bravo,Example Wide Receiver,BBB,WR,2,1,2.0,245.0,example-2,fp-example-2

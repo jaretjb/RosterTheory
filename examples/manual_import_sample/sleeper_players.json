@@ -1,0 +1,26 @@
+{
+  "sample-1": {
+    "fantasy_positions": ["QB"],
+    "full_name": "Alpha Quarterback",
+    "position": "QB",
+    "team": "AAA"
+  },
+  "sample-2": {
+    "fantasy_positions": ["RB"],
+    "full_name": "Bravo Running Back",
+    "position": "RB",
+    "team": "BBB"
+  },
+  "sample-3": {
+    "fantasy_positions": ["WR"],
+    "full_name": "Charlie Wide Receiver",
+    "position": "WR",
+    "team": "CCC"
+  },
+  "sample-4": {
+    "fantasy_positions": ["TE"],
+    "full_name": "Delta Tight End",
+    "position": "TE",
+    "team": "DDD"
+  }
+}
