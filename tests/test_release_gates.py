@@ -35,7 +35,9 @@ class ReleaseGateTests(unittest.TestCase):
             "clean_install_smoke.py",
             "python -m pip_audit",
             "python -m ruff",
-            "gitleaks/gitleaks-action@v3",
+            "docker://ghcr.io/gitleaks/gitleaks:v8.24.3",
+            "git --redact --verbose --exit-code=1",
+            "actions/upload-artifact@v6",
         ):
             self.assertIn(command, workflow)
         self.assertEqual(
