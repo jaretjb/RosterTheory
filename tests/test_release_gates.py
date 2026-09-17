@@ -36,7 +36,7 @@ class ReleaseGateTests(unittest.TestCase):
             "python -m pip_audit",
             "python -m ruff",
             "docker://ghcr.io/gitleaks/gitleaks:v8.24.3",
-            'safe.directory "$GITHUB_WORKSPACE"',
+            "safe.directory /github/workspace",
             "git --redact --verbose --exit-code=1",
             "actions/upload-artifact@v6",
         ):
