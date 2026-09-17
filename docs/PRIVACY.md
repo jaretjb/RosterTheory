@@ -5,8 +5,8 @@ Updated: September 14, 2026 (America/Los_Angeles)
 RosterTheory's source, tests, configuration examples, and public documentation
 must not contain a manager's identity, private league or draft identifiers,
 credentials, private filesystem paths, or generated provider evidence. The
-copyright holder's legal name, Jaret Brown, is an intentional exception in
-the MIT license and its release handoff, approved September 15, 2026.
+maintainer name used in package metadata and commit authorship is intentionally
+public; personal contact information is not.
 
 ## Public and local files
 

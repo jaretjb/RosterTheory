@@ -78,18 +78,22 @@ class ContextRoutingTests(unittest.TestCase):
         ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
         self.assertIn("config/leagues.json", ignore)
 
-    def test_mit_license_is_referenced_by_readme_and_package_metadata(self):
+    def test_unlicense_is_referenced_by_readme_and_package_metadata(self):
         license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
         metadata_text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
         metadata = tomllib.loads(metadata_text)
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-        self.assertTrue(license_text.startswith("MIT License\n"))
-        self.assertIn("Copyright (c) 2026 Jaret Brown", license_text)
-        self.assertEqual(metadata["project"]["license"], "MIT")
+        self.assertTrue(
+            license_text.startswith(
+                "This is free and unencumbered software released into the public domain.\n"
+            )
+        )
+        self.assertIn("THE SOFTWARE IS PROVIDED \"AS IS\"", license_text)
+        self.assertEqual(metadata["project"]["license"], "Unlicense")
         self.assertIn("LICENSE", metadata["project"]["license-files"])
         self.assertEqual(metadata["project"]["readme"], "README.md")
-        self.assertIn("[MIT License](LICENSE)", readme)
+        self.assertIn("[the Unlicense](LICENSE)", readme)
 
     def test_public_boundary_uses_only_synthetic_manager_identifiers(self):
         retired_markers = (

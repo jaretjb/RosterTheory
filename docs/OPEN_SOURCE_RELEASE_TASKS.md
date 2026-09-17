@@ -6,7 +6,8 @@ Goal: publish RosterTheory as a safe, reusable, fully open-source project
 without exposing personal league data, redistributing third-party data without
 a proved basis, or presenting league-specific calibration as portable.
 
-License decision: MIT. Copyright holder confirmed by the user: Jaret Brown.
+Current license decision: Unlicense. It replaced MIT after publication so the
+project can be reused without attribution or other license conditions.
 
 This backlog is planning scope, not permission to publish a repository, create
 a release, rewrite Git history, delete local data, or upload a package. Only one
@@ -534,7 +535,7 @@ Acceptance:
   creating a tag or GitHub release needs separate explicit approval.
 - Verify the repository is publicly reachable without authentication, that its
   visible branch and history match the approved candidate, and that README,
-  MIT license, public templates, and safe installation instructions are present.
+  license file, public templates, and safe installation instructions are present.
   Repeat a clean-clone install and offline `doctor` smoke test against the public
   source; check public pages for unintended secrets or private data.
 - Record the public URL, commit, visibility result, verification results, and

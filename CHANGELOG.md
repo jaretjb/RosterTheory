@@ -2,6 +2,7 @@
 
 ## 0.1.0 — Unreleased alpha
 
+- Rewritten plain-language README and a switch from MIT to the Unlicense.
 - Local read-only Draft, Trade, and Waiver decision-support CLI for Sleeper
   leagues; no automatic picks, offers, claims, or lineup changes.
 - Synthetic league configuration, offline setup diagnostics, guided help, and
@@ -22,8 +23,8 @@
 - Blocking multi-platform release gates for the complete test suite, CLI output
   contracts, tracked private/generated artifacts, full-history secret scanning,
   pinned static and dependency audits, distributions, and clean wheel installs.
-- GitHub source-only packaging path with wheel and source distribution; no
-  PyPI publication or public-release claim yet.
+- Public GitHub source with wheel and source-distribution support; no PyPI
+  publication.
 
 Stable alpha infrastructure includes installation, command discovery,
 machine-output contracts, command-driven input preparation, evidence

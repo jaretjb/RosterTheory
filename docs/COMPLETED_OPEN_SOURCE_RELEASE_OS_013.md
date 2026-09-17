@@ -52,7 +52,7 @@ No tag or GitHub release was created, and no distribution was uploaded to PyPI.
   known personal email or private absolute-path pattern.
 - The replacement's complete GitHub Actions release-gate run, including the
   full-history Gitleaks scan, completed successfully.
-- Anonymous requests to the repository, README, and MIT license returned HTTP
+- Anonymous requests to the repository, README, and license file returned HTTP
   200.
 - A credential-free clone resolved to the replacement repository's public
   `main`, whose ancestry terminates at the approved root.
