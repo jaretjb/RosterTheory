@@ -34,7 +34,7 @@ Sleeper recommendations remain read-only throughout release work.
 | OS-018 | Unified season preparation and runtime refresh | OS-015, OS-016, OS-017 | done — September 16, 2026 |
 | OS-006 | Automated public-release quality and security gates | OS-018 | done — September 16, 2026 |
 | OS-007 | Public alpha release candidate | OS-006 | done — September 16, 2026 |
-| OS-013 | GitHub publication and post-publication verification | OS-007 | planned — requires explicit user approval |
+| OS-013 | GitHub publication and post-publication verification | OS-007 | done — September 16, 2026 |
 
 Task IDs reflect when work was added to the backlog; dependency order, not
 numeric order, determines the release sequence. Complete only one active task
@@ -544,3 +544,16 @@ Acceptance:
 Stop: the GitHub repository is public only after explicit sign-off, and the
 published source and installation path are independently verified. The task
 does not authorize a stable release or automatic Sleeper actions.
+
+Completed September 16, 2026. With explicit user approval, the private remote
+`main` was replaced by the reviewed single-root candidate at
+`76801ee2a3efeced464381cb471cb3e19eaabb86`. Fifty-four Actions runs tied to
+the retired private history were deleted; the successful run and artifact for
+the clean candidate were retained. Immediately before publication the remote
+had one branch, no tags, no pull requests, and no releases. The repository was
+made public at <https://github.com/jaret81/RosterTheory>. Anonymous HTTP checks
+for the repository, README, and MIT license passed; a credential-free shallow
+clone contained exactly the approved root, installed successfully, and ran the
+offline synthetic `doctor` check with zero provider calls and zero Sleeper
+writes. No tag, GitHub release, PyPI upload, provider request, or Sleeper write
+occurred.

@@ -1,5 +1,15 @@
 # Active milestone
 
+OS-013 — GitHub publication and post-publication verification is complete as
+of September 16, 2026 (America/Los_Angeles). The reviewed source-only alpha is
+public at <https://github.com/jaret81/RosterTheory>. Remote `main` was replaced
+by the approved sanitized single-root candidate; obsolete Actions runs tied to
+the retired private graph were removed while the clean successful run was
+retained. Anonymous repository, README, license, clone, install, and offline
+`doctor` checks pass. No tag, GitHub release, PyPI upload, provider request, or
+Sleeper write occurred. Details are in
+`docs/COMPLETED_OPEN_SOURCE_RELEASE_OS_013.md`.
+
 OS-007 — Public alpha release candidate is complete as of September 16, 2026
 (America/Los_Angeles). The reviewable `0.1.0` source-only alpha is a sanitized
 single-root local branch whose tree matches the reviewed preparation branch.

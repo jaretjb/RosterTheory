@@ -44,15 +44,14 @@ private filesystem path or live credential was found in the public tree. The
 FantasyPros key example is an empty or clearly synthetic placeholder.
 
 The ignored local files were not deleted, moved, or inspected for publication.
-No provider request, Sleeper write, repository publication, or Git history
-rewrite occurred.
+No provider request or Sleeper write occurred.
 
 OS-007 repeated the public-tree review and prepared the reviewed tree on a
-local, single-root candidate branch. A fresh clone of that candidate contains
-one reachable commit, passes the repository path and identity-pattern reviews,
-and has no Gitleaks finding. The original repository, its private reachable
-history, and ignored evidence remain unchanged and private; the candidate has
-not been pushed or published.
+local, single-root candidate branch. A fresh clone of that candidate contained
+one reachable commit, passed the repository path and identity-pattern reviews,
+and had no Gitleaks finding. OS-013 published that reviewed root as remote
+`main`; the original private history and ignored evidence remain in a verified
+private local backup rather than the public Git graph.
 
 ## Git history decision
 
@@ -61,12 +60,12 @@ retired real league configuration, former private league and organization
 labels, live identifiers in historical documents, and individual author
 identity in commit metadata.
 
-The approved release disposition is a new single-root history created from the
-reviewed tree, not publication of or in-place filtering of the private graph.
-OS-007 prepares and verifies that history locally. Before publication, preserve
-the current repository and ignored evidence as a private backup, re-confirm the
-candidate commit and tree, and obtain the explicit OS-013 approvals for pushing
-the candidate and changing repository visibility.
+The completed release disposition is a new single-root history created from
+the reviewed tree, not publication of or in-place filtering of the private
+graph. Before publication, OS-013 preserved the original repository in a
+verified private backup, re-confirmed the candidate commit and tree, replaced
+the private remote history, removed obsolete Actions runs tied to the retired
+graph, and verified the public repository anonymously.
 
 If any version of the repository has already been shared, rewriting remote
 history cannot revoke existing clones, forks, caches, or downloaded archives.
