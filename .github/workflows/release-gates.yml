@@ -88,6 +88,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Trust checked-out workspace for containerized scan
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Scan Git history and working tree
         uses: docker://ghcr.io/gitleaks/gitleaks:v8.24.3
         with:
