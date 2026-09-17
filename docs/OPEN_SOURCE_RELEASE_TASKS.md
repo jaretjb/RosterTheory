@@ -551,9 +551,12 @@ Completed September 16, 2026. With explicit user approval, the private remote
 the retired private history were deleted; the successful run and artifact for
 the clean candidate were retained. Immediately before publication the remote
 had one branch, no tags, no pull requests, and no releases. The repository was
-made public at <https://github.com/jaret81/RosterTheory>. Anonymous HTTP checks
-for the repository, README, and MIT license passed; a credential-free shallow
-clone contained exactly the approved root, installed successfully, and ran the
-offline synthetic `doctor` check with zero provider calls and zero Sleeper
-writes. No tag, GitHub release, PyPI upload, provider request, or Sleeper write
-occurred.
+initially made public at <https://github.com/jaret81/RosterTheory>. An anonymous
+check found that an unreachable retired commit remained addressable by exact
+SHA, so visibility was immediately returned to private. The original repository
+was retained as the private `RosterTheory-private-archive`; a distinct
+`RosterTheory` repository was created and populated only with the sanitized
+history. Its complete release workflow, corrected full-history Gitleaks scan,
+anonymous HTTP checks, credential-free clone and install, retired-SHA check, and
+offline synthetic `doctor` check pass. No tag, GitHub release, PyPI upload,
+provider request, or Sleeper write occurred.

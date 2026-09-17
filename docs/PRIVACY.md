@@ -49,9 +49,10 @@ No provider request or Sleeper write occurred.
 OS-007 repeated the public-tree review and prepared the reviewed tree on a
 local, single-root candidate branch. A fresh clone of that candidate contained
 one reachable commit, passed the repository path and identity-pattern reviews,
-and had no Gitleaks finding. OS-013 published that reviewed root as remote
-`main`; the original private history and ignored evidence remain in a verified
-private local backup rather than the public Git graph.
+and had no Gitleaks finding. OS-013 published a fresh repository whose `main`
+starts at that reviewed root. The original private history and ignored evidence
+remain in a verified private local backup and a separately named private GitHub
+archive rather than the public repository's object database.
 
 ## Git history decision
 
@@ -63,9 +64,13 @@ identity in commit metadata.
 The completed release disposition is a new single-root history created from
 the reviewed tree, not publication of or in-place filtering of the private
 graph. Before publication, OS-013 preserved the original repository in a
-verified private backup, re-confirmed the candidate commit and tree, replaced
-the private remote history, removed obsolete Actions runs tied to the retired
-graph, and verified the public repository anonymously.
+verified private backup, re-confirmed the candidate commit and tree, removed
+obsolete Actions runs tied to the retired graph, and verified the public
+repository anonymously. When GitHub continued serving an unreachable retired
+commit by exact SHA after the initial force-update, the repository was
+immediately made private. The original repository was retained under a private
+archive name and a distinct repository was created for the sanitized public
+history.
 
 If any version of the repository has already been shared, rewriting remote
 history cannot revoke existing clones, forks, caches, or downloaded archives.
