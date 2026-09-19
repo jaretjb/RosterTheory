@@ -1,8 +1,32 @@
 # Active milestone
 
+No implementation milestone is active as of September 18, 2026
+(America/Los_Angeles). Completed records below are retained as handoff history
+and do not authorize additional work.
+
+Replacement Counterfactual Consistency is complete. Trade and general Waiver
+lineup deltas now optimize the active bench first and compare bye/inactive
+capacity with the best legal, acquirable waiver alternative. A Waiver target
+is excluded from its own baseline, structural roster holes do not assume an
+extra transaction, and replacement IDs are auditable in evidence and human
+reports. Draft's legacy bye sensitivity now reports reserve value above the
+waiver floor while retaining the total filled and floor components. Focused
+feature tests, all 575 repository tests, and Ruff pass. No provider request,
+league calibration transfer, transaction, or Sleeper write occurred. Details
+are in `docs/COMPLETED_REPLACEMENT_COUNTERFACTUAL_CONSISTENCY.md`.
+
+Trade Phase 10 — Ranking-exclusion resilience and roster-context targets is
+complete. Provider-only rank slots no longer collapse projection curves;
+automatic targets respect one-starter roster capacity and report incoming
+lineup use. League Alpha evidence hash `f46d834e73b0935a` and League Beta hash
+`7cfa494b39a6ed4b` both replay and return no target. Beta passes the former WR
+106/107 stop. The dedicated context gate passes 14 tests, all 568 repository
+tests pass, and CI runs context routing separately on every push and pull
+request. No Sleeper write occurred. Exact evidence is in Trade Phase 10.
+
 OS-013 — GitHub publication and post-publication verification is complete as
 of September 16, 2026 (America/Los_Angeles). The reviewed source-only alpha is
-public at <https://github.com/jaret81/RosterTheory>. Remote `main` was replaced
+public at <https://github.com/jaretjb/RosterTheory>. Remote `main` was replaced
 by a fresh repository whose history starts at the approved sanitized root. The
 original GitHub repository is retained as the private
 `RosterTheory-private-archive`; this avoids exposing unreachable objects that

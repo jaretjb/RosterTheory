@@ -1,11 +1,12 @@
 {
-  "version": "phase9-search-construction-v1",
+  "version": "phase10-roster-context-v1",
   "target": {
     "market_value_floor": 0.0,
     "raw_projection_floor": 0.0,
     "material_gap_floor": 5.0,
     "max_partner_lineup_loss": 10.0,
     "near_waiver_need_margin": 1.0,
-    "reject_received_asset_drop": true
+    "reject_received_asset_drop": true,
+    "max_one_starter_reserves": 1
   }
 }

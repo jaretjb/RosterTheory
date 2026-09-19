@@ -5,6 +5,7 @@ from itertools import combinations
 from typing import Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, RosterIllegal
+from roster_theory.core.lineup import lineup_slots
 from roster_theory.core.models import Projection
 from roster_theory.core.provenance import stable_hash
 from roster_theory.trade.boards import ValuationGap, ValueBoard
@@ -40,13 +41,14 @@ class SearchConfig:
     max_exact_per_opponent: int = 2
     max_large_exact_per_opponent: int = 1
     max_results: int = 20
-    search_policy_version: str = "phase9-search-construction-v1"
+    search_policy_version: str = "phase10-roster-context-v1"
     target_market_value_floor: float = 0.0
     target_raw_projection_floor: float = 0.0
     target_material_gap_floor: float = 5.0
     max_partner_lineup_loss: float = 10.0
     near_waiver_need_margin: float = 1.0
     reject_received_asset_drop: bool = True
+    max_one_starter_reserves: int = 1
 
     def __post_init__(self) -> None:
         integer_fields = (
@@ -55,6 +57,7 @@ class SearchConfig:
             self.max_exact_per_opponent,
             self.max_large_exact_per_opponent,
             self.max_results,
+            self.max_one_starter_reserves,
         )
         if any(value < 0 for value in integer_fields):
             raise ValueError("Search pool, exact-evaluation, and result limits cannot be negative")
@@ -80,6 +83,13 @@ class SearchCoverage:
 
 
 @dataclass(frozen=True, slots=True)
+class IncomingAssetUsage:
+    player_id: str
+    starter_weeks: tuple[int, ...]
+    weighted_lineup_delta_in_started_weeks: float
+
+
+@dataclass(frozen=True, slots=True)
 class SearchOpportunity:
     opponent_roster_id: str
     sent_player_ids: tuple[str, ...]
@@ -98,6 +108,7 @@ class SearchOpportunity:
     partner_lineup_delta: float
     partner_market_delta: float
     market_gap_edge: float
+    incoming_asset_usage: tuple[IncomingAssetUsage, ...]
     evaluation: TradeEvaluation
 
 
@@ -147,6 +158,91 @@ def _diagnosis_maps(
         for player_id in row.usable_surplus_player_ids
     }
     return needs, surplus
+
+
+def _post_trade_active_roster(
+    evaluation: TradeEvaluation,
+    snapshot: TradeSnapshot,
+    roster_id: str,
+) -> set[str]:
+    team = next(row for row in snapshot.teams if row.roster_id == roster_id)
+    roster = set(team.player_ids) - set(team.reserve_ids)
+    if roster_id == evaluation.package.roster_a_id:
+        roster.difference_update(asset.player_id for asset in evaluation.package.from_a)
+        roster.update(asset.player_id for asset in evaluation.package.from_b)
+    else:
+        roster.difference_update(asset.player_id for asset in evaluation.package.from_b)
+        roster.update(asset.player_id for asset in evaluation.package.from_a)
+    for move in evaluation.secondary_moves:
+        if move.roster_id != roster_id:
+            continue
+        if move.kind == "DROP":
+            roster.difference_update(move.chosen_player_ids)
+        elif move.kind == "ADD":
+            roster.update(move.chosen_player_ids)
+    return roster
+
+
+def _redundant_one_starter_positions(
+    evaluation: TradeEvaluation,
+    snapshot: TradeSnapshot,
+    *,
+    reserve_limit: int,
+) -> tuple[str, ...]:
+    """Return positions where an automatic target adds excess inactive depth.
+
+    Only positions with exactly one eligible starting slot are constrained.
+    A league with SUPER_FLEX therefore does not inherit the 1QB rule.
+    """
+
+    user_id = evaluation.package.roster_a_id
+    team = next(row for row in snapshot.teams if row.roster_id == user_id)
+    before_ids = set(team.player_ids) - set(team.reserve_ids)
+    after_ids = _post_trade_active_roster(evaluation, snapshot, user_id)
+    player_by_id = {row.player_id: row for row in snapshot.players}
+    capacities = {
+        position: sum(position in eligible for _, eligible in lineup_slots(snapshot.league.roster_positions))
+        for position in SKILL_POSITIONS
+    }
+    excess: list[str] = []
+    for position, capacity in sorted(capacities.items()):
+        if capacity != 1:
+            continue
+        before_count = sum(
+            position in player_by_id[player_id].positions
+            for player_id in before_ids
+            if player_id in player_by_id
+        )
+        after_count = sum(
+            position in player_by_id[player_id].positions
+            for player_id in after_ids
+            if player_id in player_by_id
+        )
+        if after_count > before_count and after_count > capacity + reserve_limit:
+            excess.append(position)
+    return tuple(excess)
+
+
+def _incoming_asset_usage(
+    evaluation: TradeEvaluation,
+) -> tuple[IncomingAssetUsage, ...]:
+    user_team = evaluation.team_impacts[0]
+    received = tuple(asset.player_id for asset in evaluation.package.from_b)
+    rows: list[IncomingAssetUsage] = []
+    for player_id in received:
+        started = tuple(
+            week for week in user_team.weeks if player_id in week.after_starters
+        )
+        rows.append(
+            IncomingAssetUsage(
+                player_id=player_id,
+                starter_weeks=tuple(week.week for week in started),
+                weighted_lineup_delta_in_started_weeks=round(
+                    sum(week.delta * week.weight for week in started), 3
+                ),
+            )
+        )
+    return tuple(rows)
 
 
 def _candidate_pool(
@@ -310,6 +406,13 @@ def _opportunity(
         return None, "phase6_decision_gate"
     if user_team.weighted_delta <= 0.0:
         return None, "user_lineup_gate"
+    redundant_positions = _redundant_one_starter_positions(
+        evaluation,
+        snapshot,
+        reserve_limit=config.max_one_starter_reserves,
+    )
+    if redundant_positions:
+        return None, "redundant_one_starter_position"
     incoming_by_roster = {
         evaluation.package.roster_a_id: {
             asset.player_id for asset in evaluation.package.from_b
@@ -339,6 +442,10 @@ def _opportunity(
         return None, "target_raw_projection_gate"
     sent = tuple(asset.player_id for asset in evaluation.package.from_a)
     received = tuple(asset.player_id for asset in evaluation.package.from_b)
+    incoming_usage = _incoming_asset_usage(evaluation)
+    used_received = {
+        row.player_id for row in incoming_usage if row.starter_weeks
+    }
     gap_edge = sum(-gaps[player_id].value_gap for player_id in received) - sum(
         -gaps[player_id].value_gap for player_id in sent
     )
@@ -351,6 +458,7 @@ def _opportunity(
     received_positions = {
         position
         for player_id in received
+        if player_id in used_received
         for position in player_by_id[player_id].positions
     }
     if strict_user_needs & received_positions:
@@ -386,6 +494,7 @@ def _opportunity(
         partner_lineup_delta=partner_team.weighted_delta,
         partner_market_delta=round(partner_market, 3),
         market_gap_edge=round(gap_edge, 3),
+        incoming_asset_usage=incoming_usage,
         evaluation=evaluation,
     ), "accepted"
 

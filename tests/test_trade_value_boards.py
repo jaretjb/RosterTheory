@@ -30,6 +30,7 @@ from roster_theory.trade.experts import (
     select_current_experts,
 )
 from roster_theory.trade.board_service import (
+    _build_provider_projection_curves,
     _input_calls,
     _identity_map,
     board_refresh_report,
@@ -159,6 +160,41 @@ class InSeasonExpertTests(unittest.TestCase):
 
 
 class TradeBoardTests(unittest.TestCase):
+    def test_provider_only_projection_keeps_its_rank_slot_without_entering_board_universe(self) -> None:
+        projections = tuple(
+            Projection(
+                player_id=player_id,
+                horizon="WEEKLY",
+                week=1,
+                raw_stats=(("points", points),),
+                league_points=points,
+                source="fixture",
+                coverage_status="complete",
+            )
+            for player_id, points in (
+                ("sleeper-1", 30.0),
+                ("sleeper-2", 20.0),
+                ("fp:draft-sleeper-6149", 10.0),
+            )
+        )
+        distribution_positions = {
+            "sleeper-1": "WR",
+            "sleeper-2": "WR",
+            "fp:draft-sleeper-6149": "WR",
+        }
+        board_positions = {"sleeper-1": "WR", "sleeper-2": "WR"}
+
+        curves = _build_provider_projection_curves(
+            projections,
+            distribution_positions,
+            required_counts={"WR": 3},
+            expected_weeks=(1,),
+        )
+
+        curve = next(row for row in curves if row.position == "WR")
+        self.assertEqual(curve.slot_points, ((1, 30.0), (2, 20.0), (3, 10.0)))
+        self.assertNotIn("fp:draft-sleeper-6149", board_positions)
+
     def test_waiver_ranking_window_can_be_shorter_without_changing_trade_defaults(self):
         now = datetime(2026, 9, 10, 12, tzinfo=timezone.utc)
         definitions = (

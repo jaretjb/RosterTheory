@@ -370,6 +370,7 @@ def _uncalibrated_policy(artifact: str, league_key: str, season: int) -> dict[st
                 "max_partner_lineup_loss": None,
                 "near_waiver_need_margin": None,
                 "reject_received_asset_drop": None,
+                "max_one_starter_reserves": None,
             },
         })
     elif artifact == "waiver-wire":

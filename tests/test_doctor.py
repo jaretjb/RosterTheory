@@ -81,6 +81,7 @@ class DoctorTests(unittest.TestCase):
                     "material_gap_floor": 5,
                     "max_partner_lineup_loss": 10,
                     "reject_received_asset_drop": True,
+                    "max_one_starter_reserves": 1,
                 },
             },
         )

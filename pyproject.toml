@@ -27,10 +27,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jaret81/RosterTheory"
-Source = "https://github.com/jaret81/RosterTheory"
-Issues = "https://github.com/jaret81/RosterTheory/issues"
-Documentation = "https://github.com/jaret81/RosterTheory#readme"
+Homepage = "https://github.com/jaretjb/RosterTheory"
+Source = "https://github.com/jaretjb/RosterTheory"
+Issues = "https://github.com/jaretjb/RosterTheory/issues"
+Documentation = "https://github.com/jaretjb/RosterTheory#readme"
 
 [project.optional-dependencies]
 dev = [

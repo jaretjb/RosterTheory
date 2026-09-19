@@ -42,7 +42,7 @@ from roster_theory.waiver.service import (
     waiver_evaluation_report,
     waiver_refresh_plan,
 )
-from roster_theory.waiver.snapshot import build_waiver_snapshot
+from roster_theory.waiver.snapshot import PlayerAcquisition, build_waiver_snapshot
 from roster_theory.waiver.ww_evidence import (
     WaiverWireConfig,
     build_waiver_wire_evidence,
@@ -377,7 +377,7 @@ class WaiverEvaluationTests(unittest.TestCase):
         evidence = waiver_wire_evidence()
         result = self.evaluate(waiver_wire_evidence=evidence)
         selected = result.candidates[0].ownership
-        self.assertEqual(result.schema_version, 11)
+        self.assertEqual(result.schema_version, 12)
         self.assertEqual(selected.waiver_wire_market_add_rank, 2.0)
         self.assertEqual(selected.waiver_wire_market_add_position_rank, 1.0)
         self.assertEqual(selected.waiver_wire_selected_add_ranks[0].expert_id, "17")
@@ -482,6 +482,62 @@ class WaiverEvaluationTests(unittest.TestCase):
         self.assertFalse(first.sleeper_write_performed)
         self.assertTrue(first.candidate_hash)
         self.assertTrue(first.value_input_hash)
+
+    def test_bye_add_is_valued_over_next_available_waiver_player(self):
+        snapshot = waiver_snapshot()
+        alternate = player("fa_qb", "Next Quarterback", "QB", "JJJ")
+        locked = player("locked_qb", "Locked Quarterback", "QB", "KKK")
+        snapshot = replace(
+            snapshot,
+            players=(*snapshot.players, alternate, locked),
+            acquisitions=(
+                *snapshot.acquisitions,
+                PlayerAcquisition(
+                    "fa_qb", "FREE_AGENT", None, (), ("controlled_fixture",)
+                ),
+                PlayerAcquisition(
+                    "locked_qb", "LOCKED", None, (), ("controlled_fixture",)
+                ),
+            ),
+        )
+        week_rows = (
+            InSeasonWeek(1, False, ("AAA",)),
+            *weeks()[1:],
+        )
+        projection_rows = (
+            *projections(),
+            *(
+                Projection("fa_qb", "WEEKLY", week, (), 17.0, "fixture")
+                for week in (1, 2, 3)
+            ),
+            *(
+                Projection("locked_qb", "WEEKLY", week, (), 25.0, "fixture")
+                for week in (1, 2, 3)
+            ),
+        )
+        value_rows = (
+            *values(),
+            PlayerValueInput("fa_qb", 34.0, 25.5, 51.0),
+            PlayerValueInput("locked_qb", 50.0, 37.5, 75.0),
+        )
+        result = evaluate_waiver(
+            snapshot,
+            add="Target Quarterback",
+            drop="Bench Receiver",
+            weeks=week_rows,
+            projections=projection_rows,
+            values=value_rows,
+            drop_legality=legality(),
+            news_fresh={"add": True},
+            now=NOW,
+        )
+        selected = result.candidates[0]
+        current = selected.lineup.weeks[0]
+        self.assertEqual(current.before_replacements, ("fa_qb",))
+        self.assertEqual(current.after_replacements, ())
+        self.assertEqual(current.before_points, 36.0)
+        self.assertEqual(current.after_points, 41.0)
+        self.assertEqual(selected.current_week_delta, 5.0)
 
     def test_saved_evidence_replays_and_rejects_tampering(self):
         result = self.evaluate()

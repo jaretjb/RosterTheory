@@ -610,6 +610,35 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
         "Strongest uncertainty: " + evaluation.strongest_uncertainty,
         f"Saved evidence: {result.output_path}",
     ]
+    replacement_weeks = tuple(
+        row
+        for row in selected.lineup.weeks
+        if row.before_replacements or row.after_replacements
+    )
+    if replacement_weeks:
+        lines.insert(
+            3,
+            "Bye/inactive waiver floor (evaluated add excluded from its own baseline): "
+            + "; ".join(
+                f"W{row.week} before "
+                + (
+                    ", ".join(
+                        names.get(player_id, player_id)
+                        for player_id in row.before_replacements
+                    )
+                    or "none"
+                )
+                + ", after "
+                + (
+                    ", ".join(
+                        names.get(player_id, player_id)
+                        for player_id in row.after_replacements
+                    )
+                    or "none"
+                )
+                for row in replacement_weeks
+            ),
+        )
     if emerging_value.status == "COMPLETE":
         scenario_lines = []
         for comparison in emerging_value.scenario_comparisons:

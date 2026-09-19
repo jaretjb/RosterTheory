@@ -62,6 +62,9 @@ class WeeklyProjectionMatrix:
     lineup_cache: dict[tuple[tuple[str, ...], int, bool], LineupResult] = field(
         default_factory=dict, compare=False, hash=False, repr=False
     )
+    replacement_lineup_cache: dict[
+        tuple[tuple[str, ...], int, bool, tuple[str, ...]], "ReplacementLineupResult"
+    ] = field(default_factory=dict, compare=False, hash=False, repr=False)
     depth_cache: dict[tuple[tuple[str, ...], bool], float] = field(
         default_factory=dict, compare=False, hash=False, repr=False
     )
@@ -87,6 +90,15 @@ class WeeklyLineupImpact:
     after_starters: tuple[str, ...]
     lineup_entrants: tuple[str, ...]
     lineup_exits: tuple[str, ...]
+    before_replacements: tuple[str, ...] = ()
+    after_replacements: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ReplacementLineupResult:
+    lineup: LineupResult
+    roster_starter_ids: tuple[str, ...]
+    replacement_player_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -344,6 +356,112 @@ def plausible_unowned_players(
     return tuple(sorted(result))
 
 
+def lineup_with_replacement_floor(
+    context: InSeasonContext,
+    matrix: WeeklyProjectionMatrix,
+    roster: Iterable[str],
+    week: int,
+    *,
+    allow_partial: bool,
+    replacement_exclusions: Iterable[str] = (),
+) -> ReplacementLineupResult:
+    """Optimize a roster, then fill only uncovered capacity from waivers.
+
+    Active bench players are considered first by the ordinary lineup. Waiver
+    candidates can enter only up to the number of starting slots that remain
+    uncovered, so this establishes a replacement floor without treating the
+    entire free-agent pool as part of the roster.
+    """
+    player_by_id = {player.player_id: player for player in context.players}
+    roster_ids = tuple(sorted(player_id for player_id in roster if player_id in player_by_id))
+    exclusions = tuple(sorted(set(replacement_exclusions)))
+    cache_key = (roster_ids, week, allow_partial, exclusions)
+    cached = matrix.replacement_lineup_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    # Preserve the ordinary completeness contract and the roster's healthy
+    # positional capacity before filtering players who are known unavailable
+    # for this particular week. Structural holes created by an imbalanced
+    # roster or an add/drop are not permission to assume a second transaction.
+    full_lineup = lineup(
+        context, matrix, roster_ids, week, allow_partial=allow_partial
+    )
+    available_roster = tuple(
+        player_id
+        for player_id in roster_ids
+        if (cell := matrix.cell(player_id, week)) is not None
+        and cell.points is not None
+        and cell.availability == "ACTIVE"
+    )
+    roster_lineup = lineup(
+        context,
+        matrix,
+        available_roster,
+        week,
+        allow_partial=allow_partial,
+    )
+    uncovered_slots = full_lineup.filled_slots - roster_lineup.filled_slots
+    if uncovered_slots <= 0:
+        result = ReplacementLineupResult(
+            lineup=roster_lineup,
+            roster_starter_ids=tuple(
+                sorted(row.player_id for row in roster_lineup.assignments)
+            ),
+            replacement_player_ids=(),
+        )
+        matrix.replacement_lineup_cache[cache_key] = result
+        return result
+
+    excluded = set(exclusions) | set(roster_ids)
+    plausible = plausible_unowned_players(
+        context,
+        matrix,
+        per_position_week=max(5, uncovered_slots + 1),
+    )
+    replacements = tuple(
+        player_id
+        for player_id in plausible
+        if player_id not in excluded
+        and (cell := matrix.cell(player_id, week)) is not None
+        and cell.points is not None
+        and cell.availability == "ACTIVE"
+    )
+    if not replacements:
+        result = ReplacementLineupResult(
+            lineup=roster_lineup,
+            roster_starter_ids=tuple(
+                sorted(row.player_id for row in roster_lineup.assignments)
+            ),
+            replacement_player_ids=(),
+        )
+        matrix.replacement_lineup_cache[cache_key] = result
+        return result
+
+    candidates = (*available_roster, *replacements)
+    points = {
+        player_id: float(cell.points)
+        for player_id in candidates
+        if (cell := matrix.cell(player_id, week)) is not None and cell.points is not None
+    }
+    optimized = optimize_lineup(
+        tuple(LineupPlayer(player_id, player_by_id[player_id].positions) for player_id in candidates),
+        lineup_slots(context),
+        points,
+        limited_player_ids=replacements,
+        maximum_limited_players=uncovered_slots,
+    )
+    selected = {row.player_id for row in optimized.assignments}
+    replacement_ids = tuple(sorted(selected.intersection(replacements)))
+    result = ReplacementLineupResult(
+        lineup=optimized,
+        roster_starter_ids=tuple(sorted(selected.difference(replacement_ids))),
+        replacement_player_ids=replacement_ids,
+    )
+    matrix.replacement_lineup_cache[cache_key] = result
+    return result
+
+
 def depth_above_waiver(
     context: InSeasonContext,
     matrix: WeeklyProjectionMatrix,
@@ -419,17 +537,31 @@ def team_impact(
     before: set[str],
     after: set[str],
     options: ImpactOptions,
+    *,
+    replacement_exclusions: Iterable[str] = (),
 ) -> TeamImpact:
     rows: list[WeeklyLineupImpact] = []
     for week in context.weeks:
-        before_lineup = lineup(
-            context, matrix, before, week.week, allow_partial=options.allow_partial_schedule
+        before_result = lineup_with_replacement_floor(
+            context,
+            matrix,
+            before,
+            week.week,
+            allow_partial=options.allow_partial_schedule,
+            replacement_exclusions=replacement_exclusions,
         )
-        after_lineup = lineup(
-            context, matrix, after, week.week, allow_partial=options.allow_partial_schedule
+        after_result = lineup_with_replacement_floor(
+            context,
+            matrix,
+            after,
+            week.week,
+            allow_partial=options.allow_partial_schedule,
+            replacement_exclusions=replacement_exclusions,
         )
-        before_ids = tuple(sorted(row.player_id for row in before_lineup.assignments))
-        after_ids = tuple(sorted(row.player_id for row in after_lineup.assignments))
+        before_lineup = before_result.lineup
+        after_lineup = after_result.lineup
+        before_ids = before_result.roster_starter_ids
+        after_ids = after_result.roster_starter_ids
         weight = options.playoff_weight if week.playoff else 1.0
         rows.append(
             WeeklyLineupImpact(
@@ -443,6 +575,8 @@ def team_impact(
                 after_starters=after_ids,
                 lineup_entrants=tuple(sorted(set(after_ids) - set(before_ids))),
                 lineup_exits=tuple(sorted(set(before_ids) - set(after_ids))),
+                before_replacements=before_result.replacement_player_ids,
+                after_replacements=after_result.replacement_player_ids,
             )
         )
     before_total = sum(row.before_points * row.weight for row in rows)

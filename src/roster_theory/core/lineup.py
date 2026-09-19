@@ -168,18 +168,32 @@ def optimize_lineup(
     players: Iterable[LineupPlayer],
     roster_positions: Iterable[str],
     points: Mapping[str, float],
+    *,
+    limited_player_ids: Iterable[str] = (),
+    maximum_limited_players: int | None = None,
 ) -> LineupResult:
-    """Return a deterministic maximum-point legal assignment."""
+    """Return a deterministic maximum-point legal assignment.
+
+    ``maximum_limited_players`` supports replacement-counterfactual lineups:
+    callers may expose several legal waiver choices while limiting the lineup
+    to the number of roster slots that were otherwise uncovered.
+    """
     player_list = sorted(players, key=lambda player: player.player_id)
     slots = lineup_slots(roster_positions)
-    single_position_result = _single_position_lineup(player_list, slots, points)
+    limited_ids = frozenset(limited_player_ids)
+    if maximum_limited_players is not None and maximum_limited_players < 0:
+        raise ValueError("maximum_limited_players must be non-negative")
+    constrained = maximum_limited_players is not None and bool(limited_ids)
+    single_position_result = (
+        None if constrained else _single_position_lineup(player_list, slots, points)
+    )
     if single_position_result is not None:
         return single_position_result
     slot_count = len(slots)
     empty_assignments = ("",) * slot_count
-    # mask -> (score, player ID by slot; empty slots contain "")
-    states: dict[int, tuple[float, tuple[str, ...]]] = {
-        0: (0.0, empty_assignments)
+    # (mask, limited players used) -> (score, player ID by slot; empty slots contain "")
+    states: dict[tuple[int, int], tuple[float, tuple[str, ...]]] = {
+        (0, 0): (0.0, empty_assignments)
     }
     for player in player_list:
         player_positions = {_normalize_position(value) for value in player.positions}
@@ -190,8 +204,15 @@ def optimize_lineup(
         if not eligible_mask:
             continue
         player_points = float(points.get(player.player_id, 0.0))
+        limited_increment = int(player.player_id in limited_ids)
         updated = dict(states)
-        for mask, (score, assignments) in states.items():
+        for (mask, limited_count), (score, assignments) in states.items():
+            next_limited_count = limited_count + limited_increment
+            if (
+                maximum_limited_players is not None
+                and next_limited_count > maximum_limited_players
+            ):
+                continue
             available = eligible_mask & ~mask
             while available:
                 bit = available & -available
@@ -203,16 +224,17 @@ def optimize_lineup(
                     score + player_points,
                     tuple(candidate_assignments),
                 )
-                existing = updated.get(mask | bit)
+                state_key = (mask | bit, next_limited_count)
+                existing = updated.get(state_key)
                 if existing is None or candidate[0] > existing[0] or (
                     candidate[0] == existing[0] and candidate[1] < existing[1]
                 ):
-                    updated[mask | bit] = candidate
+                    updated[state_key] = candidate
         states = updated
-    mask, (score, selected_by_slot) = min(
+    (mask, _), (score, selected_by_slot) = min(
         states.items(),
         key=lambda item: (
-            -item[0].bit_count(),
+            -item[0][0].bit_count(),
             -item[1][0],
             tuple(
                 (slot_index, player_id)

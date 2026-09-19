@@ -1725,8 +1725,13 @@ class SimulationTests(unittest.TestCase):
             [starter, same_bye], ["QB"], baseline
         )
         self.assertEqual(covered["base_lineup_score"], 340)
-        self.assertAlmostEqual(covered["bye_coverage_points"], 16.0)
-        self.assertAlmostEqual(uncovered["bye_coverage_points"], 10.0)
+        self.assertAlmostEqual(covered["bye_coverage_points"], 6.0)
+        self.assertAlmostEqual(uncovered["bye_coverage_points"], 0.0)
+        self.assertAlmostEqual(covered["bye_replacement_floor_points"], 10.0)
+        self.assertAlmostEqual(uncovered["bye_replacement_floor_points"], 10.0)
+        self.assertAlmostEqual(covered["bye_filled_points"], 16.0)
+        self.assertAlmostEqual(uncovered["bye_filled_points"], 10.0)
+        self.assertAlmostEqual(covered["bye_adjusted_lineup_score"], 346.0)
         self.assertEqual(covered["bench_vorp"], 102)
         self.assertEqual(covered["total_roster_vorp"], 272)
 
@@ -1763,6 +1768,8 @@ class SimulationTests(unittest.TestCase):
                 {"0.10", "0.20", "0.30"},
             )
             self.assertIn("mean_bye_adjusted_lineup_score", summary)
+            self.assertIn("mean_bye_replacement_floor_points", summary)
+            self.assertIn("mean_bye_filled_points", summary)
             self.assertIn("mean_bench_vorp", summary)
             self.assertEqual(summary["score_type"], "availability_robustness_diagnostic")
             self.assertEqual(

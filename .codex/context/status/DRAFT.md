@@ -15,7 +15,9 @@ league/format calibration, and a passing offline validation before any live
 shadow work. Promotion would require prospective normal-clock evidence and
 separate user approval.
 
-Next action: no Draft implementation milestone is active. Do not reopen 2026
-league work. For future-cycle planning, start from the BD-905 failure review
-and propose a new milestone. Never reuse preseason Draft ranks for an in-season Trade
-or Waiver decision, or transfer one league's calibration to another.
+The shared Replacement Counterfactual Consistency milestone clarified the
+legacy bye sensitivity: `bye_coverage_points` is now reserve production above
+the waiver floor, with the floor and total filled production reported
+separately. It did not reopen 2026 Draft operations or change Draft acquisition
+policy. No Draft task is active. Never reuse preseason Draft ranks for an
+in-season Trade or Waiver decision, or transfer league calibration.

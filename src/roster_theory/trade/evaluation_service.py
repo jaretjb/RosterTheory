@@ -254,6 +254,34 @@ def format_trade_evaluation(evaluation: TradeEvaluation) -> str:
             f"best W{impact.best_week} {impact.best_week_delta:+.2f}, "
             f"worst W{impact.worst_week} {impact.worst_week_delta:+.2f}"
         )
+        replacement_weeks = tuple(
+            row
+            for row in impact.weeks
+            if row.before_replacements or row.after_replacements
+        )
+        if replacement_weeks:
+            lines.append(
+                f"Roster {impact.roster_id} bye/inactive waiver floor: "
+                + "; ".join(
+                    f"W{row.week} before "
+                    + (
+                        ", ".join(
+                            names.get(player_id, player_id)
+                            for player_id in row.before_replacements
+                        )
+                        or "none"
+                    )
+                    + ", after "
+                    + (
+                        ", ".join(
+                            names.get(player_id, player_id)
+                            for player_id in row.after_replacements
+                        )
+                        or "none"
+                    )
+                    for row in replacement_weeks
+                )
+            )
     for move in evaluation.secondary_moves:
         if move.kind != "NONE":
             chosen = ", ".join(

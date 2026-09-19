@@ -5,7 +5,7 @@ Completed: September 16, 2026 (America/Los_Angeles)
 ## Outcome
 
 RosterTheory's reviewed source-only `0.1.0` alpha repository is public at
-<https://github.com/jaret81/RosterTheory>.
+<https://github.com/jaretjb/RosterTheory>.
 
 With explicit user approval, the published history starts from the sanitized
 single-root candidate:
@@ -16,7 +16,7 @@ single-root candidate:
 - root identity: `RosterTheory Release <release@roster-theory.invalid>`
 
 The original graph remains available in a verified ignored local backup and in
-the separate private `jaret81/RosterTheory-private-archive` repository. The
+the separate private `jaretjb/RosterTheory-private-archive` repository. The
 working repository now uses `Jaret Brown` and GitHub's account-associated
 no-reply address for future commits, so the contributor name remains visible
 without publishing a personal contact address.

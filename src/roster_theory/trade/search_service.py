@@ -107,6 +107,7 @@ def _config_from_policy(
             target.get("near_waiver_need_margin", config.near_waiver_need_margin)
         ),
         reject_received_asset_drop=bool(target["reject_received_asset_drop"]),
+        max_one_starter_reserves=int(target["max_one_starter_reserves"]),
     )
 
 
@@ -263,6 +264,10 @@ def run_league_search(
                     "user_rationale": row.user_rationale,
                     "partner_rationale": row.partner_rationale,
                     "objectives": "; ".join(row.objective_tags),
+                    "incoming_asset_usage": "; ".join(
+                        f"{names.get(usage.player_id, usage.player_id)} starts W{','.join(str(week) for week in usage.starter_weeks) or 'none'}"
+                        for usage in row.incoming_asset_usage
+                    ),
                 }
                 for row in result.opportunities
             ),
@@ -377,7 +382,7 @@ def format_search_result(result: SearchRunResult) -> str:
     lines = [
         f"TRADE ASSISTANT - {result.search.league_key} - {result.search.horizon} OPPORTUNITY SEARCH",
         f"Returned {len(result.search.opportunities)} non-dominated opportunities; large-package search is bounded, not exhaustive.",
-        f"Policy {result.search.search_policy_version}: TARGET requires nonnegative selected, market, and raw-projection value.",
+        f"Policy {result.search.search_policy_version}: TARGET requires nonnegative selected, market, and raw-projection value; one-starter depth is roster-context limited.",
     ]
     for index, row in enumerate(result.search.opportunities, 1):
         sent = ", ".join(names.get(pid, pid) for pid in row.sent_player_ids)
@@ -390,6 +395,13 @@ def format_search_result(result: SearchRunResult) -> str:
                 f"partner lineup {row.partner_lineup_delta:+.2f}, market value {row.partner_market_delta:+.2f}",
                 f"   Why: {row.user_rationale}; partner: {row.partner_rationale}; "
                 f"objectives {', '.join(row.objective_tags) or 'frontier alternative'}",
+                "   Incoming use: "
+                + "; ".join(
+                    f"{names.get(usage.player_id, usage.player_id)} starts "
+                    f"{len(usage.starter_weeks)} week(s)"
+                    f" ({usage.weighted_lineup_delta_in_started_weeks:+.2f} team delta in those weeks)"
+                    for usage in row.incoming_asset_usage
+                ),
             )
         )
     lines.append("Coverage (enumerated / pruned / exact / accepted):")

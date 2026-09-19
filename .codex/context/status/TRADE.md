@@ -1,22 +1,22 @@
 # Trade Assistant current status
 
-Updated: September 9, 2026 (America/Los_Angeles)
+Updated: September 18, 2026 (America/Los_Angeles)
 
-Stopping point: League Beta Phase 9 is complete. Its verified 12-team, two-FLEX
-search reconciled 180 roster slots and Weeks 1-17, searched all 11 opponents,
-and produced one replay-verified target. Exact results and the evidence hash
-are in `docs/COMPLETED_TRADE_ASSISTANT_PHASE_9.md`.
+Stopping point: Phase 10 is complete. Provider-only ranked players retain their
+projection-curve slots without entering mapped roster/value boards. Automatic
+targets derive one-starter capacity from league slots, permit one reserve,
+reject excess depth such as a third 1QB, and report incoming lineup use.
 
-Validation: the Phase 9 repository-root suite passed 308 tests. No Sleeper
-write occurred. League Beta's expanded scoring format, Week 1 anchor, scarcity,
-runtime, and replay gates passed. Draft policy was not imported and League Alpha
-was not refreshed live.
+Live result: both saved searches replay and return no target. League Alpha
+enumerated 5,094 packages, evaluated 27, and recorded two redundant-position
+rejections. League Beta enumerated 6,226, evaluated 33, and passed the former WR
+106/107 stop. Each league used separate scoped evidence and policy metadata.
 
-Active limitation: no Trade implementation milestone is active. TA-802, the
-next fresh League Alpha audit, was deferred until the user chooses to resume it.
-League-specific calibration and evidence must never be transferred between
-League Beta and League Alpha.
-
-Next action: activate only the specifically selected Trade task. Load its task
-row and referenced requirements/design sections; do not load the full Trade
-design for routine status, tests, League Beta operation, or unrelated work.
+Validation: the dedicated context-routing gate passes 14 tests and all 568
+repository tests pass. CI runs the fast context gate on every push and pull
+request. No Sleeper write occurred. Exact tasks and evidence hashes are in
+`docs/TRADE_ASSISTANT_TASKS.md` Phase 10. The completed shared replacement
+milestone makes bye/inactive lineup deltas compare the optimized active bench
+and best legal free agent rather than zero. Replacement IDs are included in
+evidence and reports; structural roster holes do not assume another move. No
+Trade milestone is active.

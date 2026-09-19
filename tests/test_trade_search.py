@@ -18,10 +18,12 @@ from roster_theory.trade.search import (
     SearchConfig,
     _candidate_pool,
     _diagnosis_maps,
+    _redundant_one_starter_positions,
     enumerate_candidate_packages,
     search_league,
 )
 from roster_theory.trade.search_service import (
+    _config_from_policy,
     _gap_report,
     format_search_result,
     load_search_evidence,
@@ -30,6 +32,63 @@ from tests.test_trade_evaluation import board_fixture, projection_fixture, snaps
 
 
 class CandidateEnumerationTests(unittest.TestCase):
+    def test_third_qb_is_excess_only_in_a_one_qb_automatic_target(self) -> None:
+        base = snapshot_fixture()
+        qb_ids = {"a_bench", "a_low", "b_low"}
+        players = tuple(
+            replace(player, positions=("QB",))
+            if player.player_id in qb_ids
+            else player
+            for player in base.players
+        )
+        one_qb = replace(
+            base,
+            players=players,
+            league=replace(base.league, roster_positions=("QB", "RB", "WR", "BN")),
+        )
+        third_qb = SimpleNamespace(
+            package=TradePackage(
+                "1",
+                "2",
+                (PlayerAsset("a_wr"),),
+                (PlayerAsset("b_low"),),
+            ),
+            secondary_moves=(),
+        )
+        qb_swap = SimpleNamespace(
+            package=TradePackage(
+                "1",
+                "2",
+                (PlayerAsset("a_low"),),
+                (PlayerAsset("b_low"),),
+            ),
+            secondary_moves=(),
+        )
+
+        self.assertEqual(
+            _redundant_one_starter_positions(
+                third_qb, one_qb, reserve_limit=1
+            ),
+            ("QB",),
+        )
+        self.assertEqual(
+            _redundant_one_starter_positions(qb_swap, one_qb, reserve_limit=1),
+            (),
+        )
+        superflex = replace(
+            one_qb,
+            league=replace(
+                one_qb.league,
+                roster_positions=("QB", "SUPER_FLEX", "RB", "WR", "BN"),
+            ),
+        )
+        self.assertEqual(
+            _redundant_one_starter_positions(
+                third_qb, superflex, reserve_limit=1
+            ),
+            (),
+        )
+
     def test_near_waiver_starter_can_seed_a_construction_need(self) -> None:
         diagnosis = SimpleNamespace(
             positions=(
@@ -622,6 +681,8 @@ class LeagueSearchTests(unittest.TestCase):
         self.assertGreaterEqual(target.user_selected_delta, 0.0)
         self.assertGreaterEqual(target.user_market_delta, 0.0)
         self.assertGreaterEqual(target.user_raw_projection_delta, 0.0)
+        incoming = {row.player_id: row for row in target.incoming_asset_usage}
+        self.assertEqual(incoming["b_wr"].starter_weeks, (1, 2, 3))
 
     def test_search_config_rejects_invalid_limits(self) -> None:
         with self.assertRaises(ValueError):
@@ -630,6 +691,26 @@ class LeagueSearchTests(unittest.TestCase):
             SearchConfig(max_exact_per_opponent=-1)
         with self.assertRaises(ValueError):
             SearchConfig(near_waiver_need_margin=-0.1)
+        with self.assertRaises(ValueError):
+            SearchConfig(max_one_starter_reserves=-1)
+
+    def test_old_search_policy_cannot_silently_enable_roster_context_gate(self) -> None:
+        policy = {
+            "version": "old-policy",
+            "target": {
+                "market_value_floor": 0,
+                "raw_projection_floor": 0,
+                "material_gap_floor": 5,
+                "max_partner_lineup_loss": 10,
+                "near_waiver_need_margin": 1,
+                "reject_received_asset_drop": True,
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "policy.json"
+            path.write_text(json.dumps(policy), encoding="utf-8")
+            with self.assertRaises(KeyError):
+                _config_from_policy(SearchConfig(), path)
 
     def test_received_asset_immediately_dropped_is_not_a_search_result(self) -> None:
         result = self._search(
@@ -771,7 +852,8 @@ class LeagueSearchTests(unittest.TestCase):
                 ),
             )
         )
-        self.assertIn("phase9-search-construction-v1", formatted)
+        self.assertIn("phase10-roster-context-v1", formatted)
+        self.assertIn("Incoming use:", formatted)
         self.assertIn("Rejections:", formatted)
 
 

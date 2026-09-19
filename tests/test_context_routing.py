@@ -48,6 +48,15 @@ class ContextRoutingTests(unittest.TestCase):
         self.assertIn("docs/OPEN_SOURCE_RELEASE_TASKS.md", status)
         self.assertIn("OS-001", status)
 
+    def test_context_gate_is_fast_local_and_ci_visible(self):
+        workflow = (ROOT / ".github/workflows/release-gates.yml").read_text(
+            encoding="utf-8"
+        )
+        contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        command = "python -m unittest tests.test_context_routing"
+        self.assertIn(command, workflow)
+        self.assertIn(command, contributing)
+
     def test_draft_handoff_closes_2026_and_requires_new_future_milestone(self):
         status = (ROOT / ".codex/context/status/DRAFT.md").read_text(encoding="utf-8")
         tasks = (ROOT / "docs/OPEN_TASKS.md").read_text(encoding="utf-8")

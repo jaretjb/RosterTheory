@@ -296,6 +296,51 @@ class ProjectionAndEvaluationTests(unittest.TestCase):
         self.assertEqual(matrix.cell("a_rb", 1).points, 0.0)
         self.assertEqual(matrix.cell("a_rb", 2).points, 10.0)
 
+    def test_trade_bye_gain_is_measured_above_waiver_replacement(self) -> None:
+        weeks = (
+            replace(self.snapshot.weeks[0], bye_teams=("AAA",)),
+            *self.snapshot.weeks[1:],
+        )
+        teams = (
+            replace(self.snapshot.teams[0], player_ids=("a_rb", "a_wr")),
+            self.snapshot.teams[1],
+        )
+        owner_by_player = tuple(
+            row for row in self.snapshot.owner_by_player if row[0] not in {"a_bench", "a_low"}
+        )
+        snapshot = replace(
+            self.snapshot,
+            weeks=weeks,
+            teams=teams,
+            players=tuple(
+                replace(row, nfl_team="ZZZ") if row.player_id == "a_wr" else row
+                for row in self.snapshot.players
+            ),
+            owner_by_player=owner_by_player,
+        )
+        package = build_entered_package(
+            snapshot,
+            send=("a_rb",),
+            receive=("b_rb",),
+        )
+        result = evaluate_trade(
+            snapshot,
+            package,
+            projections=self.projections,
+            selected_board=self.selected,
+            market_board=self.market,
+        )
+        bye_week = result.team_impacts[0].weeks[0]
+        self.assertEqual(bye_week.before_replacements, ("fa_wr",))
+        self.assertEqual(bye_week.after_replacements, ())
+        self.assertEqual(bye_week.before_points, 15.0)
+        self.assertEqual(bye_week.after_points, 14.0)
+        self.assertEqual(bye_week.delta, -1.0)
+        self.assertIn(
+            "bye/inactive waiver floor",
+            format_trade_evaluation(result),
+        )
+
     def test_known_inactive_player_is_zeroed_and_labeled(self) -> None:
         players = tuple(
             replace(player, injury_status="OUT") if player.player_id == "a_rb" else player

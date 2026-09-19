@@ -447,6 +447,8 @@ class SimulationResult:
     roster_records: list[dict[str, Any]] = field(default_factory=list)
     base_lineup_scores: list[float] = field(default_factory=list)
     bye_coverage_scores: list[float] = field(default_factory=list)
+    bye_replacement_floor_scores: list[float] = field(default_factory=list)
+    bye_filled_scores: list[float] = field(default_factory=list)
     bye_adjusted_scores: list[float] = field(default_factory=list)
     bench_vorp_scores: list[float] = field(default_factory=list)
     usable_bench_vorp_scores: list[float] = field(default_factory=list)
@@ -508,6 +510,12 @@ class SimulationResult:
             )
             summary["mean_bye_coverage_points"] = round(
                 fmean(self.bye_coverage_scores), 3
+            )
+            summary["mean_bye_replacement_floor_points"] = round(
+                fmean(self.bye_replacement_floor_scores), 3
+            )
+            summary["mean_bye_filled_points"] = round(
+                fmean(self.bye_filled_scores), 3
             )
             summary["mean_bye_adjusted_lineup_score"] = round(
                 fmean(self.bye_adjusted_scores), 3
@@ -1796,12 +1804,14 @@ def deterministic_roster_strength(
     bye_weeks: Mapping[str, int] = NFL_BYE_WEEKS_2026,
     active_games: int = 17,
 ) -> dict[str, float]:
-    """Score lineup, known-bye coverage, and reserve talent without randomness."""
+    """Score known-bye reserve value above the waiver floor without randomness."""
     players = [player for player in roster if player.position in SKILL_POSITIONS]
     positions = tuple(roster_positions)
     base_lineup_score, base_starters = _optimal_lineup(players, positions)
     starter_keys = {player.key for player in base_starters}
     bye_coverage = 0.0
+    bye_replacement_floor = 0.0
+    bye_filled_points = 0.0
     for week in sorted(set(bye_weeks.values())):
         active_players = [
             player
@@ -1818,7 +1828,21 @@ def deterministic_roster_strength(
             positions,
             replacement_baselines,
         )
-        bye_coverage += max(0.0, covered_score - active_base_starter_score) / active_games
+        active_base_starters = [
+            player
+            for player in base_starters
+            if not player.team or bye_weeks.get(player.team) != week
+        ]
+        waiver_floor_score = roster_score(
+            active_base_starters,
+            positions,
+            replacement_baselines,
+        )
+        filled_points = max(0.0, covered_score - active_base_starter_score)
+        replacement_floor = max(0.0, waiver_floor_score - active_base_starter_score)
+        bye_filled_points += filled_points / active_games
+        bye_replacement_floor += replacement_floor / active_games
+        bye_coverage += max(0.0, covered_score - waiver_floor_score) / active_games
 
     bench_players = [player for player in players if player.key not in starter_keys]
     bench_vorp = sum(
@@ -1849,6 +1873,8 @@ def deterministic_roster_strength(
     return {
         "base_lineup_score": base_lineup_score,
         "bye_coverage_points": bye_coverage,
+        "bye_replacement_floor_points": bye_replacement_floor,
+        "bye_filled_points": bye_filled_points,
         "bye_adjusted_lineup_score": base_lineup_score + bye_coverage,
         "bench_vorp": bench_vorp,
         "usable_bench_vorp": usable_bench_vorp,
@@ -4356,6 +4382,10 @@ def compare_strategies(
             )
             result.base_lineup_scores.append(user_strength["base_lineup_score"])
             result.bye_coverage_scores.append(user_strength["bye_coverage_points"])
+            result.bye_replacement_floor_scores.append(
+                user_strength["bye_replacement_floor_points"]
+            )
+            result.bye_filled_scores.append(user_strength["bye_filled_points"])
             result.bench_vorp_scores.append(user_strength["bench_vorp"])
             result.usable_bench_vorp_scores.append(
                 user_strength["usable_bench_vorp"]
@@ -4392,6 +4422,12 @@ def compare_strategies(
                     ),
                     "bye_coverage_points": round(
                         user_strength["bye_coverage_points"], 3
+                    ),
+                    "bye_replacement_floor_points": round(
+                        user_strength["bye_replacement_floor_points"], 3
+                    ),
+                    "bye_filled_points": round(
+                        user_strength["bye_filled_points"], 3
                     ),
                     "bench_vorp": round(user_strength["bench_vorp"], 3),
                     "usable_bench_vorp": round(

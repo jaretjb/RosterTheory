@@ -857,6 +857,29 @@ def _canonical_projections(
     return tuple(result), complete_positions, warning_map
 
 
+def _build_provider_projection_curves(
+    canonical_projections: Sequence[Projection],
+    distribution_positions: Mapping[str, str],
+    *,
+    required_counts: Mapping[str, int],
+    expected_weeks: Sequence[int],
+):
+    """Build rank-slot curves from the provider distribution, not board identities.
+
+    Provider-only identifiers intentionally remain here: they supply an
+    authoritative projection slot even when the current Sleeper directory cannot
+    map them to a roster/value-board player. Board construction applies the
+    separate mapped-player boundary later.
+    """
+
+    return build_projection_curves(
+        canonical_projections,
+        distribution_positions,
+        required_counts=required_counts,
+        expected_weeks=expected_weeks,
+    )
+
+
 def _raw_rank_ordinals(selected: Sequence[SelectedRank]) -> dict[str, int]:
     result: dict[str, int] = {}
     for position in sorted({row.position for row in selected}):
@@ -1150,17 +1173,9 @@ def refresh_value_boards(
         ranking_positions,
     )
     weeks = tuple(week.week for week in snapshot.weeks)
-    board_projections = tuple(
-        row for row in canonical_projections if row.player_id in positions
-    )
-    board_distribution_positions = {
-        player_id: position
-        for player_id, position in distribution_positions.items()
-        if player_id in positions
-    }
-    curves = build_projection_curves(
-        board_projections,
-        board_distribution_positions,
+    curves = _build_provider_projection_curves(
+        canonical_projections,
+        distribution_positions,
         required_counts=required_counts,
         expected_weeks=weeks,
     )

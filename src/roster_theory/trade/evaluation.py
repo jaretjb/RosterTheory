@@ -1334,7 +1334,7 @@ def evaluate_trade(
         ),
     }
     base = TradeEvaluation(
-        schema_version=3,
+        schema_version=4,
         product="TRADE ASSISTANT",
         operation="ENTERED PACKAGE EVALUATION",
         manifest_id=snapshot.manifest.analysis_id,

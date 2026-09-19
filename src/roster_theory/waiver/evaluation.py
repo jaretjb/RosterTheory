@@ -524,12 +524,18 @@ def _validate_inputs(
     projected_ids = {row.player_id for row in projections if row.horizon == "WEEKLY"}
     relevant_ids = set(value_map) | projected_ids | set(dict(snapshot.owner_by_player))
     players = tuple(player for player in snapshot.players if player.player_id in relevant_ids)
+    acquisition_by_id = {row.player_id: row.state for row in snapshot.acquisitions}
     context = InSeasonContext(
         players=players,
         roster_positions=snapshot.league.roster_positions,
         weeks=ordered_weeks,
         unowned_player_ids=tuple(
-            sorted(player.player_id for player in players if player.player_id not in dict(snapshot.owner_by_player))
+            sorted(
+                player.player_id
+                for player in players
+                if player.player_id not in dict(snapshot.owner_by_player)
+                and acquisition_by_id.get(player.player_id) in ACQUIRABLE_STATES
+            )
         ),
         evaluation_positions=WAIVER_POSITIONS,
         current_status_week_only=True,
@@ -1290,6 +1296,7 @@ def evaluate_waiver(
             supported_roster,
             after,
             options,
+            replacement_exclusions=(add_player.player_id,),
         )
         before_skill = {
             player_id
@@ -1654,7 +1661,7 @@ def evaluate_waiver(
     warnings.append("No Waiver decision policy was applied; no final label is available")
     user_settings = dict(snapshot.league.platform_settings)
     base = WaiverEvaluation(
-        schema_version=11,
+        schema_version=12,
         product="WAIVER ASSISTANT",
         operation="ENTERED ADD/DROP EVALUATION",
         league_key=snapshot.league_key,

@@ -552,7 +552,7 @@ Completed September 16, 2026. With explicit user approval, the private remote
 the retired private history were deleted; the successful run and artifact for
 the clean candidate were retained. Immediately before publication the remote
 had one branch, no tags, no pull requests, and no releases. The repository was
-initially made public at <https://github.com/jaret81/RosterTheory>. An anonymous
+initially made public at <https://github.com/jaretjb/RosterTheory>. An anonymous
 check found that an unreachable retired commit remained addressable by exact
 SHA, so visibility was immediately returned to private. The original repository
 was retained as the private `RosterTheory-private-archive`; a distinct

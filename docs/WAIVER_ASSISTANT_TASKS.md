@@ -570,6 +570,10 @@ Acceptance:
 
 ## WA-016 — Walk-forward outcome capture and empirical calibration
 
+Status: long-running research; not active and not a blocker for the current
+public alpha. Required only before a future evidence-based probability or
+policy-threshold promotion.
+
 Depends on: WA-015 evidence contracts. This task may collect shadow evidence
 before WA-015 policy promotion, but it may not change labels without a later
 active milestone.

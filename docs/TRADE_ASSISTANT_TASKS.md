@@ -1,6 +1,6 @@
 # RosterTheory Trade Assistant task list
 
-Status: League Beta Phase 9 complete; TA-802 live League Alpha audit deferred by user
+Status: Phase 10 complete; no open Trade development task
 Created: September 4, 2026 (America/Los_Angeles)  
 Requirements: `docs/TRADE_ASSISTANT_REQUIREMENTS.md`  
 Design: `docs/TRADE_ASSISTANT_DESIGN.md`
@@ -43,6 +43,7 @@ Priorities are `P0` (required foundation), `P1` (MVP), and `P2` (post-MVP).
 | 7 | League-wide opportunity search is safe and deterministic | Phase 6 gate passes |
 | 8 | The read-only MVP is recommendation-ready | Phase 7 gate passes |
 | 9 | League Beta's 12-team, two-FLEX format is supported and optimized | TA-801 passes and the user approves prioritizing League Beta |
+| 10 | Trade reports survive legitimate ranking exclusions and automatic targets respect roster-context utility | User approves the September 18 correctness milestone |
 
 ## Phase 0 — Activation and baseline
 
@@ -298,23 +299,27 @@ real offer while retaining an obvious stop when data or assumptions are weak.
 | ID | P | Status | Work and deliverable | Depends | Context | Exit evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | TA-801 | P0 | DONE | Run the complete golden fixture matrix and map all 14 MVP acceptance criteria to passing tests/evidence. | Phase 7 | R§12; D§15 | All deterministic fixture criteria pass in the 283-test suite; every remaining live or audit obligation is explicitly assigned below. |
-| TA-802 | P0 | PLANNED | Refresh a real read-only League Alpha snapshot; hand-audit ownership, boards, waiver baselines, diagnosis, gaps, one entered package, and top search alternatives. | TA-801 | R§12; D§6, §15 | Every automated result reconciles to current Sleeper rosters and exact calculations. |
-| TA-803 | P0 | PLANNED | Audit network methods, secrets, cache/export contents, source attribution/licensing, and failure behavior. | TA-802 | R§2.1, §3.6, §11-13; D§5, §13-14 | GET-only Sleeper boundary is proven; key and unnecessary licensed rows are absent. |
-| TA-804 | P0 | PLANNED | Run full unit/regression suite, CLI smoke checks, deterministic replay, coverage/completeness checks, and documentation/link validation. | TA-803 | R§12.10-12.13; D§15 | All suites pass from repository root with no Draft behavior change. |
-| TA-805 | P1 | PLANNED | Update README commands, current handoff, product context, and a concise Trade operations runbook without making large docs startup context. | TA-804 | R§9-11; D§12-14 | A new agent can run/stop the MVP using only routed context. |
-| TA-806 | P0 | PLANNED | Present the audited MVP and known limitations for user approval; close or extend the active milestone based on evidence. | TA-805 | R§12-13; D§16 | User decision and exact next milestone are recorded; no automated trade is submitted. |
+| TA-802 | P0 | OPERATIONAL | Refresh a real read-only League Alpha snapshot; hand-audit ownership, boards, waiver baselines, diagnosis, gaps, one entered package, and top search alternatives. This is an on-demand recurring operation, not unfinished development. | TA-801 | R§12; D§6, §15 | Every run uses fresh League Alpha evidence and reconciles automated results to current Sleeper rosters and exact calculations. |
+| TA-803 | P0 | SUPERSEDED | Audit network methods, secrets, cache/export contents, source attribution/licensing, and failure behavior. | OS-006, OS-007, OS-013 | R§2.1, §3.6, §11-13; D§5, §13-14 | Public-release gates, full-history review, redistribution review, and the automated GET-only boundary cover the intended evidence. |
+| TA-804 | P0 | SUPERSEDED | Run full unit/regression suite, CLI smoke checks, deterministic replay, coverage/completeness checks, and documentation/link validation. | OS-006, OS-007, OS-013 | R§12.10-12.13; D§15 | Blocking multi-platform CI, clean-candidate validation, and post-publication verification cover the release checks; generic link maintenance is repository work. |
+| TA-805 | P1 | CLOSED | Update README commands, current handoff, product context, and a concise Trade operations runbook without making large docs startup context. | OS-005, OS-008–OS-012, OS-014–OS-018 | R§9-11; D§12-14 | The public README documents Trade workflows and routed status/context files provide the handoff. A dedicated runbook is optional documentation, not a blocker. |
+| TA-806 | P0 | OBSOLETE | Present the audited MVP and known limitations for user approval; close or extend the active milestone based on evidence. | Phase 9, OS-013 | R§12-13; D§16 | League Beta Phase 9 and the approved public alpha supersede this sequencing gate; no Trade milestone remains active. |
 
-The user deferred TA-802's fresh League Alpha audit until the weekend after
-September 7 and approved prioritizing the separately scoped League Beta expansion.
-TA-802 remains planned; no League Alpha refresh should run during Phase 9.
+Backlog audit completed September 17, 2026. TA-802 is retained only as a fresh,
+on-demand League Alpha operation because its evidence expires and it is not a
+publication or development prerequisite. TA-803 through TA-806 no longer form
+an executable dependency chain: the public-release program, completed League
+Beta Phase 9, public documentation, and blocking release workflow supplied or
+superseded their intended evidence. The historical Phase 8 gate below remains
+design history and does not authorize work.
 
-### Phase 8 gate — MVP definition of done
+### Historical Phase 8 gate — original MVP definition of done
 
-The MVP is complete only when every acceptance criterion passes on fixtures and
-a fresh League Alpha snapshot, all outputs remain read-only, current ownership and
-identity are complete, both valuation boards and raw projections are auditable,
-both teams' lineup/depth/risk effects are correct, saved results reproduce, the
-full Draft suite stays green, and the user accepts the handoff.
+This original gate required every acceptance criterion to pass on fixtures and
+a fresh League Alpha snapshot. It also required read-only outputs, complete
+current ownership and identity, auditable valuation boards and raw projections,
+correct lineup/depth/risk effects for both teams, reproducible saved results, a
+green Draft suite, and user acceptance of the handoff.
 
 ## Acceptance-criteria traceability
 
@@ -376,6 +381,33 @@ replays deterministically, League Alpha and Draft regressions remain green, and 
 user accepts the read-only handoff. An unclassified nonzero skill scoring
 setting, partial ownership/identity, or failed horizon gate still stops before
 recommendations.
+
+## Phase 10 — Ranking-exclusion resilience and roster-context targets
+
+Football consequence: an injured or otherwise unranked player must not prevent a
+league report, while an automatic target must not call the full generic value of
+a redundant third quarterback a benefit when that quarterback barely affects the
+user's optimal lineup.
+
+This phase is a user-approved correctness repair after the September 18 live
+searches. It applies league-neutral mechanics and verifies League Alpha and
+League Beta independently. It does not copy either league's calibration, alter
+authoritative expert ranks, change Draft or Waiver policy, or authorize a Sleeper
+transaction.
+
+| ID | P | Status | Work and deliverable | Depends | Context | Exit evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| TA-1001 | P0 | DONE | Preserve the complete authoritative provider rank-slot distribution when building Trade projection curves even when a ranked player cannot map into the current Sleeper player universe. Continue to exclude unmapped players from roster/value boards, audit the mismatch, and fail visibly only when the provider distribution itself is incomplete. | September 18 League Beta false stop | R§6.4, §6.7, §11-12; D§6, §7.2, §14-15 | The curve builder now receives the complete canonical provider distribution. A provider-only WR slot remains in the curve but outside the board universe; genuine curve and board coverage failures remain covered. All 25 value-board tests pass. |
+| TA-1002 | P0 | DONE | Make automatic Trade target selection use roster-context marginal utility. Prevent an incoming asset at a one-starter position from being credited as an unrestricted upgrade when it only creates excess redundant depth, bind need/surplus rationale to the assets that supply it, and expose incoming-asset lineup use so small incidental gains cannot disguise a negative core exchange. Entered packages remain evaluable. | TA-1001 | R§3.2, §6.5-6.7, §8.1-8.2, §9, §12; D§7.3, §8.2-8.3, §10-12, §15 | The Phase 10 search policy derives starting capacity from each league's actual slots, permits one reserve at a one-starter position, rejects an added third 1QB, preserves QB-for-QB and superflex cases, binds need rationale to incoming starters, and reports incoming use. All 18 search tests and all 112 Trade tests pass. |
+| TA-1003 | P0 | DONE | Run focused and full regressions, then fresh GET-only Trade searches for League Alpha and League Beta. Reconcile each league separately and compare the corrected outputs with the September 18 evidence. | TA-1001-TA-1002 | R§11-12; D§14-15 | Live evidence passes and replays: Alpha hash `f46d834e73b0935a` returns no target after 5,094 enumerated/27 exact packages and records two redundant-position rejections; Beta hash `7cfa494b39a6ed4b` returns no target after 6,226/33 and no longer stops at WR 106/107. The dedicated 14-test context gate and all 568 repository tests pass. CI now runs the context gate separately on every push and pull request. No Sleeper write occurred. |
+
+### Phase 10 gate
+
+Phase 10 completes only when provider-only ranking exclusions preserve the
+authoritative positional distribution without entering roster boards, automatic
+targets value redundant positions through actual roster use, both leagues have
+separate fresh evidence, all regressions pass, and no Sleeper write or expert-rank
+invention occurs.
 
 ## Deferred beyond the player-only redraft MVP
 

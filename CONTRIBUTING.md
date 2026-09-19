@@ -18,6 +18,7 @@ Use Python 3.11 or newer. From a checkout:
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
+python -m unittest tests.test_context_routing
 python -m unittest discover -s tests
 ```
 
@@ -25,6 +26,9 @@ On macOS/Linux, activate with `source .venv/bin/activate`. Production code
 uses the Python standard library; tests use `unittest`. Offline help,
 `example-config`, and `doctor` need no provider credentials. Provider tests
 should use fakes or synthetic fixtures, never live private league evidence.
+Run the fast context-routing check after editing `.codex/context`, a backlog,
+or public repository metadata; CI runs the same gate on every push and pull
+request.
 
 ## Patches
 

@@ -9,6 +9,21 @@ permissions:
   contents: read
 
 jobs:
+  context-routing:
+    name: conditional context routing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Gate context size, routes, and public boundaries
+        run: python -m unittest tests.test_context_routing
+
   unit-tests:
     name: ${{ matrix.os }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}

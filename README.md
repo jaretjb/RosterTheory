@@ -37,7 +37,7 @@ setup-checking commands without a FantasyPros key.
 RosterTheory is installed directly from GitHub:
 
 ```powershell
-git clone https://github.com/jaret81/RosterTheory.git
+git clone https://github.com/jaretjb/RosterTheory.git
 cd RosterTheory
 python -m venv .venv
 ./.venv/Scripts/Activate.ps1

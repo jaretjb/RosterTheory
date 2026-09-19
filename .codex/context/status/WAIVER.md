@@ -1,34 +1,29 @@
 # Waiver Assistant current status
 
-Updated: September 16, 2026 (America/Los_Angeles)
+Updated: September 17, 2026 (America/Los_Angeles)
 
-The Waiver Assistant is read-only for both leagues. WA-012 through WA-015
-provide FantasyPros Waiver, role, symmetric emerging-upside scenario, and
-league-local policy evidence. Market and trusted-expert ranks stay separate;
-incomplete, stale, conflicting, spike-only, excessive-downside, and
-protected-drop cases fail closed. WA-016 adds decision-time capture and
-look-ahead-safe walk-forward reporting. No policy has been promoted.
+The Waiver Assistant is read-only for both leagues. Detailed task evidence and
+exit proofs remain in the selected rows of `docs/WAIVER_ASSISTANT_TASKS.md`.
 
-WA-017 current-week inactive omission resilience is complete. FantasyPros
-source-omission zeroes can be reconciled only for the current week when fresh
-league-local Sleeper data reports IR/PUP/SUSP/OUT. Healthy-player and future-
-week omissions still fail closed.
+- WA-012 through WA-015 provide FantasyPros Waiver, role, symmetric emerging-
+  upside, and league-local policy evidence. Market and trusted-expert ranks stay
+  separate; incomplete, stale, conflicting, spike-only, excessive-downside, and
+  protected-drop cases fail closed.
+- WA-017 permits current-week projection-omission zeroes only for fresh league-
+  local IR/PUP/SUSP/OUT evidence; healthy and future-week omissions fail closed.
+- WA-018 leads human reports with the move, reason, and weekly effect.
+- WA-019 maps numeric DST identities only through unique normalized teams and
+  compares weekly points/ranks with the incumbent.
+- WA-020 shows five explained `Worth a look` candidates, keeps incomplete
+  players visible but ineligible, and extends complete RB valuation to RB60.
+- WA-021 allows a legal same-position add with superior fresh weekly rank, ROS
+  ECR, and projection to override stale non-ROS ownership gates only.
 
-WA-020 notable-candidate explanations are complete. Human search output gives a
-five-player `Worth a look` shortlist with ranks, roster comparison, and an
-exclusion reason. Complete RB valuation extends through RB60; incomplete
-players remain visible but ineligible. Full proofs remain in JSON.
-
-WA-021 fresh-rank dominance is complete. Waiver uses two-hour rank/expert caches.
-A legal same-position add that wins weekly rank, ROS ECR, and remaining
-projection may override stale non-ROS ownership gates; other gates remain.
-
-WA-019 DST identity reconciliation is complete. Unique normalized team
-abbreviations map numeric DST IDs while ambiguity fails closed. Search reports
-weekly points and ranks against the incumbent.
-
-WA-018 action-first human search reporting is complete. Output now leads with
-the move, reason, and weekly effect, then compact defense, kicker, and player
-watchlists. Technical proofs remain in JSON. All 520 tests pass.
-
-WA-006 weekly audits remain recurring read-only operations. No milestone is active.
+WA-006 audits are recurring operations. WA-016 is optional fail-closed shadow
+research, not an active milestone or public-alpha blocker; its evidence is
+required before probability or threshold promotion. No policy is promoted.
+The completed shared replacement milestone makes general add/drop and K/DST
+bye/inactive deltas use the next acquirable waiver alternative, excluding the
+evaluated add and locked players. Structural holes do not assume a second
+move; the existing one-QB streamer comparison remains separate. Full technical
+proofs remain in JSON. No Waiver milestone is active.
