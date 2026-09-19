@@ -823,6 +823,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         current_rank=5,
         ros_rank=None,
         drop_name=None,
+        weekly_deltas=None,
+        streamer_points=None,
     ):
         snapshot = waiver_snapshot()
         roster_position = "DEF" if position == "DST" else position
@@ -830,6 +832,11 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         add_id = f"add_{position.lower()}"
         incumbent = player(incumbent_id, f"Roster {position}", position, "ST1")
         target = player(add_id, f"Candidate {position}", position, "ST2")
+        streamer = (
+            player("stream_dst", "Available Streamer", "DST", "ST3")
+            if position == "DST" and streamer_points is not None
+            else None
+        )
         user_team = replace(
             snapshot.teams[0],
             player_ids=(*snapshot.teams[0].player_ids, incumbent_id),
@@ -847,24 +854,43 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 roster_positions=(*snapshot.league.roster_positions, roster_position),
             ),
             teams=(user_team, *snapshot.teams[1:]),
-            players=(*snapshot.players, incumbent, target),
+            players=(*snapshot.players, incumbent, target, *((streamer,) if streamer else ())),
             owner_by_player=(*snapshot.owner_by_player, (incumbent_id, "1")),
             roster_capacity=(capacity, *snapshot.roster_capacity[1:]),
             acquisitions=(
                 *snapshot.acquisitions,
                 PlayerAcquisition(incumbent_id, "LOCKED", "1", (), ("fixture",)),
                 PlayerAcquisition(add_id, "FREE_AGENT", None, (), ("fixture",)),
+                *(
+                    (
+                        PlayerAcquisition(
+                            "stream_dst", "FREE_AGENT", None, (), ("fixture",)
+                        ),
+                    )
+                    if streamer
+                    else ()
+                ),
             ),
         )
+        deltas = weekly_deltas or (current_delta, future_delta, future_delta)
         projection_rows = (
             *projections(),
             *(
                 Projection(incumbent_id, "WEEKLY", week, (), 8.0, "fixture")
                 for week in (1, 2, 3)
             ),
-            Projection(add_id, "WEEKLY", 1, (), 8.0 + current_delta, "fixture"),
-            Projection(add_id, "WEEKLY", 2, (), 8.0 + future_delta, "fixture"),
-            Projection(add_id, "WEEKLY", 3, (), 8.0 + future_delta, "fixture"),
+            *(
+                Projection(add_id, "WEEKLY", week, (), 8.0 + delta, "fixture")
+                for week, delta in zip((1, 2, 3), deltas)
+            ),
+            *(
+                (
+                    Projection("stream_dst", "WEEKLY", week, (), points, "fixture")
+                    for week, points in zip((1, 2, 3), streamer_points)
+                )
+                if streamer_points is not None
+                else ()
+            ),
         )
         value_rows = (
             *values(),
@@ -883,6 +909,20 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 24.0 + current_delta + 2 * future_delta,
                 current_week_position_rank=current_rank,
                 rest_of_season_position_rank=ros_rank,
+            ),
+            *(
+                (
+                    PlayerValueInput(
+                        "stream_dst",
+                        0.0,
+                        0.0,
+                        sum(streamer_points),
+                        current_week_position_rank=4,
+                        rest_of_season_position_rank=12,
+                    ),
+                )
+                if streamer_points is not None
+                else ()
             ),
         )
         evaluated = evaluate_waiver(
@@ -905,20 +945,37 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                     position, current_delta=2.0, future_delta=-1.0, ros_rank=8
                 )
                 self.assertEqual(result.decision_label, "ADD NOW")
-                self.assertEqual(result.decision.decision_path, f"{position}_STREAM")
+                self.assertEqual(
+                    result.decision.decision_path,
+                    "DST_ROLLING_STREAM" if position == "DST" else "K_STREAM",
+                )
                 self.assertFalse(result.decision.elite_dst_exception)
 
-    def test_elite_dst_can_survive_a_bad_week_but_non_elite_cannot(self):
+    def test_future_dst_advantage_is_watch_only_regardless_of_ros_rank(self):
         elite = self.special_team_evaluation(
             "DST", current_delta=-1.0, future_delta=1.0, ros_rank=2
         )
         ordinary = self.special_team_evaluation(
             "DST", current_delta=-1.0, future_delta=1.0, ros_rank=4
         )
-        self.assertEqual(elite.decision_label, "ADD NOW")
-        self.assertEqual(elite.decision.decision_path, "ELITE_DST")
-        self.assertTrue(elite.decision.elite_dst_exception)
-        self.assertEqual(ordinary.decision_label, "PASS")
+        self.assertEqual(elite.decision_label, "WATCH")
+        self.assertEqual(elite.decision.decision_path, "SPECIAL_TEAM_NEAR_THRESHOLD")
+        self.assertFalse(elite.decision.elite_dst_exception)
+        self.assertEqual(ordinary.decision_label, "WATCH")
+
+    def test_dst_target_must_beat_attainable_four_week_streaming_baseline(self):
+        result = self.special_team_evaluation(
+            "DST",
+            current_delta=-0.94,
+            weekly_deltas=(-0.94, -1.28, 0.35),
+            streamer_points=(7.9, 9.0, 9.0),
+            ros_rank=3,
+        )
+        evidence = result.candidates[0].dst_streaming
+        self.assertEqual(result.decision_label, "WATCH")
+        self.assertEqual(evidence.horizon_weights, (1.0, 0.5, 0.25))
+        self.assertLess(evidence.weighted_advantage, 0.0)
+        self.assertEqual(evidence.weeks[1].baseline_player_id, "stream_dst")
 
     def test_special_team_missing_weekly_rank_is_never_affirmative(self):
         result = self.special_team_evaluation(

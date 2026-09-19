@@ -1066,7 +1066,7 @@ def search_waiver_candidates(
         )
     base = WaiverSearch(
         schema_version=8,
-        evaluation_schema_version=11,
+        evaluation_schema_version=13,
         product="WAIVER ASSISTANT",
         operation="COMPLETE WAIVER SEARCH",
         league_key=snapshot.league_key,

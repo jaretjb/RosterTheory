@@ -211,21 +211,37 @@ def optimize_lineup(
     *,
     limited_player_ids: Iterable[str] = (),
     maximum_limited_players: int | None = None,
+    required_filled_slots: Iterable[str] = (),
 ) -> LineupResult:
     """Return a deterministic maximum-point legal assignment.
 
     ``maximum_limited_players`` supports replacement-counterfactual lineups:
     callers may expose several legal waiver choices while limiting the lineup
     to the number of roster slots that were otherwise uncovered.
+
+    ``required_filled_slots`` prevents a replacement from filling an unrelated
+    higher-scoring slot while leaving the original uncovered slot empty.  This
+    matters for fixed positions such as DST and K in mixed-position contexts.
     """
     player_list = sorted(players, key=lambda player: player.player_id)
     slots = lineup_slots(roster_positions)
+    slot_index_by_id = {slot_id: index for index, (slot_id, _) in enumerate(slots)}
+    required_slot_ids = frozenset(required_filled_slots)
+    unknown_required = tuple(sorted(required_slot_ids - set(slot_index_by_id)))
+    if unknown_required:
+        raise ValueError(
+            "required_filled_slots contains unknown slot(s): "
+            + ", ".join(unknown_required)
+        )
+    required_mask = sum(1 << slot_index_by_id[slot_id] for slot_id in required_slot_ids)
     limited_ids = frozenset(limited_player_ids)
     if maximum_limited_players is not None and maximum_limited_players < 0:
         raise ValueError("maximum_limited_players must be non-negative")
     constrained = maximum_limited_players is not None and bool(limited_ids)
     single_position_result = (
-        None if constrained else _single_position_lineup(player_list, slots, points)
+        None
+        if constrained or required_mask
+        else _single_position_lineup(player_list, slots, points)
     )
     if single_position_result is not None:
         return single_position_result
@@ -271,8 +287,15 @@ def optimize_lineup(
                 ):
                     updated[state_key] = candidate
         states = updated
+    eligible_states = {
+        key: value
+        for key, value in states.items()
+        if key[0] & required_mask == required_mask
+    }
+    if required_mask and not eligible_states:
+        raise ValueError("No legal lineup can fill every required slot")
     (mask, _), (score, selected_by_slot) = min(
-        states.items(),
+        (eligible_states or states).items(),
         key=lambda item: (
             -item[0][0].bit_count(),
             -item[1][0],

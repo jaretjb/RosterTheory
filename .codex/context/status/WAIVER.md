@@ -10,16 +10,19 @@ exit proofs remain in the selected rows of `docs/WAIVER_ASSISTANT_TASKS.md`.
   live FantasyPros expert contract, resumes shared history, and works for both
   leagues from the default config. Search remains a performance target.
 
+- WA-023 requires DST moves to beat this week's and the four-week decaying
+  incumbent/streamer baseline. Future-only value is WATCH; K/DST replacements
+  must match the fixed position.
+
 - WA-012–WA-015 provide Waiver Wire, role, emerging-upside, and league-local
-  policy evidence. Market/expert ranks stay separate; incomplete or unsafe
-  cases fail closed.
+  policy evidence; incomplete cases fail closed.
 - WA-017 permits current-week projection-omission zeroes only for fresh league-
   local IR/PUP/SUSP/OUT evidence; healthy and future-week omissions fail closed.
 - WA-018 leads human reports with the move, reason, and weekly effect.
 - WA-019 maps numeric DST identities only through unique normalized teams and
   compares weekly points/ranks with the incumbent.
-- WA-020 shows five explained `Worth a look` candidates, keeps incomplete
-  players visible but ineligible, and extends complete RB valuation to RB60.
+- WA-020 explains five `Worth a look` candidates and keeps incomplete players
+  visible but ineligible.
 - WA-021 allows a legal same-position add with superior fresh weekly rank, ROS
   ECR, and projection to override stale non-ROS ownership gates only.
 

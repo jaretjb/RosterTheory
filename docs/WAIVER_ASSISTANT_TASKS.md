@@ -782,3 +782,29 @@ Acceptance:
 - Focused tests cover automatic preparation, explicit-input compatibility,
   legacy-policy migration, empty expert responses, resumability, and human/JSON
   failures. The full repository suite and Ruff pass.
+
+## WA-023 — Availability-aware DST streaming valuation
+
+Status: complete September 18, 2026
+
+Goal: make DST waiver advice optimize the near-term decisions a manager can
+actually take instead of treating a defense as a forced season-long hold.
+
+Acceptance:
+
+- Score DST add/drop decisions over Weeks 0–3 with league-local projected
+  points and explicit horizon weights `1.0, 0.5, 0.25, 0.125`.
+- Compare the target with the incumbent and legal, currently acquirable DST
+  streaming alternatives; do not credit a target for beating an implausible
+  season-long hold baseline.
+- Require an immediate DST acquisition to clear the weighted streaming
+  baseline. A future-only advantage is `WATCH`/stash context, not an
+  affirmative one-for-one DST swap.
+- Restrict replacement-floor players to eligibility for the uncovered lineup
+  slots so a QB or other position cannot substitute for a missing DST.
+- Preserve league-local scoring, evidence completeness, read-only Sleeper
+  behavior, deterministic JSON proofs, and existing non-DST Waiver behavior.
+- Focused regression tests cover the Denver/Tampa Bay and Denver/San Francisco
+  shapes, streaming alternatives, and same-position replacement floors. The
+  full repository suite and Ruff pass, and both configured leagues are
+  validated read-only before publication.

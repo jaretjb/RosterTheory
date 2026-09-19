@@ -379,9 +379,8 @@ def _best_waiver_reason(evaluation: Any, selected: Any) -> str:
     path = decision.decision_path
     if path == "FRESH_RANK_DOMINANCE":
         return "The add ranks higher this week and for the rest of the season without losing projected value."
-    if path == "ELITE_DST":
-        rank = selected.ownership.rest_of_season_add_rank
-        return f"This is a rest-of-season DST{rank} hold, even though it is not the best one-week stream."
+    if path == "DST_ROLLING_STREAM":
+        return "This defense clears both the current-week and four-week attainable-streamer baselines."
     if path == "DST_STREAM":
         return "This defense supplies the strongest approved current-week streaming gain."
     if path == "K_STREAM":
@@ -406,7 +405,11 @@ def _special_team_lines(
         ),
         key=lambda row: (
             row.candidates[0].ownership.current_week_add_rank or 10_000,
-            -row.candidates[0].current_week_delta,
+            -(
+                row.candidates[0].dst_streaming.current_week_advantage
+                if position == "DST" and row.candidates[0].dst_streaming.applicable
+                else row.candidates[0].current_week_delta
+            ),
             row.add_player_id,
         ),
     )[:limit]
@@ -417,11 +420,16 @@ def _special_team_lines(
         drop_name = names.get(drop_id, drop_id) if drop_id else "open slot"
         rank = selected.ownership.current_week_add_rank
         label = evaluation.decision_label or "PASS"
+        rolling = (
+            f" | 4W {selected.dst_streaming.weighted_advantage:+.2f}"
+            if position == "DST" and selected.dst_streaming.applicable
+            else ""
+        )
         lines.append(
             f"- {names.get(evaluation.add_player_id, evaluation.add_player_id)}: "
             f"{position}{rank if rank is not None else '?'} | "
             f"{selected.current_week_add_points:.2f} pts | "
-            f"{selected.current_week_delta:+.2f} vs {drop_name} | {label}"
+            f"{selected.current_week_delta:+.2f} vs {drop_name}{rolling} | {label}"
         )
     return lines
 
@@ -679,12 +687,8 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
                 if selected.ownership.rest_of_season_add_rank is not None
                 else "unavailable"
             )
-            + "; elite DST exception "
-            + (
-                "used"
-                if evaluation.decision and evaluation.decision.elite_dst_exception
-                else "not used"
-            ),
+            + "; rolling DST guard "
+            + ("active" if evaluation.add_position == "DST" else "not applicable"),
         )
         if evaluation.add_position == "DST":
             drop_points = (
@@ -701,6 +705,19 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
                 f"(DST{selected.ownership.current_week_drop_rank or '?'}); "
                 f"lineup gain {selected.current_week_delta:+.2f}",
             )
+            if selected.dst_streaming.applicable:
+                lines.insert(
+                    8,
+                    "DST rolling value: weighted target "
+                    f"{selected.dst_streaming.weighted_target_points:.2f} vs attainable "
+                    f"baseline {selected.dst_streaming.weighted_baseline_points:.2f}; "
+                    f"advantage {selected.dst_streaming.weighted_advantage:+.2f}; "
+                    "weeks "
+                    + ", ".join(
+                        f"W{row.week} {row.target_advantage:+.2f}×{row.weight:g}"
+                        for row in selected.dst_streaming.weeks
+                    ),
+                )
     if selected.holding.applicable:
         lines.insert(
             6,

@@ -4,6 +4,14 @@ No implementation milestone is active as of September 18, 2026
 (America/Los_Angeles). Completed records below are retained as handoff history
 and do not authorize additional work.
 
+WA-023 — Availability-aware DST streaming valuation is complete. DST decisions
+now use a four-week `1.0/0.5/0.25/0.125` comparison against the incumbent and
+currently acquirable streamers, require both an immediate and weighted edge,
+and classify future-only cases as WATCH. Fixed K/DST replacement slots cannot
+be filled by another position. Both live Denver recommendations became WATCH;
+all 591 tests and Ruff pass. Details are in
+`docs/COMPLETED_WAIVER_ASSISTANT_WA_023.md`.
+
 Trade TA-1201 — Search runtime optimization and publication is complete.
 League Beta's full search fell from about 225 seconds to about 63 seconds while
 retaining 6,226 enumerated packages, 33 exact evaluations, identical rejection

@@ -450,6 +450,11 @@ def lineup_with_replacement_floor(
         points,
         limited_player_ids=replacements,
         maximum_limited_players=uncovered_slots,
+        required_filled_slots=tuple(
+            row.slot
+            for row in full_lineup.assignments
+            if row.slot.split(":", 1)[0] in {"DST", "K"}
+        ),
     )
     selected = {row.player_id for row in optimized.assignments}
     replacement_ids = tuple(sorted(selected.intersection(replacements)))

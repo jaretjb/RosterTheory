@@ -163,6 +163,29 @@ class InSeasonReplacementCounterfactualTests(unittest.TestCase):
         self.assertEqual(result.roster_starter_ids, ("kicker",))
         self.assertEqual(result.replacement_player_ids, ("next_dst",))
 
+    def test_dst_bye_cannot_be_replaced_by_higher_scoring_superflex_qb(self) -> None:
+        players = (
+            player("active_qb", "QB", "ACT"),
+            player("bye_dst", "DST", "BYE"),
+            player("waiver_qb", "QB", "FA1"),
+            player("waiver_dst", "DST", "FA2"),
+        )
+        result = replacement_result(
+            players=players,
+            roster_positions=("SUPER_FLEX", "DST", "BN"),
+            roster={"active_qb", "bye_dst"},
+            points={
+                "active_qb": 20.0,
+                "bye_dst": 8.0,
+                "waiver_qb": 19.0,
+                "waiver_dst": 6.0,
+            },
+            bye_teams=("BYE",),
+            evaluation_positions=("QB", "DST"),
+        )
+        self.assertEqual(result.lineup.score, 26.0)
+        self.assertEqual(result.replacement_player_ids, ("waiver_dst",))
+
 
 if __name__ == "__main__":
     unittest.main()

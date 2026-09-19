@@ -15,6 +15,7 @@ from roster_theory.inseason.evaluation import (
     KNOWN_INACTIVE,
     RiskImpact,
     TeamImpact,
+    WeeklyProjectionMatrix,
     build_weekly_projection_matrix,
     depth_above_waiver,
     lineup,
@@ -53,6 +54,7 @@ COMPLETE_PROJECTION_COVERAGE = frozenset(
 SKILL_POSITIONS = frozenset({"QB", "RB", "WR", "TE"})
 SPECIAL_TEAM_POSITIONS = frozenset({"K", "DST"})
 WAIVER_POSITIONS = ("QB", "RB", "WR", "TE", "K", "DST")
+DST_STREAMING_HORIZON_WEIGHTS = (1.0, 0.5, 0.25, 0.125)
 
 
 def _normalized_positions(player: Player) -> frozenset[str]:
@@ -246,6 +248,30 @@ class WeeklyStreamingBaseline:
 
 
 @dataclass(frozen=True, slots=True)
+class WeeklyDstStreamingComparison:
+    week: int
+    weight: float
+    target_points: float
+    baseline_player_id: str | None
+    baseline_points: float
+    target_advantage: float
+    alternative_player_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class DstStreamingEvidence:
+    applicable: bool
+    horizon_weights: tuple[float, ...]
+    weeks: tuple[WeeklyDstStreamingComparison, ...]
+    weighted_target_points: float
+    weighted_baseline_points: float
+    weighted_advantage: float
+    current_week_advantage: float
+    best_future_week_advantage: float
+    strongest_uncertainty: str
+
+
+@dataclass(frozen=True, slots=True)
 class QuarterbackHoldingEvidence:
     applicable: bool
     reason: str
@@ -355,6 +381,7 @@ class DropCandidateEvaluation:
     skill_player: SkillPlayerDecisionEvidence
     current_week_add_points: float
     current_week_drop_points: float | None
+    dst_streaming: DstStreamingEvidence
 
 
 @dataclass(frozen=True, slots=True)
@@ -541,6 +568,108 @@ def _validate_inputs(
         current_status_week_only=True,
     )
     return value_map, context
+
+
+def _dst_streaming_evidence(
+    *,
+    add_player_id: str,
+    drop_player_id: str | None,
+    add_position: str,
+    context: InSeasonContext,
+    matrix: WeeklyProjectionMatrix,
+    player_by_id: Mapping[str, Player],
+) -> DstStreamingEvidence:
+    if add_position != "DST":
+        return DstStreamingEvidence(
+            applicable=False,
+            horizon_weights=(),
+            weeks=(),
+            weighted_target_points=0.0,
+            weighted_baseline_points=0.0,
+            weighted_advantage=0.0,
+            current_week_advantage=0.0,
+            best_future_week_advantage=0.0,
+            strongest_uncertainty="ADD_IS_NOT_DST",
+        )
+
+    alternative_ids = tuple(
+        sorted(
+            {
+                *(
+                    (drop_player_id,)
+                    if drop_player_id is not None
+                    and drop_player_id in player_by_id
+                    and "DST" in _normalized_positions(player_by_id[drop_player_id])
+                    else ()
+                ),
+                *(
+                    player_id
+                    for player_id in context.unowned_player_ids
+                    if player_id != add_player_id
+                    and player_id in player_by_id
+                    and "DST" in _normalized_positions(player_by_id[player_id])
+                ),
+            }
+        )
+    )
+    rows: list[WeeklyDstStreamingComparison] = []
+    for horizon_index, week in enumerate(
+        context.weeks[: len(DST_STREAMING_HORIZON_WEIGHTS)]
+    ):
+        weight = DST_STREAMING_HORIZON_WEIGHTS[horizon_index]
+        target_cell = matrix.cell(add_player_id, week.week)
+        target_points = (
+            float(target_cell.points)
+            if target_cell is not None
+            and target_cell.points is not None
+            and target_cell.availability == "ACTIVE"
+            else 0.0
+        )
+        alternatives = tuple(
+            sorted(
+                (
+                    float(cell.points),
+                    player_id,
+                )
+                for player_id in alternative_ids
+                if (cell := matrix.cell(player_id, week.week)) is not None
+                and cell.points is not None
+                and cell.availability == "ACTIVE"
+            )
+        )
+        baseline_points, baseline_player_id = max(
+            alternatives,
+            key=lambda row: row[0],
+            default=(0.0, None),
+        )
+        rows.append(
+            WeeklyDstStreamingComparison(
+                week=week.week,
+                weight=weight,
+                target_points=round(target_points, 3),
+                baseline_player_id=baseline_player_id,
+                baseline_points=round(baseline_points, 3),
+                target_advantage=round(target_points - baseline_points, 3),
+                alternative_player_ids=tuple(player_id for _, player_id in alternatives),
+            )
+        )
+    weighted_target = sum(row.target_points * row.weight for row in rows)
+    weighted_baseline = sum(row.baseline_points * row.weight for row in rows)
+    return DstStreamingEvidence(
+        applicable=True,
+        horizon_weights=tuple(row.weight for row in rows),
+        weeks=tuple(rows),
+        weighted_target_points=round(weighted_target, 3),
+        weighted_baseline_points=round(weighted_baseline, 3),
+        weighted_advantage=round(weighted_target - weighted_baseline, 3),
+        current_week_advantage=(rows[0].target_advantage if rows else 0.0),
+        best_future_week_advantage=max(
+            (row.target_advantage for row in rows[1:]), default=0.0
+        ),
+        strongest_uncertainty=(
+            "Future streamer availability is estimated from defenses that are acquirable now"
+        ),
+    )
 
 
 def _unavailable_contingency_evidence(
@@ -1490,6 +1619,14 @@ def evaluate_waiver(
                 else ()
             ),
         )
+        dst_streaming = _dst_streaming_evidence(
+            add_player_id=add_player.player_id,
+            drop_player_id=drop_id,
+            add_position=add_position,
+            context=context,
+            matrix=matrix,
+            player_by_id=player_by_id,
+        )
         candidates.append(
             DropCandidateEvaluation(
                 drop_player_id=drop_id,
@@ -1526,6 +1663,7 @@ def evaluate_waiver(
                     if drop_id is not None
                     else None
                 ),
+                dst_streaming=dst_streaming,
             )
         )
     ordered = tuple(
@@ -1687,7 +1825,7 @@ def evaluate_waiver(
     warnings.append("No Waiver decision policy was applied; no final label is available")
     user_settings = dict(snapshot.league.platform_settings)
     base = WaiverEvaluation(
-        schema_version=12,
+        schema_version=13,
         product="WAIVER ASSISTANT",
         operation="ENTERED ADD/DROP EVALUATION",
         league_key=snapshot.league_key,

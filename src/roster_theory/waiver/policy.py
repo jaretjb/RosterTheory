@@ -1248,12 +1248,15 @@ def _assess_special_team_candidate(
         if evaluation.add_position == "K"
         else policy.dst_current_week_gain_floor
     )
-    stream_pass = selected.current_week_delta >= stream_floor
-    elite_pass = (
-        elite
-        and selected.current_week_delta >= -policy.elite_dst_maximum_current_week_loss
-        and selected.lineup.weighted_delta >= policy.elite_dst_weighted_lineup_floor
-    )
+    dst_streaming = selected.dst_streaming
+    if evaluation.add_position == "DST":
+        stream_pass = (
+            dst_streaming.applicable
+            and dst_streaming.current_week_advantage >= stream_floor
+            and dst_streaming.weighted_advantage >= 0.0
+        )
+    else:
+        stream_pass = selected.current_week_delta >= stream_floor
     gates = (
         _gate(
             "complete_special_team_evidence",
@@ -1272,19 +1275,37 @@ def _assess_special_team_candidate(
             "A currently inactive target cannot receive an affirmative label",
         ),
         _gate(
-            "current_week_stream_or_elite_dst",
-            stream_pass or elite_pass,
+            (
+                "current_week_and_rolling_stream"
+                if evaluation.add_position == "DST"
+                else "current_week_stream"
+            ),
+            stream_pass,
             "==",
             True,
-            stream_pass or elite_pass,
-            "K/DST must improve the current week unless an authoritative top-three ROS DST passes the elite guard",
+            stream_pass,
+            (
+                "DST must improve this week and beat the four-week weighted "
+                "incumbent/streamer baseline"
+                if evaluation.add_position == "DST"
+                else "K must improve the current week"
+            ),
         ),
     )
     affirmative = all(gate.passed for gate in gates)
     watch_plausible = (
-        selected.current_week_delta
+        (
+            dst_streaming.applicable
+            and (
+                dst_streaming.current_week_advantage
+                >= policy.special_teams_watch_current_week_gain_floor
+                or dst_streaming.best_future_week_advantage > 0.0
+                or elite
+            )
+        )
+        if evaluation.add_position == "DST"
+        else selected.current_week_delta
         >= policy.special_teams_watch_current_week_gain_floor
-        or elite
     )
     if affirmative:
         if evaluation.acquisition_state == AcquisitionState.FREE_AGENT.value:
@@ -1294,7 +1315,9 @@ def _assess_special_team_candidate(
         else:
             label = "ACQUIRE"
         decision_path = (
-            "ELITE_DST" if elite_pass and not stream_pass else f"{evaluation.add_position}_STREAM"
+            "DST_ROLLING_STREAM"
+            if evaluation.add_position == "DST"
+            else f"{evaluation.add_position}_STREAM"
         )
         strongest_uncertainty = (
             "Special-team thresholds are controlled-fixture calibrated, not validated against historical streaming outcomes"
@@ -1311,12 +1334,15 @@ def _assess_special_team_candidate(
         decision_path = "SPECIAL_TEAM_WEEKLY_FAILURE"
         first_failed = next(gate for gate in gates if not gate.passed)
         strongest_uncertainty = first_failed.explanation
-    residual = selected.lineup.weighted_delta - selected.current_week_delta
-    priority_score = round(
-        policy.special_teams_current_week_weight * selected.current_week_delta
-        + residual,
-        3,
-    )
+    if evaluation.add_position == "DST":
+        priority_score = dst_streaming.weighted_advantage
+    else:
+        residual = selected.lineup.weighted_delta - selected.current_week_delta
+        priority_score = round(
+            policy.special_teams_current_week_weight * selected.current_week_delta
+            + residual,
+            3,
+        )
     decision = WaiverDecisionAssessment(
         label=label,
         decision_path=decision_path,
@@ -1324,13 +1350,17 @@ def _assess_special_team_candidate(
         policy_hash=policy.policy_hash,
         calibration_mode=policy.calibration_mode,
         priority_score=priority_score,
-        elite_dst_exception=elite_pass and not stream_pass,
+        elite_dst_exception=False,
         gates=gates,
         reversal_conditions=(
-            f"Current-week lineup gain falls below {stream_floor:+.1f}",
-            f"DST rest-of-season rank is worse than {policy.elite_dst_ros_rank_cutoff} or unavailable",
-            f"Elite DST current-week loss exceeds {policy.elite_dst_maximum_current_week_loss:.1f}",
-            f"Elite DST remaining-week lineup delta falls below {policy.elite_dst_weighted_lineup_floor:+.1f}",
+            (
+                f"Current-week DST advantage over the attainable baseline falls below {stream_floor:+.1f}"
+                if evaluation.add_position == "DST"
+                else f"Current-week lineup gain falls below {stream_floor:+.1f}"
+            ),
+            "DST four-week weighted advantage over incumbent/streamers falls below +0.0",
+            "A stronger currently acquirable DST enters the rolling baseline",
+            "Future streamer availability materially changes",
             "Authoritative weekly rank, projections, value coverage, or material-news freshness becomes incomplete",
         ),
     )

@@ -377,7 +377,7 @@ class WaiverEvaluationTests(unittest.TestCase):
         evidence = waiver_wire_evidence()
         result = self.evaluate(waiver_wire_evidence=evidence)
         selected = result.candidates[0].ownership
-        self.assertEqual(result.schema_version, 12)
+        self.assertEqual(result.schema_version, 13)
         self.assertEqual(selected.waiver_wire_market_add_rank, 2.0)
         self.assertEqual(selected.waiver_wire_market_add_position_rank, 1.0)
         self.assertEqual(selected.waiver_wire_selected_add_ranks[0].expert_id, "17")
