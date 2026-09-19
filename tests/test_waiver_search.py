@@ -978,6 +978,57 @@ class WaiverSearchTests(unittest.TestCase):
 
 
 class WaiverSearchServiceAndCliTests(unittest.TestCase):
+    def test_search_without_inputs_prepares_builds_and_reports(self):
+        args = SimpleNamespace(
+            league="league_alpha", inputs=None, snapshot=None, config="config.json",
+            policy=None, player_cache="players.json", save_evidence=None, json=True,
+        )
+        prepared = {"errors": []}
+        built = {"output_path": "fresh-inputs.json"}
+        searched = object()
+        with (
+            patch("roster_theory.cli.prepare_season_inputs", return_value=prepared) as prepare,
+            patch("roster_theory.cli.build_waiver_inputs", return_value=built) as build,
+            patch("roster_theory.cli.search_waivers", return_value=searched) as search,
+            patch("roster_theory.cli.waiver_search_report", return_value={"ok": True}),
+            patch("roster_theory.cli._print_json") as output,
+        ):
+            command_waiver_search(args)
+
+        prepare.assert_called_once_with(
+            "league_alpha", assistant="waiver", config_path="config.json"
+        )
+        build.assert_called_once()
+        self.assertEqual(search.call_args.kwargs["inputs_path"], "fresh-inputs.json")
+        output.assert_called_once_with({"ok": True})
+
+    def test_search_reuses_fresh_automatic_input_bundle(self):
+        args = SimpleNamespace(
+            league="league_alpha", inputs=None, snapshot=None, config="config.json",
+            policy=None, player_cache="players.json", save_evidence=None, json=True,
+        )
+        prepared = {
+            "errors": [],
+            "leagues": [{
+                "league": "league_alpha",
+                "artifacts": [{
+                    "artifact": "waiver_inputs", "status": "ready",
+                    "path": "cached-inputs.json",
+                }],
+            }],
+        }
+        with (
+            patch("roster_theory.cli.prepare_season_inputs", return_value=prepared),
+            patch("roster_theory.cli.build_waiver_inputs") as build,
+            patch("roster_theory.cli.search_waivers", return_value=object()) as search,
+            patch("roster_theory.cli.waiver_search_report", return_value={"ok": True}),
+            patch("roster_theory.cli._print_json"),
+        ):
+            command_waiver_search(args)
+
+        build.assert_not_called()
+        self.assertEqual(search.call_args.kwargs["inputs_path"], "cached-inputs.json")
+
     def test_search_parser_is_namespaced_and_read_only(self):
         for league_key in ("league_alpha", "league_beta"):
             with self.subTest(league_key=league_key):

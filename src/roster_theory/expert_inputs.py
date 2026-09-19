@@ -35,6 +35,7 @@ from roster_theory.trade.experts import (
     normalize_current_experts,
     parse_inseason_accuracy_page,
     score_experts,
+    load_inseason_accuracy,
     write_inseason_accuracy,
 )
 
@@ -449,12 +450,22 @@ def build_inseason_pool(
                     position: datetime.fromisoformat(updates[position].replace("Z", "+00:00"))
                     for position in SKILL_POSITIONS
                 }
-                if any(value.tzinfo is None for value in parsed_updates.values()):
-                    reason = "undated_position_availability"
-                elif any(
-                    not 0 <= (normalized_now - value.astimezone(timezone.utc)).total_seconds()
+                # FantasyPros' expert directory emits second-resolution
+                # timestamps without an offset. Interpreting those as UTC is
+                # conservative for the provider's US publication workflow: it
+                # makes evidence appear older, never newer, than US local time.
+                normalized_updates = {
+                    position: (
+                        value.replace(tzinfo=timezone.utc)
+                        if value.tzinfo is None
+                        else value.astimezone(timezone.utc)
+                    )
+                    for position, value in parsed_updates.items()
+                }
+                if any(
+                    not 0 <= (normalized_now - value).total_seconds()
                     <= freshness_hours * 3600
-                    for value in parsed_updates.values()
+                    for value in normalized_updates.values()
                 ):
                     reason = "stale_position_availability"
                 elif source_counts.get(active.source_name.casefold(), 0) >= maximum_source_count:
@@ -612,7 +623,9 @@ def _current_expert_evidence(
     path = _evidence_path(replay_dir or evidence_dir, "current_experts", season)
     if replay_dir is not None:
         return _load_evidence(path, kind="current_experts", year=season)
-    payload = client.ranking_experts(season, type="ROS", include_overall="true")
+    payload = client.ranking_experts(
+        season, ranking_type="ros", details="experts"
+    )
     record = _evidence_record(
         "current_experts",
         season,
@@ -645,6 +658,7 @@ def refresh_expert_inputs(
     pool_size: int = 5,
     maximum_source_count: int = 2,
     freshness_hours: float = 48.0,
+    reuse_historical: bool = False,
     now: datetime | None = None,
     client: FantasyProsClient | None = None,
     fetch_text: Callable[[str, float], str] = _http_text,
@@ -670,7 +684,27 @@ def refresh_expert_inputs(
         budget=budget,
     )
     replay = Path(replay_dir) if replay_dir else None
-    call_count = 0 if replay else (5 if artifact in {"draft-accuracy", "all"} else 0) + (6 if artifact in {"inseason-pool", "all"} else 0)
+    reusable_inseason: tuple[InSeasonAccuracy, ...] | None = None
+    if (
+        replay is None
+        and reuse_historical
+        and artifact == "inseason-pool"
+        and paths.inseason_accuracy.is_file()
+    ):
+        try:
+            candidate = load_inseason_accuracy(paths.inseason_accuracy)
+            if {row.year for row in candidate} == set(years):
+                reusable_inseason = candidate
+        except (OSError, ValueError, KeyError):
+            reusable_inseason = None
+    call_count = 0 if replay else (
+        (5 if artifact in {"draft-accuracy", "all"} else 0)
+        + (
+            1 if reusable_inseason is not None
+            else 6 if artifact in {"inseason-pool", "all"}
+            else 0
+        )
+    )
     budget_state = _read_budget(paths.budget)
     budget_state.reserve(call_count, today=(now or datetime.now(timezone.utc)).date())
     planned_calls = [
@@ -823,27 +857,41 @@ def refresh_expert_inputs(
             writes.append({"artifact": artifact_id, "destination": str(path), "overwrite": True, "status": "completed"})
 
     if artifact in {"inseason-pool", "all"}:
-        evidence = _page_evidence(
-            "inseason_accuracy",
-            years,
-            url_template=INSEASON_ACCURACY_URL,
-            evidence_dir=paths.evidence_dir,
-            replay_dir=replay,
-            captured_at=captured_at,
-            minimum_interval=minimum_interval,
-            timeout_seconds=timeout_seconds,
-            fetch_text=fetch_text,
-        )
-        accuracy_rows: list[InSeasonAccuracy] = []
-        for record in evidence:
-            accuracy_rows.extend(
-                parse_inseason_accuracy_page(
-                    str(record["payload"]),
-                    int(record["year"]),
-                    retrieved_at=str(record["captured_at"]),
-                    source_url=str(record["source_url"]),
-                )
+        evidence: list[dict[str, Any]] = []
+        if reusable_inseason is not None:
+            accuracy_rows = list(reusable_inseason)
+        else:
+            evidence = _page_evidence(
+                "inseason_accuracy",
+                years,
+                url_template=INSEASON_ACCURACY_URL,
+                evidence_dir=paths.evidence_dir,
+                replay_dir=replay,
+                captured_at=captured_at,
+                minimum_interval=minimum_interval,
+                timeout_seconds=timeout_seconds,
+                fetch_text=fetch_text,
             )
+            accuracy_rows: list[InSeasonAccuracy] = []
+            for record in evidence:
+                accuracy_rows.extend(
+                    parse_inseason_accuracy_page(
+                        str(record["payload"]),
+                        int(record["year"]),
+                        retrieved_at=str(record["captured_at"]),
+                        source_url=str(record["source_url"]),
+                    )
+                )
+        covered_years = {row.year for row in accuracy_rows}
+        if covered_years != set(years):
+            raise CoverageIncomplete(
+                "In-season accuracy did not produce complete five-season evidence"
+            )
+        # Historical accuracy is a shared provider fact. Persist it before the
+        # current directory is selected so an access-limited directory response
+        # can be retried without downloading five unchanged seasons again.
+        if reusable_inseason is None:
+            write_inseason_accuracy(accuracy_rows, paths.inseason_accuracy)
         if not replay:
             time.sleep(minimum_interval)
         current_record = _current_expert_evidence(
@@ -854,6 +902,13 @@ def refresh_expert_inputs(
             client=client or FantasyProsClient(),
         )
         current = normalize_current_experts(current_record["payload"])
+        if not current:
+            limited = bool(current_record["payload"].get("public_api_limited"))
+            suffix = " (public_api_limited=true)" if limited else ""
+            raise CoverageIncomplete(
+                "FantasyPros returned zero current ranking experts"
+                f"{suffix}; current expert authority is unavailable from this API access tier"
+            )
         pool_rows, selection_audit = build_inseason_pool(
             tuple(accuracy_rows),
             current,
@@ -863,7 +918,6 @@ def refresh_expert_inputs(
             maximum_source_count=maximum_source_count,
             freshness_hours=freshness_hours,
         )
-        write_inseason_accuracy(accuracy_rows, paths.inseason_accuracy)
         _write_pool(pool_rows, paths.inseason_pool)
         audit_value = {
             "schema_version": POOL_AUDIT_SCHEMA_VERSION,
@@ -880,12 +934,18 @@ def refresh_expert_inputs(
                 "coverage_floor": 0.8,
                 "maximum_source_count": maximum_source_count,
                 "freshness_hours": freshness_hours,
+                "naive_provider_timestamps_assumed_utc": True,
                 "required_positions": list(SKILL_POSITIONS),
                 "preseason_proxy_permitted": False,
             },
             "provider_evidence_hashes": {
                 str(record["year"]): record["payload_hash"] for record in evidence
             }
+            | ({
+                "historical_accuracy_csv": sha256(
+                    paths.inseason_accuracy.read_bytes()
+                ).hexdigest()
+            } if reusable_inseason is not None else {})
             | {"current_experts": current_record["payload_hash"]},
             "selection": selection_audit,
             "pool_hash": stable_hash(pool_rows),

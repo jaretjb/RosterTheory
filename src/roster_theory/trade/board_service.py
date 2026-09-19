@@ -360,7 +360,7 @@ def _input_calls(
                 (
                     "ros_experts",
                     f"/nfl/{season}/rankings/experts",
-                    {"type": "ROS", "include_overall": "true"},
+                    {"ranking_type": "ros", "details": "experts"},
                     ros_experts_max_age,
                 )
             )

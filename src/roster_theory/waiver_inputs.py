@@ -125,40 +125,31 @@ def load_contingency_inputs(
     return tuple(result)
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(
-        description="Build fresh read-only Waiver Assistant inputs for a configured league"
-    )
-    parser.add_argument(
-        "league",
-        help="Configured league key with league-local Waiver policy files",
-    )
-    parser.add_argument("--output")
-    parser.add_argument("--config", help="League configuration JSON")
-    parser.add_argument("--policy", help="Waiver decision policy override")
-    parser.add_argument(
-        "--waiver-wire-policy", help="Waiver Wire evidence policy override"
-    )
-    parser.add_argument(
-        "--contingency-file",
-        help="Optional league-scoped named-role evidence for counterfactual audit",
-    )
-    args = parser.parse_args(argv)
-    league_key = args.league
+def build_waiver_inputs(
+    league_key: str,
+    *,
+    output: str | Path | None = None,
+    config: str | Path | None = None,
+    policy_path: str | Path | None = None,
+    waiver_wire_policy_path: str | Path | None = None,
+    contingency_file: str | Path | None = None,
+) -> dict[str, object]:
+    """Build a fresh league-local input bundle and return its audit summary."""
+
     output_path = Path(
-        args.output or f"data/cache/waiver/{league_key}_live_inputs.json"
+        output or f"data/cache/waiver/{league_key}_live_inputs.json"
     )
     policy = load_waiver_policy(
         resolve_league_policy_path(
             league_key,
             "waiver_decision",
-            config_path=args.config,
-            explicit_path=args.policy,
+            config_path=config,
+            explicit_path=policy_path,
         )
     )
     board = refresh_value_boards(
         league_key,
-        config_path=args.config,
+        config_path=config,
         cache_dir="data/cache/waiver/fantasypros/2026",
         budget_path="data/cache/trade/fantasypros/daily_budget.json",
         include_special_teams=True,
@@ -168,15 +159,15 @@ def main(argv: list[str] | None = None) -> None:
     )
     snapshot = board.refresh.snapshot
     waiver_state = refresh_waiver_snapshot(
-        league_key, config_path=args.config
+        league_key, config_path=config
     ).snapshot
     waiver_wire_refresh = refresh_waiver_wire_evidence(
         config=load_waiver_wire_config(
             resolve_league_policy_path(
                 league_key,
                 "waiver_wire",
-                config_path=args.config,
-                explicit_path=args.waiver_wire_policy,
+                config_path=config,
+                explicit_path=waiver_wire_policy_path,
             ),
             league_key=league_key,
         ),
@@ -292,7 +283,7 @@ def main(argv: list[str] | None = None) -> None:
         row for row in board.weekly_projections if row.player_id in covered_ids
     )
     contingencies = load_contingency_inputs(
-        args.contingency_file,
+        contingency_file,
         league_key=league_key,
         snapshot=snapshot,
         projections=projections,
@@ -337,48 +328,67 @@ def main(argv: list[str] | None = None) -> None:
         contingencies=contingencies,
         waiver_wire_evidence=waiver_wire_refresh.evidence,
     )
-    print(
-        json.dumps(
-            {
-                "operation": "WAIVER LIVE INPUT BUILD",
-                "league": league_key,
-                "policy_version": policy.version,
-                "policy_hash": policy.policy_hash,
-                "captured_at": captured_at.isoformat(),
-                "covered_value_players": len(values),
-                "weekly_projection_rows": len(projections),
-                "contingency_relationships": len(contingencies),
-                "user_drop_legality_rows": len(active_supported_ids),
-                "user_players_missing_value_inputs": sorted(
-                    active_supported_ids - covered_ids
-                ),
-                "proved_locked_user_players": sorted(proved_locked),
-                "fantasypros_calls": (
-                    board.call_plan.fantasypros_calls
-                    + waiver_wire_refresh.call_plan.fantasypros_calls
-                ),
-                "fantasypros_cache_hits": (
-                    board.call_plan.cache_hits
-                    + waiver_wire_refresh.call_plan.cache_hits
-                ),
-                "waiver_wire_complete": waiver_wire_refresh.evidence.complete,
-                "waiver_wire_market_complete": (
-                    waiver_wire_refresh.evidence.market_complete
-                ),
-                "waiver_wire_selected_experts_complete": (
-                    waiver_wire_refresh.evidence.selected_experts_complete
-                ),
-                "waiver_wire_warnings": list(waiver_wire_refresh.evidence.warnings),
-                "fantasypros_remaining_after_plan": (
-                    board.call_plan.fantasypros_remaining_after_plan
-                ),
-                "output_path": str(output_path),
-                "sleeper_write_performed": False,
-            },
-            indent=2,
-            sort_keys=True,
-        )
+    return {
+        "operation": "WAIVER LIVE INPUT BUILD",
+        "league": league_key,
+        "policy_version": policy.version,
+        "policy_hash": policy.policy_hash,
+        "captured_at": captured_at.isoformat(),
+        "covered_value_players": len(values),
+        "weekly_projection_rows": len(projections),
+        "contingency_relationships": len(contingencies),
+        "user_drop_legality_rows": len(active_supported_ids),
+        "user_players_missing_value_inputs": sorted(active_supported_ids - covered_ids),
+        "proved_locked_user_players": sorted(proved_locked),
+        "fantasypros_calls": (
+            board.call_plan.fantasypros_calls
+            + waiver_wire_refresh.call_plan.fantasypros_calls
+        ),
+        "fantasypros_cache_hits": (
+            board.call_plan.cache_hits
+            + waiver_wire_refresh.call_plan.cache_hits
+        ),
+        "waiver_wire_complete": waiver_wire_refresh.evidence.complete,
+        "waiver_wire_market_complete": waiver_wire_refresh.evidence.market_complete,
+        "waiver_wire_selected_experts_complete": (
+            waiver_wire_refresh.evidence.selected_experts_complete
+        ),
+        "waiver_wire_warnings": list(waiver_wire_refresh.evidence.warnings),
+        "fantasypros_remaining_after_plan": (
+            board.call_plan.fantasypros_remaining_after_plan
+        ),
+        "output_path": str(output_path),
+        "sleeper_write_performed": False,
+    }
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description="Build fresh read-only Waiver Assistant inputs for a configured league"
     )
+    parser.add_argument(
+        "league", help="Configured league key with league-local Waiver policy files"
+    )
+    parser.add_argument("--output")
+    parser.add_argument("--config", help="League configuration JSON")
+    parser.add_argument("--policy", help="Waiver decision policy override")
+    parser.add_argument(
+        "--waiver-wire-policy", help="Waiver Wire evidence policy override"
+    )
+    parser.add_argument(
+        "--contingency-file",
+        help="Optional league-scoped named-role evidence for counterfactual audit",
+    )
+    args = parser.parse_args(argv)
+    result = build_waiver_inputs(
+        args.league,
+        output=args.output,
+        config=args.config,
+        policy_path=args.policy,
+        waiver_wire_policy_path=args.waiver_wire_policy,
+        contingency_file=args.contingency_file,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

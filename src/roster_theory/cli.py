@@ -136,7 +136,7 @@ from roster_theory.waiver.service import (
     waiver_search_action_summary,
     waiver_search_report,
 )
-from roster_theory.waiver_inputs import main as waiver_inputs_main
+from roster_theory.waiver_inputs import build_waiver_inputs
 from roster_theory.waiver.evaluation import load_waiver_evaluation
 from roster_theory.waiver.search import load_waiver_search
 from roster_theory.trade.board_service import board_refresh_report, refresh_value_boards
@@ -512,18 +512,15 @@ def command_waiver_refresh(args: argparse.Namespace) -> None:
 
 def command_waiver_inputs(args: argparse.Namespace) -> None:
     """Build the installed Waiver input bundle without requiring a source script."""
-
-    argv = [args.league]
-    for option, value in (
-        ("--output", args.output),
-        ("--config", _config_path(args)),
-        ("--policy", args.policy),
-        ("--waiver-wire-policy", args.waiver_wire_policy),
-        ("--contingency-file", args.contingency_file),
-    ):
-        if value is not None:
-            argv.extend((option, str(value)))
-    waiver_inputs_main(argv)
+    result = build_waiver_inputs(
+        args.league,
+        output=args.output,
+        config=_config_path(args),
+        policy_path=args.policy,
+        waiver_wire_policy_path=args.waiver_wire_policy,
+        contingency_file=args.contingency_file,
+    )
+    _print_json(result)
 
 
 def command_waiver_evaluate(args: argparse.Namespace) -> None:
@@ -564,16 +561,52 @@ def command_waiver_search(args: argparse.Namespace) -> None:
         if args.snapshot:
             _print_json(load_waiver_search(args.snapshot))
             return
-        if not args.inputs:
-            raise ValueError("waiver search requires --inputs")
-        result = search_waivers(
-            args.league,
-            inputs_path=args.inputs,
-            output_path=args.save_evidence,
-            player_cache_path=args.player_cache,
-            policy_path=args.policy,
-            config_path=_config_path(args),
-        )
+        inputs_path = args.inputs
+        if not inputs_path:
+            with interactive_progress(
+                "Preparing current Waiver evidence", machine_output=args.json
+            ):
+                preparation = prepare_season_inputs(
+                    args.league,
+                    assistant="waiver",
+                    config_path=_config_path(args),
+                )
+                if preparation.get("errors"):
+                    reasons = "; ".join(
+                        str(row.get("reason") or row.get("type"))
+                        for row in preparation["errors"]
+                    )
+                    raise CoverageIncomplete(
+                        "Automatic Waiver preparation stopped: " + reasons
+                    )
+                waiver_artifact = next(
+                    (
+                        artifact
+                        for league_report in preparation.get("leagues", ())
+                        if league_report.get("league") == args.league
+                        for artifact in league_report.get("artifacts", ())
+                        if artifact.get("artifact") == "waiver_inputs"
+                    ),
+                    None,
+                )
+                if waiver_artifact and waiver_artifact.get("status") == "ready":
+                    inputs_path = str(waiver_artifact["path"])
+                else:
+                    built = build_waiver_inputs(
+                        args.league,
+                        config=_config_path(args),
+                        policy_path=args.policy,
+                    )
+                    inputs_path = str(built["output_path"])
+        with interactive_progress("Searching the Waiver wire", machine_output=args.json):
+            result = search_waivers(
+                args.league,
+                inputs_path=inputs_path,
+                output_path=args.save_evidence,
+                player_cache_path=args.player_cache,
+                policy_path=args.policy,
+                config_path=_config_path(args),
+            )
     except (RosterTheoryError, SleeperError, KeyError, ValueError) as exc:
         _print_product_failure("WAIVER ASSISTANT search", args, exc)
         raise SystemExit(2) from exc
@@ -618,6 +651,43 @@ def command_trade_values(args: argparse.Namespace) -> None:
     _print_json(board_refresh_report(result))
 
 
+def _prepare_trade_analysis(args: argparse.Namespace) -> None:
+    """Refresh required Trade facts before a user-facing live analysis."""
+
+    preparation = prepare_season_inputs(
+        args.league,
+        assistant="trade",
+        config_path=_config_path(args),
+        include_experts=not bool(getattr(args, "expert_pool", None)),
+    )
+    if preparation.get("errors"):
+        reasons = "; ".join(
+            str(row.get("reason") or row.get("type"))
+            for row in preparation["errors"]
+        )
+        raise CoverageIncomplete("Automatic Trade preparation stopped: " + reasons)
+
+    required = {"schedule"}
+    if not getattr(args, "expert_pool", None):
+        required.add("experts.inseason-pool")
+    unresolved = [
+        artifact
+        for league_report in preparation.get("leagues", ())
+        if league_report.get("league") == args.league
+        for artifact in league_report.get("artifacts", ())
+        if artifact.get("artifact") in required
+        and artifact.get("status") != "ready"
+    ]
+    if unresolved:
+        raise CoverageIncomplete(
+            "Automatic Trade preparation could not make required evidence ready: "
+            + "; ".join(
+                f"{row['artifact']}: {row.get('reason') or row['status']}"
+                for row in unresolved
+            )
+        )
+
+
 def command_trade_evaluate(args: argparse.Namespace) -> None:
     try:
         if args.snapshot:
@@ -625,25 +695,30 @@ def command_trade_evaluate(args: argparse.Namespace) -> None:
             return
         if not args.send or not args.receive:
             raise ValueError("trade evaluate requires --send and --receive")
-        result = evaluate_entered_trade(
-            args.league,
-            config_path=_config_path(args),
-            send=args.send,
-            receive=args.receive,
-            options=EvaluationOptions(
-                playoff_weight=args.playoff_weight,
-                allow_partial_schedule=args.allow_partial,
-                allow_rank_only=args.allow_rank_only,
-                drop_overrides=tuple(args.drop),
-                add_overrides=tuple(args.add),
-                risk_posture=args.risk_posture.upper(),
-            ),
-            output_path=args.save_evidence,
-            expert_pool_path=args.expert_pool,
-            cache_dir=args.fantasypros_cache,
-            budget_path=args.budget,
-            policy_path=args.policy,
-        )
+        with interactive_progress(
+            "Preparing current Trade evidence", machine_output=args.json
+        ):
+            _prepare_trade_analysis(args)
+        with interactive_progress("Evaluating the Trade", machine_output=args.json):
+            result = evaluate_entered_trade(
+                args.league,
+                config_path=_config_path(args),
+                send=args.send,
+                receive=args.receive,
+                options=EvaluationOptions(
+                    playoff_weight=args.playoff_weight,
+                    allow_partial_schedule=args.allow_partial,
+                    allow_rank_only=args.allow_rank_only,
+                    drop_overrides=tuple(args.drop),
+                    add_overrides=tuple(args.add),
+                    risk_posture=args.risk_posture.upper(),
+                ),
+                output_path=args.save_evidence,
+                expert_pool_path=args.expert_pool,
+                cache_dir=args.fantasypros_cache,
+                budget_path=args.budget,
+                policy_path=args.policy,
+            )
     except (RosterTheoryError, SleeperError, FantasyProsError, ValueError) as exc:
         _print_product_failure("TRADE ASSISTANT evaluation", args, exc)
         raise SystemExit(2) from exc
@@ -662,16 +737,21 @@ def command_trade_evaluate(args: argparse.Namespace) -> None:
 
 def command_trade_diagnose(args: argparse.Namespace) -> None:
     try:
-        result = diagnose_current_roster(
-            args.league,
-            config_path=_config_path(args),
-            options=EvaluationOptions(risk_posture=args.risk_posture.upper()),
-            output_path=args.output,
-            expert_pool_path=args.expert_pool,
-            cache_dir=args.fantasypros_cache,
-            budget_path=args.budget,
-            policy_path=args.policy,
-        )
+        with interactive_progress(
+            "Preparing current Trade evidence", machine_output=args.json
+        ):
+            _prepare_trade_analysis(args)
+        with interactive_progress("Diagnosing the roster", machine_output=args.json):
+            result = diagnose_current_roster(
+                args.league,
+                config_path=_config_path(args),
+                options=EvaluationOptions(risk_posture=args.risk_posture.upper()),
+                output_path=args.output,
+                expert_pool_path=args.expert_pool,
+                cache_dir=args.fantasypros_cache,
+                budget_path=args.budget,
+                policy_path=args.policy,
+            )
     except (RosterTheoryError, SleeperError, FantasyProsError, ValueError) as exc:
         _print_product_failure("TRADE ASSISTANT diagnosis", args, exc)
         raise SystemExit(2) from exc
@@ -694,15 +774,20 @@ def command_trade_diagnose(args: argparse.Namespace) -> None:
 
 def command_trade_gaps(args: argparse.Namespace) -> None:
     try:
-        result = run_gap_report(
-            args.league,
-            config_path=_config_path(args),
-            output_path=args.output,
-            csv_path=args.csv,
-            expert_pool_path=args.expert_pool,
-            cache_dir=args.fantasypros_cache,
-            budget_path=args.budget,
-        )
+        with interactive_progress(
+            "Preparing current Trade evidence", machine_output=args.json
+        ):
+            _prepare_trade_analysis(args)
+        with interactive_progress("Finding value gaps", machine_output=args.json):
+            result = run_gap_report(
+                args.league,
+                config_path=_config_path(args),
+                output_path=args.output,
+                csv_path=args.csv,
+                expert_pool_path=args.expert_pool,
+                cache_dir=args.fantasypros_cache,
+                budget_path=args.budget,
+            )
     except (RosterTheoryError, SleeperError, FantasyProsError, ValueError) as exc:
         _print_product_failure("TRADE ASSISTANT gap report", args, exc)
         raise SystemExit(2) from exc
@@ -724,25 +809,30 @@ def command_trade_search(args: argparse.Namespace) -> None:
         if args.snapshot:
             _print_json(load_search_evidence(args.snapshot))
             return
-        result = run_league_search(
-            args.league,
-            config_path=_config_path(args),
-            options=EvaluationOptions(risk_posture=args.risk_posture.upper()),
-            config=SearchConfig(
-                small_pool_per_team=args.small_pool,
-                large_pool_per_team=args.large_pool,
-                max_exact_per_opponent=args.max_exact,
-                max_large_exact_per_opponent=args.max_large_exact,
-                max_results=args.max_results,
-            ),
-            output_path=args.output,
-            csv_path=args.csv,
-            expert_pool_path=args.expert_pool,
-            cache_dir=args.fantasypros_cache,
-            budget_path=args.budget,
-            policy_path=args.policy,
-            search_policy_path=args.search_policy,
-        )
+        with interactive_progress(
+            "Preparing current Trade evidence", machine_output=args.json
+        ):
+            _prepare_trade_analysis(args)
+        with interactive_progress("Searching for Trades", machine_output=args.json):
+            result = run_league_search(
+                args.league,
+                config_path=_config_path(args),
+                options=EvaluationOptions(risk_posture=args.risk_posture.upper()),
+                config=SearchConfig(
+                    small_pool_per_team=args.small_pool,
+                    large_pool_per_team=args.large_pool,
+                    max_exact_per_opponent=args.max_exact,
+                    max_large_exact_per_opponent=args.max_large_exact,
+                    max_results=args.max_results,
+                ),
+                output_path=args.output,
+                csv_path=args.csv,
+                expert_pool_path=args.expert_pool,
+                cache_dir=args.fantasypros_cache,
+                budget_path=args.budget,
+                policy_path=args.policy,
+                search_policy_path=args.search_policy,
+            )
     except (RosterTheoryError, SleeperError, FantasyProsError, ValueError) as exc:
         _print_product_failure("TRADE ASSISTANT search", args, exc)
         raise SystemExit(2) from exc
@@ -766,17 +856,22 @@ def command_trade_compare(args: argparse.Namespace) -> None:
         packages = payload.get("packages") if isinstance(payload, dict) else payload
         if not isinstance(packages, list):
             raise ValueError("Package file must be a JSON list or contain a 'packages' list")
-        result = run_package_comparison(
-            args.league,
-            config_path=_config_path(args),
-            packages=packages,
-            options=EvaluationOptions(risk_posture=args.risk_posture.upper()),
-            output_path=args.output,
-            expert_pool_path=args.expert_pool,
-            cache_dir=args.fantasypros_cache,
-            budget_path=args.budget,
-            policy_path=args.policy,
-        )
+        with interactive_progress(
+            "Preparing current Trade evidence", machine_output=args.json
+        ):
+            _prepare_trade_analysis(args)
+        with interactive_progress("Comparing Trade packages", machine_output=args.json):
+            result = run_package_comparison(
+                args.league,
+                config_path=_config_path(args),
+                packages=packages,
+                options=EvaluationOptions(risk_posture=args.risk_posture.upper()),
+                output_path=args.output,
+                expert_pool_path=args.expert_pool,
+                cache_dir=args.fantasypros_cache,
+                budget_path=args.budget,
+                policy_path=args.policy,
+            )
     except (OSError, json.JSONDecodeError, RosterTheoryError, SleeperError, FantasyProsError, ValueError) as exc:
         _print_product_failure("TRADE ASSISTANT comparison", args, exc)
         raise SystemExit(2) from exc
@@ -1764,7 +1859,7 @@ League setup
 Season preparation
   inputs status LEAGUE            Inspect freshness and readiness offline
   inputs prepare LEAGUE           Refresh only missing or stale provider facts
-  Run: roster-theory inputs prepare LEAGUE --assistant trade
+  Advanced diagnostics; analysis commands normally prepare their own inputs.
   Input: configured league and, for live refreshes, authorized provider access.
   Use --all-leagues for shared season evidence with isolated league policies.
 
@@ -1776,16 +1871,16 @@ Draft
   and board/simulation/watch commands need complete expert data and a board.
 
 Trade
-  trade refresh / diagnose / evaluate / search  In-season roster and package work
-  Example: roster-theory trade refresh LEAGUE
-  Input: configured league, current expert and schedule data; decision commands
-  require an approved policy for that league.
+  trade diagnose / evaluate / gaps / search / compare  Current roster/package work
+  Example: roster-theory trade search LEAGUE
+  Analysis commands automatically refresh stale evidence and current ownership;
+  they require an approved policy for that league and never submit an offer.
 
 Waiver
   waiver refresh / evaluate / search  In-season add/drop analysis
-  Example: roster-theory waiver refresh LEAGUE
-  Input: configured league and current expert data; decisions also need fresh
-  availability and legality evidence and an approved policy for that league.
+  Example: roster-theory waiver search LEAGUE
+  Search automatically refreshes stale expert, availability, legality, and
+  league-scored projection evidence, then prints the read-only report.
 
 Diagnostics
   doctor [LEAGUE]                  Check local setup offline, without provider calls
@@ -2354,12 +2449,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     waiver_search = waiver_commands.add_parser(
         "search",
-        help="Search every proved-eligible QB/RB/WR/TE from one immutable input bundle",
+        help="Prepare current evidence and produce a read-only Waiver report",
     )
     waiver_search.add_argument("league")
     waiver_search.add_argument(
         "--inputs",
-        help="Fresh complete Waiver projection, value, availability, and legality evidence",
+        help="Use an existing immutable input bundle instead of preparing automatically",
     )
     waiver_search.add_argument(
         "--player-cache", default="data/cache/waiver/sleeper/players_nfl.json"
@@ -2393,7 +2488,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     trade_evaluate = trade_commands.add_parser(
         "evaluate",
-        help="Evaluate a read-only entered player package for both rosters",
+        help="Prepare current evidence and evaluate a read-only player package",
     )
     trade_evaluate.add_argument("league", help="Configured league key")
     trade_evaluate.add_argument(
@@ -2437,7 +2532,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     trade_diagnose = trade_commands.add_parser(
         "diagnose",
-        help="Diagnose the current roster's weekly needs, depth, byes, and offense risk",
+        help="Prepare current evidence and diagnose roster needs, depth, and risk",
     )
     trade_diagnose.add_argument("league", help="Configured league key")
     trade_diagnose.add_argument(
@@ -2465,7 +2560,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     trade_gaps = trade_commands.add_parser(
         "gaps",
-        help="Show horizon-matched selected-versus-market gaps with ownership",
+        help="Prepare current evidence and show selected-versus-market gaps",
     )
     trade_gaps.add_argument("league", help="Configured league key")
     trade_gaps.add_argument("--json", action="store_true")
@@ -2482,7 +2577,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     trade_search = trade_commands.add_parser(
         "search",
-        help="Find bounded, bilateral league-wide trade opportunities",
+        help="Prepare current evidence and find bilateral trade opportunities",
     )
     trade_search.add_argument("league", help="Configured league key")
     trade_search.add_argument(
@@ -2519,7 +2614,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     trade_compare = trade_commands.add_parser(
         "compare",
-        help="Exactly evaluate and rank packages from a JSON file",
+        help="Prepare current evidence and compare packages from a JSON file",
     )
     trade_compare.add_argument("league", help="Configured league key")
     trade_compare.add_argument(

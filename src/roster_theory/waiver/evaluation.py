@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, IdentityIncomplete, RosterIllegal
 from roster_theory.core.models import Player, Projection
@@ -1090,7 +1090,9 @@ def evaluate_waiver(
     contingency_cache: dict[
         tuple[str, frozenset[str]], PlayerContingencyEvidence
     ] | None = None,
+    evaluation_cache: dict[str, Any] | None = None,
 ) -> WaiverEvaluation:
+    shared_cache = evaluation_cache if evaluation_cache is not None else {}
     assert_current(snapshot, now=now)
     projections = reconcile_current_week_inactive_omissions(snapshot, projections)
     evaluation_time = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
@@ -1101,26 +1103,40 @@ def evaluate_waiver(
             raise CoverageIncomplete(
                 "Waiver Wire evidence belongs to a different league"
             )
-        expected_waiver_hash = stable_hash(
-            asdict(replace(waiver_wire_evidence, evidence_hash=""))
-        )
-        if waiver_wire_evidence.evidence_hash != expected_waiver_hash:
-            raise CoverageIncomplete("Waiver Wire evidence hash is invalid")
+        waiver_marker = waiver_wire_evidence.evidence_hash
+        if shared_cache.get("validated_waiver_wire_hash") != waiver_marker:
+            expected_waiver_hash = stable_hash(
+                asdict(replace(waiver_wire_evidence, evidence_hash=""))
+            )
+            if waiver_marker != expected_waiver_hash:
+                raise CoverageIncomplete("Waiver Wire evidence hash is invalid")
+            shared_cache["validated_waiver_wire_hash"] = waiver_marker
     if emergence_evidence is not None:
         if emergence_evidence.league_key != snapshot.league_key:
             raise CoverageIncomplete(
                 "Emergence evidence belongs to a different league"
             )
-        expected_emergence_hash = stable_hash(
-            asdict(replace(emergence_evidence, evidence_hash=""))
-        )
-        if emergence_evidence.evidence_hash != expected_emergence_hash:
-            raise CoverageIncomplete("Emergence evidence hash is invalid")
-    waiver_wire_by_id = {
-        row.player_id: row
-        for row in (waiver_wire_evidence.players if waiver_wire_evidence else ())
-        if row.match_status == "MATCHED"
-    }
+        emergence_marker = emergence_evidence.evidence_hash
+        if shared_cache.get("validated_emergence_hash") != emergence_marker:
+            expected_emergence_hash = stable_hash(
+                asdict(replace(emergence_evidence, evidence_hash=""))
+            )
+            if emergence_marker != expected_emergence_hash:
+                raise CoverageIncomplete("Emergence evidence hash is invalid")
+            shared_cache["validated_emergence_hash"] = emergence_marker
+    waiver_wire_marker = (
+        waiver_wire_evidence.evidence_hash if waiver_wire_evidence else None
+    )
+    waiver_cache = shared_cache.get("waiver_wire_by_id")
+    if not waiver_cache or waiver_cache[0] != waiver_wire_marker:
+        waiver_wire_by_id = {
+            row.player_id: row
+            for row in (waiver_wire_evidence.players if waiver_wire_evidence else ())
+            if row.match_status == "MATCHED"
+        }
+        shared_cache["waiver_wire_by_id"] = (waiver_wire_marker, waiver_wire_by_id)
+    else:
+        waiver_wire_by_id = waiver_cache[1]
     if waiver_wire_evidence is not None and len(waiver_wire_by_id) != sum(
         row.match_status == "MATCHED" for row in waiver_wire_evidence.players
     ):
@@ -1232,8 +1248,23 @@ def evaluate_waiver(
             raise RosterIllegal("No proved-legal same-category replacement is droppable")
         drop_ids = legal
 
-    value_map, context = _validate_inputs(snapshot, weeks, projections, values, options)
-    matrix = build_weekly_projection_matrix(context, projections)
+    inputs_marker = (id(snapshot), id(weeks), id(projections), id(values), options)
+    input_cache = shared_cache.get("validated_inputs")
+    if not input_cache or input_cache[0] != inputs_marker:
+        value_map, context = _validate_inputs(
+            snapshot, weeks, projections, values, options
+        )
+        matrix = build_weekly_projection_matrix(context, projections)
+        projection_by_key = {
+            (row.player_id, row.week): row
+            for row in projections
+            if row.horizon == "WEEKLY" and row.week is not None
+        }
+        shared_cache["validated_inputs"] = (
+            inputs_marker, value_map, context, matrix, projection_by_key
+        )
+    else:
+        _, value_map, context, matrix, projection_by_key = input_cache
     evaluated_ids = {add_player.player_id} | supported_roster
     missing_projection_weeks = tuple(
         (player_id, week.week)
@@ -1246,11 +1277,6 @@ def evaluate_waiver(
             "Weekly projections miss evaluated player-weeks: "
             + ", ".join(f"{player_id}/W{week}" for player_id, week in missing_projection_weeks)
         )
-    projection_by_key = {
-        (row.player_id, row.week): row
-        for row in projections
-        if row.horizon == "WEEKLY" and row.week is not None
-    }
     projection_inputs_complete = not missing_projection_weeks and all(
         projection_coverage_is_complete(
             projection_by_key[(player_id, week.week)].coverage_status

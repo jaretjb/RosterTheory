@@ -8,7 +8,12 @@ from pathlib import Path
 
 from roster_theory.core.errors import RequestBudgetExceeded
 from roster_theory.core.identity import reconcile_identities
-from roster_theory.core.lineup import LineupPlayer, lineup_slots, optimize_lineup
+from roster_theory.core.lineup import (
+    LineupPlayer,
+    _single_position_lineup,
+    lineup_slots,
+    optimize_lineup,
+)
 from roster_theory.core.models import Player
 from roster_theory.core.provenance import (
     AnalysisManifest,
@@ -187,6 +192,37 @@ class ScoringAndLineupTests(unittest.TestCase):
         )
         self.assertEqual(result.score, 47.0)
         self.assertEqual(result.total_slots, 3)
+
+    def test_optimizer_handles_two_flex_full_roster_without_bitmask_fallback(self) -> None:
+        players = [
+            LineupPlayer("qb", ("QB",)),
+            LineupPlayer("rb1", ("RB",)),
+            LineupPlayer("rb2", ("RB",)),
+            LineupPlayer("rb3", ("RB",)),
+            LineupPlayer("wr1", ("WR",)),
+            LineupPlayer("wr2", ("WR",)),
+            LineupPlayer("wr3", ("WR",)),
+            LineupPlayer("te", ("TE",)),
+            LineupPlayer("k", ("K",)),
+            LineupPlayer("dst", ("DST",)),
+        ]
+        points = {
+            player.player_id: float(20 - index)
+            for index, player in enumerate(players)
+        }
+
+        positions = (
+            "QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "FLEX", "K", "DEF"
+        )
+        result = _single_position_lineup(
+            sorted(players, key=lambda player: player.player_id),
+            lineup_slots(positions),
+            points,
+        )
+
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result.filled_slots, 10)
 
     def test_optimizer_matches_brute_force_on_small_rosters(self) -> None:
         def brute_force(players, roster_positions, points):

@@ -409,6 +409,53 @@ targets value redundant positions through actual roster use, both leagues have
 separate fresh evidence, all regressions pass, and no Sleeper write or expert-rank
 invention occurs.
 
+## Phase 11 — Single-command Trade analysis
+
+Football consequence: asking for a roster diagnosis, trade search, valuation-gap
+report, entered-offer evaluation, or package comparison should use current,
+league-correct evidence without making the manager operate the data pipeline.
+
+This phase is user-approved on September 18. It changes orchestration and
+documentation only: explicit refresh/preparation commands and replay overrides
+remain available, league policies remain isolated, and every operation remains
+read-only.
+
+| ID | P | Status | Work and deliverable | Depends | Context | Exit evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| TA-1101 | P0 | DONE | Make every user-facing Trade analysis command automatically prepare required schedule/expert evidence and then refresh current Sleeper/value-board inputs. Reuse fresh caches, preserve explicit overrides and snapshot replay, show concise interactive progress, keep machine output clean, repair same-league legacy policy metadata when safe, document the one-command workflow, and verify both configured leagues independently without a Sleeper write. | OS-018, WA-022, Phase 10 | R§3.1-3.6, §9-11; D§12-14 | Diagnose, evaluate, gaps, search, and compare now prepare automatically; replay stays offline and advanced overrides remain. Both default-config leagues pass live diagnosis and search independently. Alpha search enumerated 5,094/evaluated 27; Beta 6,226/33; both returned no target. All 588 tests and Ruff pass; no Sleeper write occurred. |
+
+### Phase 11 gate
+
+Phase 11 completes only when the normal Trade workflow starts with the requested
+analysis command rather than `inputs prepare` or `trade refresh`, fresh evidence
+is reused, failures name the actual unresolved prerequisite, replay remains
+offline, both leagues retain separate policy/evidence, and no Sleeper write or
+expert-rank invention occurs.
+
+## Phase 12 — Search runtime optimization and publication
+
+Football consequence: a 12-team, two-FLEX league search must remain broad
+enough to find the same credible packages while completing quickly enough to
+feel like an interactive analysis rather than a batch job.
+
+This phase is user-approved on September 18. Optimize repeated deterministic
+calculation before considering any reduction in candidate coverage. Preserve
+the exact package enumeration, pruning, evaluation, ordering, evidence, and
+league-local policy behavior. Publish the complete tested Waiver and Trade
+changes to the external repository only after privacy and release gates pass.
+
+| ID | P | Status | Work and deliverable | Depends | Context | Exit evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| TA-1201 | P0 | DONE | Profile the current League Beta search, remove repeated pure calculations through scoped immutable caches/precomputation, and prove identical search semantics on controlled fixtures and both saved/live league cases. Record before/after runtime and do not reduce enumeration or exact-evaluation coverage. Run the complete quality/privacy gates, commit all intended Waiver/Trade work, and push the tested branch to the public external repository. | TA-1101, Phase 10 | R§3.2, §10-11; D§11, §15 | The measured two-FLEX allocation bug is fixed and repeated per-shape selection work is precomputed. League Beta fell from about 225s to 63s while retaining 6,226/33 and no target; League Alpha retained 5,094/27 and no target. Complete tests, Ruff, release/privacy gates, commit, push, and remote verification passed. |
+
+### Phase 12 gate
+
+Phase 12 completes only when measured runtime improves materially without
+changing candidate coverage or recommendation semantics, deterministic tests
+and live league-isolated comparisons pass, no private artifact enters the
+commit, release gates pass, and the resulting commit is verified on the public
+remote. No Sleeper write is authorized.
+
 ## Deferred beyond the player-only redraft MVP
 
 These are intentionally unnumbered so they cannot be mistaken for active work:

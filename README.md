@@ -118,9 +118,10 @@ If your FantasyPros plan does not provide the data an assistant needs, you can
 import an authorized CSV instead. See the
 [manual import guide](docs/MANUAL_FANTASYPROS_IMPORT.md).
 
-## Prepare the data
+## Inspect or prefetch data
 
-This is the normal command to run before using an assistant:
+Assistant commands prepare the data they need automatically. These lower-level
+commands are available for troubleshooting, offline checks, and prefetching:
 
 ```text
 roster-theory inputs prepare home_league --assistant all
@@ -134,8 +135,8 @@ roster-theory inputs status home_league --assistant all
 roster-theory doctor home_league
 ```
 
-Use `draft`, `trade`, or `waiver` instead of `all` when you only want to prepare
-one assistant.
+Use `draft`, `trade`, or `waiver` instead of `all` when you only want to inspect
+or prefetch one assistant.
 
 ## Draft
 
@@ -161,10 +162,11 @@ roster-theory watch-mock SLEEPER_DRAFT_URL --league home_league --board PATH_TO_
 
 ## Trade
 
-Prepare the current data, review your roster, or search for ideas:
+Request a current read-only roster diagnosis or trade search directly. Each
+analysis refreshes stale schedule/expert evidence, current Sleeper ownership,
+and value boards automatically while reusing fresh caches:
 
 ```text
-roster-theory inputs prepare home_league --assistant trade
 roster-theory trade diagnose home_league
 roster-theory trade search home_league
 ```
@@ -176,16 +178,21 @@ roster-theory trade evaluate home_league --send "Player A" --receive "Player B"
 ```
 
 Repeat `--send` or `--receive` for multi-player trades.
+`trade gaps` and `trade compare` use the same automatic preparation. The
+lower-level `inputs prepare`, `trade refresh`, and `trade values` commands remain
+available for diagnostics and reproducible operations; they are not normal
+end-user prerequisites.
 
 ## Waiver
 
-Build a fresh waiver input file, then use the path printed by that command:
+Request a current read-only waiver report with one command. It refreshes stale
+evidence and reuses fresh cached inputs automatically:
 
 ```text
-roster-theory inputs prepare home_league --assistant waiver
-roster-theory waiver inputs home_league
-roster-theory waiver search home_league --inputs PATH_TO_INPUTS
+roster-theory waiver search home_league
 ```
+
+`--inputs PATH` remains available for an explicit reproducible input bundle.
 
 To evaluate one move:
 

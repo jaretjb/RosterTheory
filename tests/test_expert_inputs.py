@@ -205,6 +205,80 @@ class ExpertInputTests(unittest.TestCase):
                     fetch_text=lambda _url, _timeout: accuracy_html(),
                 )
 
+    def test_empty_limited_directory_persists_history_and_reports_access(self):
+        class LimitedClient(FakeFantasyPros):
+            def ranking_experts(self, season, **params):
+                return {"experts": [], "count": 0, "public_api_limited": True}
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "leagues.json"
+            write_config(config)
+            paths = default_expert_input_paths(
+                "league_alpha", 2099, data_dir=root / "data"
+            )
+            with patch("roster_theory.expert_inputs.time.sleep"), self.assertRaisesRegex(
+                CoverageIncomplete, "public_api_limited=true"
+            ):
+                refresh_expert_inputs(
+                    "league_alpha",
+                    config_path=config,
+                    data_dir=root / "data",
+                    artifact="inseason-pool",
+                    now=NOW,
+                    client=LimitedClient(),
+                    fetch_text=lambda _url, _timeout: accuracy_html(),
+                )
+            self.assertTrue(paths.inseason_accuracy.is_file())
+
+            with patch("roster_theory.expert_inputs.time.sleep"), self.assertRaises(
+                CoverageIncomplete
+            ):
+                refresh_expert_inputs(
+                    "league_alpha",
+                    config_path=config,
+                    data_dir=root / "data",
+                    artifact="inseason-pool",
+                    reuse_historical=True,
+                    now=NOW,
+                    client=LimitedClient(),
+                    fetch_text=lambda *_args: self.fail("historical refetch"),
+                )
+
+    def test_provider_naive_update_timestamps_are_conservatively_utc(self):
+        class NaiveClient(FakeFantasyPros):
+            def ranking_experts(self, season, **params):
+                value = current_experts()
+                for expert in value["experts"]:
+                    expert["positions"] = {
+                        position: timestamp.replace("+00:00", "")
+                        for position, timestamp in expert["positions"].items()
+                    }
+                return value
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "leagues.json"
+            write_config(config)
+            with patch("roster_theory.expert_inputs.time.sleep"):
+                result = refresh_expert_inputs(
+                    "league_alpha",
+                    config_path=config,
+                    data_dir=root / "data",
+                    artifact="inseason-pool",
+                    now=NOW,
+                    client=NaiveClient(),
+                    fetch_text=lambda _url, _timeout: accuracy_html(),
+                )
+            self.assertEqual(result["status"], "ready")
+            audit = json.loads(default_expert_input_paths(
+                "league_alpha", 2099, data_dir=root / "data"
+            ).audit.read_text(encoding="utf-8"))
+            self.assertTrue(
+                audit["selection_policy"]["naive_provider_timestamps_assumed_utc"]
+            )
+
+
     def test_cli_exposes_inspect_refresh_validate_and_import(self):
         parser = build_parser()
         for operation in ("inspect", "refresh", "validate"):

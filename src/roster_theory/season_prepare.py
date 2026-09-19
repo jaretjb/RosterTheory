@@ -13,7 +13,11 @@ from roster_theory.expert_inputs import (
     inspect_expert_inputs,
     refresh_expert_inputs,
 )
-from roster_theory.private_setup import inspect_private_setup
+from roster_theory.private_setup import (
+    inspect_private_setup,
+    migrate_legacy_trade_policy_metadata,
+    migrate_legacy_waiver_policy_metadata,
+)
 from roster_theory.schedule_inputs import inspect_schedule_input, prepare_schedule_input
 from roster_theory.sleeper import load_league_config
 
@@ -90,6 +94,7 @@ def inspect_season_inputs(
     now: datetime | None = None,
     expert_freshness_hours: float = 48.0,
     schedule_freshness_hours: float = 24.0,
+    include_experts: bool = True,
 ) -> dict[str, Any]:
     """Inspect preparation inputs offline and return exact recovery commands."""
 
@@ -101,7 +106,7 @@ def inspect_season_inputs(
     for configured in selected:
         key, season = str(configured["key"]), int(configured["season"])
         artifacts: list[dict[str, Any]] = []
-        kind = _expert_kind(assistant)
+        kind = _expert_kind(assistant) if include_experts else None
         if kind:
             expert = inspect_expert_inputs(
                 key, config_path=config_path, artifact=kind, data_dir=data_dir
@@ -183,8 +188,11 @@ def inspect_season_inputs(
             waiver = Path(data_dir) / "cache" / "waiver" / f"{key}_live_inputs.json"
             waiver_status = "ready" if waiver.is_file() else "missing"
             waiver_reason = "current Waiver bundle exists" if waiver.is_file() else "current Waiver input bundle is absent"
-            if waiver.is_file() and _stale(waiver, 2.0, captured):
-                waiver_status, waiver_reason = "stale", "Waiver input bundle exceeded its two-hour freshness window"
+            if waiver.is_file() and _stale(waiver, 5.0 / 60.0, captured):
+                waiver_status, waiver_reason = (
+                    "stale",
+                    "Waiver input bundle exceeded its five-minute freshness window",
+                )
             artifacts.append({
                 "artifact": "waiver_inputs", "status": waiver_status,
                 "authority": "derived_fact", "scope": "league", "horizon": "weekly/ROS",
@@ -245,10 +253,14 @@ def _plan(status: Mapping[str, Any], refresh: str, data_dir: str | Path) -> list
                         })
                     else:
                         paths = default_expert_input_paths(key, season, data_dir=data_dir)
+                        reuse_historical = (
+                            refresh == "auto" and paths.inseason_accuracy.is_file()
+                        )
                         operations.append({
                             "kind": "experts", "artifact": "inseason-pool",
                             "league": key, "season": season, "mode": "provider",
-                            "provider_calls": 6,
+                            "provider_calls": 1 if reuse_historical else 6,
+                            "reuse_historical": reuse_historical,
                             "writes": [str(paths.inseason_accuracy), str(paths.inseason_pool), str(paths.audit), str(paths.evidence_dir), str(paths.budget)],
                         })
                         first_inseason[season] = key
@@ -268,14 +280,37 @@ def prepare_season_inputs(
     now: datetime | None = None,
     expert_refresh: Callable[..., dict[str, Any]] = refresh_expert_inputs,
     schedule_refresh: Callable[..., dict[str, Any]] = prepare_schedule_input,
+    trade_policy_migrate: Callable[..., dict[str, Any]] = migrate_legacy_trade_policy_metadata,
+    waiver_policy_migrate: Callable[..., dict[str, Any]] = migrate_legacy_waiver_policy_metadata,
+    include_experts: bool = True,
 ) -> dict[str, Any]:
     """Prepare only stale or missing provider facts; keep human policy explicit."""
 
     if refresh not in REFRESH_MODES:
         raise ValueError(f"Unsupported refresh mode: {refresh}")
+    migrations: list[dict[str, Any]] = []
+    if assistant in {"trade", "all"}:
+        for selected in _selected_leagues(
+            league, all_leagues=all_leagues, config_path=config_path
+        ):
+            migrations.append(
+                trade_policy_migrate(
+                    str(selected["key"]), config_path=config_path, dry_run=dry_run
+                )
+            )
+    if assistant in {"waiver", "all"}:
+        for selected in _selected_leagues(
+            league, all_leagues=all_leagues, config_path=config_path
+        ):
+            migrations.append(
+                waiver_policy_migrate(
+                    str(selected["key"]), config_path=config_path, dry_run=dry_run
+                )
+            )
     before = inspect_season_inputs(
         league, all_leagues=all_leagues, assistant=assistant,
         config_path=config_path, data_dir=data_dir, now=now,
+        include_experts=include_experts,
     )
     operations = _plan(before, refresh, data_dir)
     for operation in operations:
@@ -306,6 +341,7 @@ def prepare_season_inputs(
                     expert_refresh(
                         key, config_path=config_path, artifact=operation["artifact"],
                         data_dir=data_dir, replay_dir=replay_dir, now=now,
+                        reuse_historical=bool(operation.get("reuse_historical")),
                     )
                 operation["status"] = "completed"
             except Exception as exc:  # Preserve completed work so rerun can resume.
@@ -319,11 +355,13 @@ def prepare_season_inputs(
         after = inspect_season_inputs(
             league, all_leagues=all_leagues, assistant=assistant,
             config_path=config_path, data_dir=data_dir, now=now,
+            include_experts=include_experts,
         )
     doctor = audit_setup(config_path=config_path, league_key=league if not all_leagues else None)
     return {
         **after, "operation": "prepare", "dry_run": dry_run,
         "offline": offline, "refresh": refresh, "preflight": operations,
+        "policy_migrations": migrations,
         "provider_calls": sum(int(row["provider_calls"]) for row in operations if not offline),
         "errors": errors, "doctor": doctor,
         "status": (

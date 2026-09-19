@@ -194,6 +194,16 @@ def import_private_runtime(
     source = Path(input_path)
     value = _config_value(source)
     target = resolve_league_config_path(config_path)
+    # Policy paths are anchored to the directory containing leagues.json.
+    # Preserve their targets when importing the config to a different runtime
+    # directory instead of silently retargeting them under the destination.
+    for league in value["leagues"]:
+        policies = dict(league.get("policies") or {})
+        for key, configured in policies.items():
+            path = Path(str(configured)).expanduser()
+            if not path.is_absolute():
+                policies[key] = str((source.parent / path).resolve())
+        league["policies"] = policies
     written, backup = _atomic_write(
         target, _json_text(value), allow_existing=replace, dry_run=dry_run
     )
@@ -524,6 +534,96 @@ def scaffold_private_inputs(
         "scaffold", writes=writes, backups=backups, dry_run=dry_run,
         league=league_key, season=selected_season, artifacts=list(selected),
         policy_status="UNCALIBRATED",
+    )
+
+
+def migrate_legacy_waiver_policy_metadata(
+    league_key: str,
+    *,
+    config_path: str | Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Add season metadata to same-league legacy Waiver policies."""
+
+    resolved = resolve_league_config_path(config_path)
+    league = find_league_config(league_key, resolved)
+    season = int(league["season"])
+    paths = artifact_paths(league_key, config_path=resolved, season=season)
+    writes: list[Path] = []
+    backups: list[Path | None] = []
+    for artifact in ("waiver-decision", "waiver-wire"):
+        path = paths[artifact]
+        if not path.is_file():
+            continue
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise ValueError(f"Legacy {artifact} policy must be a JSON object")
+        if str(value.get("league_key") or "") != league_key:
+            raise ValueError(f"Legacy {artifact} policy belongs to another league")
+        declared_season = value.get("season")
+        if declared_season is not None:
+            if int(declared_season) != season:
+                raise ValueError(f"Legacy {artifact} policy belongs to another season")
+            continue
+        value["artifact"] = artifact
+        value["season"] = season
+        written, backup = _atomic_write(
+            path, _json_text(value), allow_existing=True, dry_run=dry_run
+        )
+        writes.append(written)
+        backups.append(backup)
+    return _result(
+        "migrate-waiver-policy-metadata",
+        writes=writes,
+        backups=backups,
+        dry_run=dry_run,
+        league=league_key,
+        season=season,
+    )
+
+
+def migrate_legacy_trade_policy_metadata(
+    league_key: str,
+    *,
+    config_path: str | Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Add season metadata to same-league legacy Trade policies."""
+
+    resolved = resolve_league_config_path(config_path)
+    league = find_league_config(league_key, resolved)
+    season = int(league["season"])
+    paths = artifact_paths(league_key, config_path=resolved, season=season)
+    writes: list[Path] = []
+    backups: list[Path | None] = []
+    for artifact in ("trade-decision", "trade-search"):
+        path = paths[artifact]
+        if not path.is_file():
+            continue
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise ValueError(f"Legacy {artifact} policy must be a JSON object")
+        if str(value.get("league_key") or "") != league_key:
+            raise ValueError(f"Legacy {artifact} policy belongs to another league")
+        declared_season = value.get("season")
+        if declared_season is not None:
+            if int(declared_season) != season:
+                raise ValueError(f"Legacy {artifact} policy belongs to another season")
+            continue
+        value["artifact"] = artifact
+        value["season"] = season
+        written, backup = _atomic_write(
+            path, _json_text(value), allow_existing=True, dry_run=dry_run
+        )
+        writes.append(written)
+        backups.append(backup)
+    return _result(
+        "migrate-trade-policy-metadata",
+        writes=writes,
+        backups=backups,
+        dry_run=dry_run,
+        league=league_key,
+        season=season,
     )
 
 

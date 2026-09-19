@@ -15,6 +15,8 @@ from roster_theory.private_setup import (
     import_private_runtime,
     initialize_private_runtime,
     inspect_private_setup,
+    migrate_legacy_trade_policy_metadata,
+    migrate_legacy_waiver_policy_metadata,
     scaffold_private_inputs,
     set_owner,
     show_redacted_setup,
@@ -49,6 +51,80 @@ def configured_runtime(root: Path) -> Path:
 
 
 class PrivateSetupTests(unittest.TestCase):
+    def test_legacy_trade_policy_metadata_migration_preserves_calibration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = configured_runtime(root)
+            policy_dir = config.parent / "legacy"
+            policy_dir.mkdir()
+            decision = policy_dir / "trade-decision.json"
+            search = policy_dir / "trade-search.json"
+            for path, version in (
+                (decision, "decision-v1"),
+                (search, "search-v1"),
+            ):
+                path.write_text(json.dumps({
+                    "schema_version": 1,
+                    "product": "TRADE ASSISTANT",
+                    "league_key": "league_alpha",
+                    "version": version,
+                    "calibrated_value": 4.5,
+                }), encoding="utf-8")
+            value = json.loads(config.read_text(encoding="utf-8"))
+            value["leagues"][0]["policies"] = {
+                "trade_decision": "legacy/trade-decision.json",
+                "trade_search": "legacy/trade-search.json",
+            }
+            config.write_text(json.dumps(value), encoding="utf-8")
+
+            result = migrate_legacy_trade_policy_metadata(
+                "league_alpha", config_path=config
+            )
+
+            self.assertEqual(len(result["writes"]), 2)
+            self.assertEqual(len(result["backups"]), 2)
+            migrated = json.loads(search.read_text(encoding="utf-8"))
+            self.assertEqual(migrated["season"], 2099)
+            self.assertEqual(migrated["artifact"], "trade-search")
+            self.assertEqual(migrated["calibrated_value"], 4.5)
+            self.assertEqual(migrated["version"], "search-v1")
+
+    def test_legacy_waiver_policy_metadata_migration_preserves_calibration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = configured_runtime(root)
+            policy_dir = config.parent / "legacy"
+            policy_dir.mkdir()
+            decision = policy_dir / "decision.json"
+            wire = policy_dir / "wire.json"
+            decision.write_text(json.dumps({
+                "schema_version": 1, "product": "WAIVER ASSISTANT",
+                "league_key": "league_alpha", "version": "calibrated-v1",
+                "threshold": 7.25,
+            }), encoding="utf-8")
+            wire.write_text(json.dumps({
+                "schema_version": 1, "product": "WAIVER ASSISTANT",
+                "league_key": "league_alpha", "trusted_expert_ids": ["17"],
+            }), encoding="utf-8")
+            value = json.loads(config.read_text(encoding="utf-8"))
+            value["leagues"][0]["policies"] = {
+                "waiver_decision": "legacy/decision.json",
+                "waiver_wire": "legacy/wire.json",
+            }
+            config.write_text(json.dumps(value), encoding="utf-8")
+
+            result = migrate_legacy_waiver_policy_metadata(
+                "league_alpha", config_path=config
+            )
+
+            self.assertEqual(len(result["writes"]), 2)
+            self.assertEqual(len(result["backups"]), 2)
+            migrated = json.loads(decision.read_text(encoding="utf-8"))
+            self.assertEqual(migrated["season"], 2099)
+            self.assertEqual(migrated["artifact"], "waiver-decision")
+            self.assertEqual(migrated["threshold"], 7.25)
+            self.assertEqual(migrated["version"], "calibrated-v1")
+
     def test_init_is_previewable_non_destructive_and_backed_up_on_replace(self):
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / "path with spaces" / "leagues.json"
@@ -81,6 +157,28 @@ class PrivateSetupTests(unittest.TestCase):
                 import_private_runtime(source, config_path=target)
             replaced = import_private_runtime(source, config_path=target, replace=True)
             self.assertEqual(len(replaced["backups"]), 1)
+
+    def test_import_rebases_relative_policy_paths_to_the_source_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source runtime" / "leagues.json"
+            source.parent.mkdir()
+            source.write_text(json.dumps({
+                "owner": {},
+                "leagues": [{
+                    "key": "league_alpha", "season": "2099",
+                    "policies": {"waiver_decision": "policies/waiver.json"},
+                }],
+            }), encoding="utf-8")
+            target = root / "user config" / "leagues.json"
+
+            import_private_runtime(source, config_path=target)
+
+            imported = json.loads(target.read_text(encoding="utf-8"))
+            self.assertEqual(
+                Path(imported["leagues"][0]["policies"]["waiver_decision"]),
+                (source.parent / "policies/waiver.json").resolve(),
+            )
 
     def test_owner_and_league_updates_are_explicit_and_redacted(self):
         with tempfile.TemporaryDirectory() as directory:

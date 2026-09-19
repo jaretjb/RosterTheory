@@ -4,6 +4,32 @@ No implementation milestone is active as of September 18, 2026
 (America/Los_Angeles). Completed records below are retained as handoff history
 and do not authorize additional work.
 
+Trade TA-1201 — Search runtime optimization and publication is complete.
+League Beta's full search fell from about 225 seconds to about 63 seconds while
+retaining 6,226 enumerated packages, 33 exact evaluations, identical rejection
+counts, and no target. League Alpha retained 5,094/27 and no target. Complete
+quality, privacy, packaging, publication, and remote checks pass. Details are
+in `docs/COMPLETED_TRADE_ASSISTANT_TA_1201.md`.
+
+Trade TA-1101 — Single-command Trade analysis is complete. Diagnose, evaluate,
+gaps, search, and compare now prepare required current evidence automatically,
+reuse fresh caches, preserve explicit overrides and offline replay, retain
+league-local policy authority, and remain read-only. Both configured leagues
+completed direct diagnosis and search from the default config. All 588 tests
+and Ruff pass. League Beta's roughly 225-second bounded search remains a performance
+target. Details are in `docs/COMPLETED_TRADE_ASSISTANT_TA_1101.md`.
+
+WA-022 — Single-command Waiver readiness and report reliability is complete.
+`roster-theory waiver search LEAGUE` now prepares stale/missing provider facts,
+builds or reuses the league-local input bundle, and produces the report without
+requiring `inputs prepare`, `waiver inputs`, or `--inputs`. The FantasyPros
+expert-directory parameters and timestamp handling match the live provider
+contract; shared history is resumable; five-minute freshness is consistent;
+legacy same-league policy metadata migrates with backups; and per-search caches
+reduce verified live runtime while preserving results. Both configured leagues
+complete read-only from the default per-user config. All 582 tests and Ruff
+pass. Details are in `docs/COMPLETED_WAIVER_ASSISTANT_WA_022.md`.
+
 Replacement Counterfactual Consistency is complete. Trade and general Waiver
 lineup deltas now optimize the active bench first and compare bye/inactive
 capacity with the best legal, acquirable waiver alternative. A Waiver target

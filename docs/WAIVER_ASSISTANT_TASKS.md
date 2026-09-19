@@ -755,3 +755,30 @@ Acceptance:
   exhaustive search.
 - Existing Waiver fixtures, Trade behavior, and read-only boundaries remain
   unchanged; the full repository suite passes with no Sleeper write.
+
+## WA-022 — Single-command Waiver readiness and report reliability
+
+Status: complete September 18, 2026
+
+Goal: make `waiver search LEAGUE` the ordinary end-user workflow by preparing
+fetchable and derived prerequisites automatically, while preserving explicit
+league-local calibration and fail-closed recommendation behavior.
+
+Acceptance:
+
+- When `--inputs` is omitted, `waiver search LEAGUE` refreshes stale or missing
+  provider evidence, builds the league-local Waiver input bundle, and runs the
+  report. Explicit `--inputs` and saved-snapshot replay remain supported.
+- Migrate this repository's legacy league-matched Waiver policies to the
+  season-aware metadata contract without replacing calibrated thresholds;
+  retain recoverable backups and never transfer policy between leagues.
+- Persist successfully parsed shared historical expert accuracy before current
+  expert selection, so a limited/empty current-expert response is resumable
+  and is reported as the actual provider-access failure rather than a missing
+  CSV.
+- Automatic preparation remains read-only with respect to Sleeper, respects
+  FantasyPros request budgets and freshness, and never turns incomplete
+  evidence into a recommendation.
+- Focused tests cover automatic preparation, explicit-input compatibility,
+  legacy-policy migration, empty expert responses, resumability, and human/JSON
+  failures. The full repository suite and Ruff pass.

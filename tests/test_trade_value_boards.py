@@ -213,7 +213,7 @@ class TradeBoardTests(unittest.TestCase):
             ),
             (
                 "/nfl/2026/rankings/experts",
-                {"type": "ROS", "include_overall": "true"},
+                {"ranking_type": "ros", "details": "experts"},
             ),
         )
         with tempfile.TemporaryDirectory() as directory:

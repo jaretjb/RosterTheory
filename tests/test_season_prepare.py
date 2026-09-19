@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -117,6 +118,30 @@ class SeasonPreparationTests(unittest.TestCase):
             self.assertTrue(result["offline"])
             self.assertFalse(data.exists())
             self.assertEqual(result["provider_calls"], [])
+
+    def test_waiver_readiness_uses_the_search_five_minute_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = write_config(root)
+            data = root / "data"
+            waiver = data / "cache" / "waiver" / "alpha_live_inputs.json"
+            waiver.parent.mkdir(parents=True)
+            now = datetime(2099, 9, 1, 12, tzinfo=timezone.utc)
+            waiver.write_text(json.dumps({
+                "captured_at": (now - timedelta(minutes=6)).isoformat(),
+            }), encoding="utf-8")
+
+            result = inspect_season_inputs(
+                "alpha", assistant="waiver", config_path=config,
+                data_dir=data, now=now,
+            )
+
+            artifact = next(
+                row for row in result["leagues"][0]["artifacts"]
+                if row["artifact"] == "waiver_inputs"
+            )
+            self.assertEqual(artifact["status"], "stale")
+            self.assertIn("five-minute", artifact["reason"])
 
     def test_fresh_status_avoids_repeating_provider_requests(self):
         ready = {

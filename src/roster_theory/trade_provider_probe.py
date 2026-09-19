@@ -365,7 +365,7 @@ def probe_fantasypros(
             lambda: client.consensus_rankings(season, **individual_params),
         )
 
-    expert_params = {"type": "ROS", "include_overall": "true"}
+    expert_params = {"ranking_type": "ros", "details": "experts"}
     run(
         "ranking_experts",
         f"/nfl/{season}/rankings/experts",

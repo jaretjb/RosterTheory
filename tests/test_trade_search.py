@@ -8,7 +8,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from roster_theory.cli import build_parser
+from roster_theory.cli import (
+    _prepare_trade_analysis,
+    build_parser,
+    command_trade_diagnose,
+    command_trade_search,
+)
+from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.models import FantasyTeam, Player, Projection
 from roster_theory.trade.boards import valuation_gaps
 from roster_theory.trade.evaluation import PlayerAsset, TradePackage, evaluate_trade
@@ -858,6 +864,94 @@ class LeagueSearchTests(unittest.TestCase):
 
 
 class SearchCliTests(unittest.TestCase):
+    def test_live_analysis_prepares_required_trade_evidence(self) -> None:
+        args = SimpleNamespace(
+            league="fixture", config="config.json", expert_pool=None
+        )
+        prepared = {
+            "errors": [],
+            "leagues": [{
+                "league": "fixture",
+                "artifacts": [
+                    {"artifact": "schedule", "status": "ready"},
+                    {"artifact": "experts.inseason-pool", "status": "ready"},
+                    {"artifact": "trade-decision", "status": "invalid"},
+                ],
+            }],
+        }
+        with patch(
+            "roster_theory.cli.prepare_season_inputs", return_value=prepared
+        ) as prepare:
+            _prepare_trade_analysis(args)
+
+        prepare.assert_called_once_with(
+            "fixture", assistant="trade", config_path="config.json",
+            include_experts=True,
+        )
+
+    def test_live_analysis_reports_automatic_preparation_failure(self) -> None:
+        args = SimpleNamespace(
+            league="fixture", config="config.json", expert_pool=None
+        )
+        with patch("roster_theory.cli.prepare_season_inputs", return_value={
+            "errors": [{"type": "SourceUnavailable", "reason": "provider down"}],
+        }):
+            with self.assertRaisesRegex(
+                CoverageIncomplete, "Automatic Trade preparation stopped: provider down"
+            ):
+                _prepare_trade_analysis(args)
+
+    def test_explicit_expert_pool_does_not_require_default_pool(self) -> None:
+        args = SimpleNamespace(
+            league="fixture", config="config.json", expert_pool="pool.json"
+        )
+        with patch("roster_theory.cli.prepare_season_inputs", return_value={
+            "errors": [],
+            "leagues": [{
+                "league": "fixture",
+                "artifacts": [
+                    {"artifact": "schedule", "status": "ready"},
+                    {
+                        "artifact": "experts.inseason-pool",
+                        "status": "blocked",
+                        "reason": "default unavailable",
+                    },
+                ],
+            }],
+        }) as prepare:
+            _prepare_trade_analysis(args)
+
+        self.assertFalse(prepare.call_args.kwargs["include_experts"])
+
+    def test_diagnose_runs_preparation_before_analysis(self) -> None:
+        args = build_parser().parse_args(["trade", "diagnose", "fixture", "--json"])
+        result = SimpleNamespace(
+            diagnosis=SimpleNamespace(), evidence_hash="hash", output_path=Path("out.json")
+        )
+        with (
+            patch("roster_theory.cli._prepare_trade_analysis") as prepare,
+            patch("roster_theory.cli.diagnose_current_roster", return_value=result) as diagnose,
+            patch("roster_theory.cli.asdict", return_value={}),
+            patch("roster_theory.cli._print_json"),
+        ):
+            command_trade_diagnose(args)
+
+        prepare.assert_called_once_with(args)
+        diagnose.assert_called_once()
+
+    def test_search_snapshot_replay_skips_live_preparation(self) -> None:
+        args = build_parser().parse_args([
+            "trade", "search", "fixture", "--snapshot", "saved.json", "--json"
+        ])
+        with (
+            patch("roster_theory.cli._prepare_trade_analysis") as prepare,
+            patch("roster_theory.cli.load_search_evidence", return_value={"ok": True}),
+            patch("roster_theory.cli._print_json"),
+        ):
+            command_trade_search(args)
+
+        prepare.assert_not_called()
+
     def test_phase_seven_commands_parse(self) -> None:
         parser = build_parser()
         gaps = parser.parse_args(["trade", "gaps", "fixture", "--csv", "gaps.csv"])

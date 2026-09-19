@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from itertools import product
 from typing import Iterable, Mapping
 
@@ -54,6 +55,41 @@ def lineup_slots(roster_positions: Iterable[str]) -> tuple[tuple[str, tuple[str,
     return tuple(slots)
 
 
+@lru_cache(maxsize=256)
+def _single_position_allocations(
+    slots: tuple[tuple[str, tuple[str, ...]], ...],
+    available_positions: tuple[str, ...],
+    capacities: tuple[tuple[str, int], ...],
+) -> tuple[tuple[tuple[str | None, ...], tuple[tuple[str, int], ...]], ...]:
+    """Cache legal slot-allocation shapes independently of points and players."""
+
+    available = set(available_positions)
+    capacity = dict(capacities)
+    slot_options = tuple(
+        tuple(position for position in eligible if position in available)
+        for _, eligible in slots
+    )
+    for include_empty in (False, True):
+        options = tuple(
+            ((None, *eligible) if include_empty else eligible)
+            for eligible in slot_options
+        )
+        if any(not values for values in options):
+            continue
+        result = []
+        for allocation in product(*options):
+            counts: dict[str, int] = {}
+            for position in allocation:
+                if position is not None:
+                    counts[position] = counts.get(position, 0) + 1
+            if any(count > capacity.get(position, 0) for position, count in counts.items()):
+                continue
+            result.append((allocation, tuple(sorted(counts.items()))))
+        if result:
+            return tuple(result)
+    return ()
+
+
 def _single_position_lineup(
     player_list: list[LineupPlayer],
     slots: tuple[tuple[str, tuple[str, ...]], ...],
@@ -72,9 +108,13 @@ def _single_position_lineup(
     )
     allocation_count = 1
     for options in slot_options:
-        # Include the empty-slot branch: it is required whenever the roster
-        # cannot fill every configured starter slot and is the expensive case.
-        allocation_count *= 1 + len(options)
+        # First try the full-lineup shapes that _single_position_allocations
+        # itself considers first. Counting an empty branch for every fixed
+        # QB/RB/WR/TE slot made ordinary two-FLEX leagues appear exponential
+        # (4,096 shapes instead of nine) and unnecessarily selected the much
+        # slower player-by-player bitmask solver. If no full allocation is
+        # legal, the cached helper can still consider empty slots below.
+        allocation_count *= len(options)
     # Enumerating position allocations is faster for ordinary lineups, but it
     # becomes exponential when several FLEX/SUPER_FLEX slots overlap. The
     # general bitmask optimizer below has a bounded state space by slot count.
@@ -93,53 +133,53 @@ def _single_position_lineup(
         for position, rows in ranked.items()
     }
 
-    def candidates(include_empty: bool):
-        options = tuple(
-            ((None, *eligible) if include_empty else eligible)
-            for eligible in slot_options
-        )
-        if any(not values for values in options):
-            return ()
-        return product(*options)
-
     best: tuple[
         tuple[int, float, tuple[tuple[int, str], ...]],
         tuple[tuple[int, str], ...],
         float,
     ] | None = None
-    for include_empty in (False, True):
-        for allocation in candidates(include_empty):
-            counts: dict[str, int] = {}
-            for position in allocation:
-                if position is not None:
-                    counts[position] = counts.get(position, 0) + 1
-            if any(count > len(ranked.get(position, ())) for position, count in counts.items()):
+    allocations = _single_position_allocations(
+        slots,
+        tuple(sorted(available_positions)),
+        tuple(sorted((position, len(rows)) for position, rows in ranked.items())),
+    )
+    required_counts = {
+        (position, count)
+        for _, count_rows in allocations
+        for position, count in count_rows
+    }
+    selected_for_count = {
+        (position, count): tuple(
+            sorted(player_id for _, player_id in ranked[position][:count])
+        )
+        for position, count in required_counts
+    }
+    score_for_count = {
+        (position, count): sum(
+            value for value, _ in ranked[position][:count]
+        )
+        for position, count in required_counts
+    }
+    for allocation, count_rows in allocations:
+        counts = dict(count_rows)
+        selected_by_position = {
+            position: selected_for_count[(position, count)]
+            for position, count in counts.items()
+        }
+        next_index = {position: 0 for position in counts}
+        assignments: list[tuple[int, str]] = []
+        for slot_index, position in enumerate(allocation):
+            if position is None:
                 continue
-            selected_by_position = {
-                position: tuple(
-                    sorted(player_id for _, player_id in ranked[position][:count])
-                )
-                for position, count in counts.items()
-            }
-            next_index = {position: 0 for position in counts}
-            assignments: list[tuple[int, str]] = []
-            for slot_index, position in enumerate(allocation):
-                if position is None:
-                    continue
-                player_ids = selected_by_position[position]
-                player_id = player_ids[next_index[position]]
-                next_index[position] += 1
-                assignments.append((slot_index, player_id))
-            selected = tuple(assignments)
-            score = sum(
-                sum(value for value, _ in ranked[position][:count])
-                for position, count in counts.items()
-            )
-            key = (-len(selected), -score, selected)
-            if best is None or key < best[0]:
-                best = (key, selected, score)
-        if best is not None:
-            break
+            player_ids = selected_by_position[position]
+            player_id = player_ids[next_index[position]]
+            next_index[position] += 1
+            assignments.append((slot_index, player_id))
+        selected = tuple(assignments)
+        score = sum(score_for_count[(position, count)] for position, count in counts.items())
+        key = (-len(selected), -score, selected)
+        if best is None or key < best[0]:
+            best = (key, selected, score)
     if best is None:
         return None
     _, selected, score = best

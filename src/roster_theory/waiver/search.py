@@ -886,6 +886,7 @@ def search_waiver_candidates(
     exact: list[WaiverEvaluation] = []
     pruned: list[WaiverSearchPruning] = []
     contingency_cache = {}
+    evaluation_cache = {}
     baseline_score: float | None = None
     for index, bound in enumerate(bounds):
         if bound.player_id in ownership_policy_prunable_candidates:
@@ -964,6 +965,7 @@ def search_waiver_candidates(
                     options=options,
                     now=now,
                     contingency_cache=contingency_cache,
+                    evaluation_cache=evaluation_cache,
                 ),
                 policy,
             )

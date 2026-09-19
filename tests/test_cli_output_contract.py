@@ -97,7 +97,10 @@ class JsonCommandTests(unittest.TestCase):
     def _invoke(self, arguments, service_name, service_result, report_name=None, report=None):
         args = build_parser().parse_args(arguments)
         stdout, stderr = io.StringIO(), io.StringIO()
-        with patch(f"roster_theory.cli.{service_name}", return_value=service_result):
+        with (
+            patch(f"roster_theory.cli.{service_name}", return_value=service_result),
+            patch("roster_theory.cli._prepare_trade_analysis"),
+        ):
             if report_name:
                 with patch(f"roster_theory.cli.{report_name}", return_value=report):
                     with redirect_stdout(stdout), redirect_stderr(stderr):
