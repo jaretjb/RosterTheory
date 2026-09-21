@@ -21,6 +21,7 @@
         "draft_preferences": "policies/home_league/2026/draft-preferences.csv",
         "trade_decision": "policies/home_league/2026/trade-decision.json",
         "trade_search": "policies/home_league/2026/trade-search.json",
+        "trade_target": "policies/home_league/2026/trade-target.json",
         "waiver_decision": "policies/home_league/2026/waiver-decision.json",
         "waiver_wire": "policies/home_league/2026/waiver-wire.json"
       },

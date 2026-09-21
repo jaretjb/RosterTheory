@@ -1,8 +1,113 @@
 # Active milestone
 
-No implementation milestone is active as of September 18, 2026
-(America/Los_Angeles). Completed records below are retained as handoff history
-and do not authorize additional work.
+Trade TA-1309 completed September 21, 2026 (America/Los_Angeles). No further
+Trade product implementation is active. TA-1310 remains planned for separate
+league-local empirical calibration when sufficient dated evidence exists.
+No Sleeper trade or roster write is allowed.
+
+TA-1309 replaced the whole-universe chart gate with explicit per-target and
+per-package pricing coverage. Current chart prices remain primary; missing
+current prices use one compatible archived prior-week chart for an entire
+candidate package, visibly indicative and never current-market FAIR. An
+unpriced asset without either chart is excluded and counted. Fresh read-only
+searches in both leagues used current chart prices; one yielded four modeled
+offers, the other none. Prior-week behavior was verified on fixtures because
+there is not yet an older local chart. All 649 tests and Ruff pass. Details:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1309.md`. The earlier failed gate is retained
+as chronology in `docs/TRADE_ASSISTANT_TA_1309_GATE_2026-09-21.md`.
+
+TA-1308 completed record: `docs/COMPLETED_TRADE_ASSISTANT_TA_1308.md`.
+The deterministic per-league study harness remains available, but the local
+export audit found no complete historical calibration corpus. No empirical
+parameter was promoted. All 643 tests and Ruff pass; no live finder was run.
+
+TA-1301 selected the documented Stats Guy Fantasy API as the weekly redraft
+trade-market provider, with an authorized local import and explicit
+`ECR-PROXY` as fail-closed fallbacks. The provider offers separately calculated
+1QB and superflex redraft values, Sleeper player IDs, daily provider timestamps,
+historical values, and application-compatible terms. Its market is a reception
+and TEP blend, so that limitation must remain visible and exact team value must
+continue to use each league's Sleeper scoring.
+
+Phase 13 now has an explicit two-axis decision contract. The finder maximizes
+the user's intrinsic/team-value gain subject to a current trade-market fairness
+band, partner exact-roster plausibility, legality, and downside gates. Market
+price constructs and prunes offers; it never determines the football-value
+winner. Entered-package evaluation remains useful without a chart and exposes
+market fairness only as a separate optional or `ECR-PROXY` result.
+
+FantasyPros has no documented weekly chart endpoint. No FantasyPros support
+request was sent; no endpoint was guessed; and its article was not scraped or
+reverse-engineered. Twelve documented, unauthenticated provider GETs verified
+current metadata and a dated FantasyPros/CBS relative-agreement check without
+retaining a player row. The dated decision is in
+`docs/TRADE_MARKET_PROVIDER_CAPABILITY_2026-09-20.md`.
+
+Completed records below are retained as handoff history and do not authorize
+additional work.
+
+Trade TA-1303 — Leakage-safe optional recent-performance evidence is complete.
+Completed results now join only to compatible pregame point/rank captures at a
+rolling-origin decision time, with visible exclusions, position-aware
+shrinkage, and claim-disabled small/stale samples. Expert order is untouched.
+Six focused tests, all 630 tests, and Ruff pass. No live history was read or
+calibration promoted. Details: `docs/COMPLETED_TRADE_ASSISTANT_TA_1303.md`.
+
+Trade TA-1307 — Target-first CLI presentation is complete. `trade targets`
+shows `WATCH` cards without claiming an offer; `trade search` uses the same
+cards before exact grouped offers and prints separate intrinsic/market axes.
+Hashed JSON, flat CSV, offline replay, one-command evidence preparation, and
+advanced overrides have synthetic CLI coverage. All 624 tests and Ruff pass.
+Live use awaits a league-scoped `trade_target` policy in TA-1308; no fixture
+premium was promoted. Details: `docs/COMPLETED_TRADE_ASSISTANT_TA_1307.md`.
+
+Trade TA-1306 — Exact 2-for-1 consolidation is complete. The consolidation
+lane now constructs only 2-for-1 offers, applies a visible versioned chart
+premium to construction and fairness, and audits the user's starter gain/add
+plus partner drop and each outgoing player's post-drop lineup/depth use.
+`ECR-PROXY` makes no chart-premium claim. Four new focused tests, all 622 tests,
+and Ruff pass. The fixture premium is not an empirical league calibration;
+TA-1308 owns that later work. No live league or Sleeper write occurred. Details
+are in `docs/COMPLETED_TRADE_ASSISTANT_TA_1306.md`.
+
+Trade TA-1305 — Target-lane constrained package optimization is complete. All
+four target lanes and four package sizes receive independent exact-evaluation
+budgets and coverage. Outgoing seeds expose exact surplus, marginal cost,
+market price, and partner need. Exact decisions keep intrinsic outcome, direct
+fairness or `ECR-PROXY`, market-ECR corroboration, partner plausibility,
+legality, depth, and downside separate. Controlled exhaustive fixtures retain
+the best intrinsic result in all 16 groups, including the formerly crowded-out
+consolidation 2-for-1. Six focused tests, all 618 tests, and Ruff pass. No
+provider request, live league operation, calibration, recommendation, or
+Sleeper write occurred. Details are in
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1305.md`.
+
+Trade TA-1304 — Deterministic target discovery and evidence contracts is
+complete. `BUY_LOW`, `SELL_HIGH`, `CONSOLIDATE`, and fallback `NEED_FIT` cards
+now preserve intrinsic, market-ECR, direct-price or `ECR-PROXY`, team-fit,
+owner-disposability, optional performance, and freshness evidence separately.
+Visible lexicographic factors replace any blended score. Every target remains
+`WATCH` without a passing package, owner preference is never inferred, and
+partial direct-price coverage fails the complete run to a named proxy. Seven
+focused tests, all 612 tests, and Ruff pass. No provider request, live league
+operation, calibration, recommendation, or Sleeper write occurred. Details are
+in `docs/COMPLETED_TRADE_ASSISTANT_TA_1304.md`.
+
+Trade TA-1302 — Trade-market ingestion and normalization is complete. A
+GET-only Stats Guy bulk client now produces a fresh, complete, attributed 1QB
+or superflex `TradeMarketBoard` keyed by Sleeper ID, with raw changes and
+scoring-blend limitations. Authorized import, hashed replay, and claim-disabled
+`ECR-PROXY` fallbacks pass synthetic tests. A metadata-only live check
+normalized 396 source rows into 211 1QB redraft prices without retaining a
+player row. All 605 tests and Ruff pass. Details are in
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1302.md`.
+
+Trade TA-1301 — Weekly trade-market provider contract is complete. The
+documented Stats Guy Fantasy API supplies daily trade-derived 1QB and superflex
+redraft values keyed by Sleeper player ID; authorized local import and
+`ECR-PROXY` remain fail-closed fallbacks. The provider's reception/TEP blend is
+explicit, exact team value remains league-scored, and no FantasyPros article
+scrape, secret, provider row, recommendation, or Sleeper write occurred.
 
 WA-023 — Availability-aware DST streaming valuation is complete. DST decisions
 now use a four-week `1.0/0.5/0.25/0.125` comparison against the incumbent and

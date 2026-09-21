@@ -18,6 +18,9 @@ testing, and handoff rules and is not general startup context.
 
 ## Always-on boundaries
 
+- Never commit or push directly to `main`. Create a separate branch for every
+  change and merge it into `main` only through a GitHub pull request. Do not
+  bypass branch protection, even for documentation-only or urgent changes.
 - Never transfer a league's calibration or result to another league without
   separate evidence.
 - Product-track boundaries live in `.codex/context/STEERING.md`; Draft, Trade, Waiver,
