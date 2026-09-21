@@ -1,0 +1,44 @@
+{
+  "league_key": "home_league",
+  "version": "home-league-provisional-v1",
+  "evidence_status": "PROVISIONAL_HEURISTIC",
+  "basis": "Read-only starting assumptions; not league-calibrated",
+  "target_discovery": {
+    "policy_id": "home-league-target-provisional-v1",
+    "material_percentile_gap": 0.08,
+    "minimum_lineup_gain": 0.5,
+    "consolidation_lineup_gain": 1.0,
+    "maximum_disposable_lineup_cost": 0.5,
+    "max_targets_per_lane": 8
+  },
+  "target_optimizer": {
+    "policy_id": "home-league-optimizer-provisional-v1",
+    "outgoing_pool_limit": 8,
+    "incoming_pool_limit": 8,
+    "construction_market_band_ratio": 0.35,
+    "construction_market_band_floor": 6.0,
+    "fair_market_band_ratio": 0.12,
+    "fair_market_band_floor": 2.0,
+    "consolidation_premium_policy_id": "home-league-premium-provisional-5pct-v1",
+    "consolidation_premium_ratio": 0.05,
+    "minimum_consolidation_starter_upgrade": 1.0,
+    "minimum_partner_asset_lineup_use": 0.0,
+    "minimum_partner_asset_depth_use": 0.0,
+    "minimum_user_lineup_gain": 0.5,
+    "partner_lineup_floor": -1.0,
+    "partner_selected_floor": -5.0,
+    "maximum_partner_depth_loss": 10.0,
+    "max_results_per_lane": 5,
+    "uniform_exact_budget": 10
+  },
+  "performance_policy": {
+    "policy_id": "home-league-performance-provisional-v1",
+    "window_weeks": 3,
+    "prior_games": 3.0,
+    "minimum_games": 2,
+    "signal_threshold": 0.3,
+    "maximum_age_days": 21.0,
+    "point_scales": [["QB", 6.0], ["RB", 5.0], ["WR", 5.0], ["TE", 4.0]],
+    "rank_scales": [["QB", 8.0], ["RB", 12.0], ["WR", 12.0], ["TE", 7.0]]
+  }
+}

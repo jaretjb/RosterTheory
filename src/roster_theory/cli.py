@@ -148,15 +148,17 @@ from roster_theory.trade.evaluation_service import (
     format_roster_diagnosis,
     format_trade_evaluation,
 )
-from roster_theory.trade.search import SearchConfig
 from roster_theory.trade.search_service import (
     format_gap_report,
     format_package_comparison,
-    format_search_result,
-    load_search_evidence,
     run_gap_report,
-    run_league_search,
     run_package_comparison,
+)
+from roster_theory.trade.target_workflow import (
+    format_target_workflow,
+    load_target_workflow_evidence,
+    run_target_workflow,
+    target_workflow_report,
 )
 
 
@@ -804,50 +806,72 @@ def command_trade_gaps(args: argparse.Namespace) -> None:
         ))
 
 
-def command_trade_search(args: argparse.Namespace) -> None:
+def _command_trade_target_workflow(args: argparse.Namespace, *, search: bool) -> None:
     try:
         if args.snapshot:
-            _print_json(load_search_evidence(args.snapshot))
+            _print_json(load_target_workflow_evidence(args.snapshot))
             return
         with interactive_progress(
             "Preparing current Trade evidence", machine_output=args.json
         ):
             _prepare_trade_analysis(args)
-        with interactive_progress("Searching for Trades", machine_output=args.json):
-            result = run_league_search(
+        with interactive_progress(
+            "Searching for Trades" if search else "Finding Trade targets",
+            machine_output=args.json,
+        ):
+            result = run_target_workflow(
                 args.league,
+                search=search,
                 config_path=_config_path(args),
                 options=EvaluationOptions(risk_posture=args.risk_posture.upper()),
-                config=SearchConfig(
-                    small_pool_per_team=args.small_pool,
-                    large_pool_per_team=args.large_pool,
-                    max_exact_per_opponent=args.max_exact,
-                    max_large_exact_per_opponent=args.max_large_exact,
-                    max_results=args.max_results,
-                ),
                 output_path=args.output,
                 csv_path=args.csv,
                 expert_pool_path=args.expert_pool,
                 cache_dir=args.fantasypros_cache,
                 budget_path=args.budget,
-                policy_path=args.policy,
-                search_policy_path=args.search_policy,
+                decision_policy_path=args.policy,
+                target_policy_path=args.target_policy,
+                market_import_path=args.trade_market_import,
+                performance_history_path=args.performance_history,
+                proxy_only=args.ecr_proxy,
+                small_pool=args.small_pool,
+                large_pool=args.large_pool,
+                max_exact=args.max_exact,
+                max_large_exact=args.max_large_exact,
+                max_results=args.max_results,
             )
     except (RosterTheoryError, SleeperError, FantasyProsError, ValueError) as exc:
-        _print_product_failure("TRADE ASSISTANT search", args, exc)
+        _print_product_failure(
+            "TRADE ASSISTANT search" if search else "TRADE ASSISTANT targets", args, exc
+        )
         raise SystemExit(2) from exc
     if args.json:
-        _print_json(asdict(result.search))
+        _print_json(target_workflow_report(result))
         _saved_notice(f"Saved evidence: {result.output_path}", args)
         if result.csv_path:
             _saved_notice(f"Saved CSV: {result.csv_path}", args)
+        if getattr(result, "feedback_path", None):
+            _saved_notice(f"Feedback template: {result.feedback_path}", args)
     else:
-        search = result.search
-        _print_human_report(args, format_search_result(result), _product_frame(
-            "Trade search", search.league_key, search.horizon,
-            "Bounded package candidates", paths=(result.output_path, result.csv_path),
-            limitations=("Search is bounded; omitted packages are not evaluated.",),
+        _print_human_report(args, format_target_workflow(result), _product_frame(
+            "Trade search" if search else "Trade targets",
+            result.targets.league_key, result.targets.horizon,
+            "Target-first bounded package search" if search else "Target discovery only",
+            warnings=result.targets.warnings,
+            paths=(result.output_path, result.csv_path),
+            limitations=(
+                "Search is bounded; omitted packages are not evaluated."
+                if search else "WATCH does not imply that a partner will accept an offer.",
+            ),
         ))
+
+
+def command_trade_targets(args: argparse.Namespace) -> None:
+    _command_trade_target_workflow(args, search=False)
+
+
+def command_trade_search(args: argparse.Namespace) -> None:
+    _command_trade_target_workflow(args, search=True)
 
 
 def command_trade_compare(args: argparse.Namespace) -> None:
@@ -1871,7 +1895,7 @@ Draft
   and board/simulation/watch commands need complete expert data and a board.
 
 Trade
-  trade diagnose / evaluate / gaps / search / compare  Current roster/package work
+  trade diagnose / evaluate / gaps / targets / search / compare  Current roster/package work
   Example: roster-theory trade search LEAGUE
   Analysis commands automatically refresh stale evidence and current ownership;
   they require an approved policy for that league and never submit an offer.
@@ -1975,6 +1999,41 @@ class MachineArgumentParser(argparse.ArgumentParser):
             )
             raise SystemExit(2)
         super().error(message)
+
+
+def _add_target_workflow_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("league", help="Configured league key")
+    parser.add_argument(
+        "--risk-posture", choices=("conservative", "balanced", "ceiling"),
+        default="balanced",
+    )
+    parser.add_argument("--small-pool", type=int)
+    parser.add_argument("--large-pool", type=int)
+    parser.add_argument("--max-exact", type=int)
+    parser.add_argument("--max-large-exact", type=int)
+    parser.add_argument("--max-results", type=int)
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--snapshot", help="Replay saved target evidence offline")
+    parser.add_argument("--output")
+    parser.add_argument("--csv")
+    parser.add_argument("--policy", help="Override league Trade decision policy")
+    parser.add_argument(
+        "--target-policy", "--search-policy", dest="target_policy",
+        help="Override league-scoped Phase 13 target and optimizer policy",
+    )
+    parser.add_argument("--trade-market-import", help="Authorized local trade-market import")
+    parser.add_argument(
+        "--performance-history",
+        help="Ignored league-local pregame and completed-outcome history JSON",
+    )
+    parser.add_argument("--ecr-proxy", action="store_true", help="Use explicit ECR-PROXY mode")
+    parser.add_argument("--expert-pool")
+    parser.add_argument(
+        "--fantasypros-cache", default="data/cache/trade/fantasypros/2026"
+    )
+    parser.add_argument(
+        "--budget", default="data/cache/trade/fantasypros/daily_budget.json"
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -2575,41 +2634,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     trade_gaps.set_defaults(func=command_trade_gaps)
 
+    trade_targets = trade_commands.add_parser(
+        "targets", help="Prepare current evidence and discover read-only Trade targets",
+    )
+    _add_target_workflow_args(trade_targets)
+    trade_targets.set_defaults(func=command_trade_targets)
+
     trade_search = trade_commands.add_parser(
-        "search",
-        help="Prepare current evidence and find bilateral trade opportunities",
+        "search", help="Prepare current evidence and find target-first Trade offers",
     )
-    trade_search.add_argument("league", help="Configured league key")
-    trade_search.add_argument(
-        "--risk-posture",
-        choices=("conservative", "balanced", "ceiling"),
-        default="balanced",
-    )
-    trade_search.add_argument("--small-pool", type=int, default=6)
-    trade_search.add_argument("--large-pool", type=int, default=4)
-    trade_search.add_argument("--max-exact", type=int, default=2)
-    trade_search.add_argument("--max-large-exact", type=int, default=1)
-    trade_search.add_argument("--max-results", type=int, default=20)
-    trade_search.add_argument("--json", action="store_true")
-    trade_search.add_argument(
-        "--snapshot", help="Replay and verify saved search evidence without live refresh"
-    )
-    trade_search.add_argument("--output")
-    trade_search.add_argument("--csv")
-    trade_search.add_argument(
-        "--policy", help="Override the league's approved Trade decision policy"
-    )
-    trade_search.add_argument(
-        "--search-policy",
-        help="Override the league's approved Trade search policy",
-    )
-    trade_search.add_argument("--expert-pool")
-    trade_search.add_argument(
-        "--fantasypros-cache", default="data/cache/trade/fantasypros/2026"
-    )
-    trade_search.add_argument(
-        "--budget", default="data/cache/trade/fantasypros/daily_budget.json"
-    )
+    _add_target_workflow_args(trade_search)
     trade_search.set_defaults(func=command_trade_search)
 
     trade_compare = trade_commands.add_parser(

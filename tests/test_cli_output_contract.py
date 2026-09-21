@@ -142,9 +142,10 @@ class JsonCommandTests(unittest.TestCase):
         self.assertEqual(parsed["finding"], "evidence retained")
         self.assertIn("Saved CSV", notice)
 
-        result = SimpleNamespace(search=ReportRow(), output_path="search.json", csv_path="search.csv")
+        result = SimpleNamespace(output_path="search.json", csv_path="search.csv")
         parsed, notice = self._invoke(
-            ["trade", "search", "league", "--json"], "run_league_search", result
+            ["trade", "search", "league", "--json"], "run_target_workflow", result,
+            "target_workflow_report", {"finding": "evidence retained"},
         )
         self.assertEqual(parsed["finding"], "evidence retained")
         self.assertIn("Saved evidence", notice)

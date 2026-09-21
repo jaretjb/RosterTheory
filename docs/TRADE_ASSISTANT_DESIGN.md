@@ -1,6 +1,6 @@
 # RosterTheory Trade Assistant design
 
-Status: Approved baseline; expert-horizon policy amended September 4, 2026  
+Status: Approved baseline; target-first Phase 13 design added September 19, 2026
 Created: September 4, 2026 (America/Los_Angeles)  
 Authority: `docs/TRADE_ASSISTANT_REQUIREMENTS.md`  
 Scope: Design only; this document does not authorize implementation
@@ -29,8 +29,11 @@ The first release will:
 - evaluate the user's and partner's legal weekly lineups before and after a
   package, including any required add or drop;
 - report expected points, usable depth, market fairness, and risk separately;
-- search the league for selected-versus-market value gaps and mutually useful
-  packages; and
+- discover buy-low, sell-high, consolidation, and need-fit targets from
+  selected/market gaps, optional supported trade-market prices, leakage-safe
+  recent-performance context, and exact roster utility;
+- construct mutually useful packages around those targets with independent
+  evaluation coverage for 2-for-1 consolidation; and
 - emit a clearly labeled terminal report plus a local evidence bundle.
 
 The design adopts the proposed requirements defaults: balanced expected points
@@ -171,6 +174,16 @@ random identifier.
 - `PlayerValue`: raw projection, raw projection rank, positional aligned
   points, overall reconciled points, common-baseline VORP, tier, rank
   disagreement, weekly team use, and warnings for each view.
+- `TradeMarketBoard`: optional weekly cross-position exchange prices, source
+  week, scoring/format variant, prior-week change, completeness, freshness,
+  identity resolution, and provenance. `ECR-PROXY` is a distinct mode, not a
+  fabricated instance of this board.
+- `PerformanceResidual`: player, completed week, pregame expectation capture,
+  actual league-compatible result, point/rank residual, availability state,
+  inclusion decision, and provenance.
+- `TradeTarget`: opportunity kind (`BUY_LOW`, `SELL_HIGH`, `CONSOLIDATE`, or
+  `NEED_FIT`), player/owner, intrinsic and market evidence, recent-performance
+  context, roster fit/disposability, package availability, and warnings.
 - `TradeAsset`: tagged union beginning with `PlayerAsset`; future asset tags do
   not enter the MVP evaluator.
 - `TradePackage`: exactly two roster IDs, assets moving each direction, and
@@ -178,9 +191,11 @@ random identifier.
 - `TeamImpact`: weekly starter points, weighted horizon points, usable-depth
   value, replacement exposure, best/worst week, playoff delta, and risk profile
   before/after/delta.
-- `TradeEvaluation`: legality, value sent/received under each board, market
-  fairness, both `TeamImpact` results, decision label, reversal conditions,
-  warnings, and manifest reference.
+- `TradeEvaluation`: legality, value sent/received under each board, an
+  intrinsic user outcome (`WIN`, `NEUTRAL`, or `LOSS`), an independent market-
+  fairness result (`FAIR`, `USER_UNDERPAY`, `USER_OVERPAY`, `ECR-PROXY`, or
+  `UNAVAILABLE`), both `TeamImpact` results, recommendation label, reversal
+  conditions, warnings, and manifest reference.
 
 Every calculation uses canonical internal player IDs. User-entered names are
 resolved to a unique Sleeper rostered player before evaluation; ambiguous or
@@ -253,6 +268,16 @@ must establish:
 - actual key limits and which historical seasons are available to the personal
   HOF license.
 
+Phase 13 adds a separate capability decision for weekly redraft trade values:
+verify a documented API/export and its use terms, format variants, publication
+week, stable player IDs, value/change fields, and coverage. The FantasyPros
+public API catalog alone is not evidence that article tables are an endpoint.
+A separately documented provider is eligible when its terms authorize the use
+and the same contract is verified. If no supported machine-readable source is
+available, retain a provenance-checked local import boundary and `ECR-PROXY`;
+never probe guessed paths, scrape article HTML, or reverse-engineer an
+unpublished formula.
+
 The design deliberately does not guess parameters that the public overview
 does not specify. A failed probe disables that capability and activates the
 requirements-defined degraded mode; it does not trigger scraping.
@@ -274,6 +299,7 @@ Default freshness limits are configurable and shown in every report:
 | FantasyPros ROS dataset capture | 24 hours | refresh the dataset before analysis |
 | FantasyPros ROS contributor ballot by position | 14 days | exclude the stale ballot; later material news invalidates it immediately |
 | FantasyPros weekly projections/ranks | current game week; 12-hour dataset capture | week-level recommendation stops |
+| supported trade-market provider/import | current provider calculation for the NFL week | disable chart-specific pricing/fairness; retain labeled `ECR-PROXY` |
 | injuries and news | 2 hours | prominent warning; injured-player automation stops |
 | historical player points | immutable by completed week | reuse verified cache |
 
@@ -441,6 +467,41 @@ Positive `value_gap` means the market values the player more highly and is a
 possible sell-high signal. Negative `value_gap` is a possible buy-low signal.
 Reports state the sign convention. No gap alone becomes a recommendation.
 
+### 7.4 Optional trade-market price board
+
+A verified weekly trade-value source is normalized independently from selected
+and market-consensus rank boards. The adapter selects only a source variant
+compatible with the league's 1QB/superflex and reception/TE-premium shape.
+Unsupported custom-scoring differences remain explicit because team value is
+still calculated from exact Sleeper scoring.
+
+Chart values are cross-position market-price evidence. They are not projected
+points and are never subtracted directly from VORP. For target discovery, fit a
+monotone percentile/tier mapping between the current complete trade-market
+board and each rank-implied board, retaining the raw chart value and change.
+With percentiles oriented so larger means more valuable, the primary finder
+signal is `market_price_percentile - intrinsic_percentile`: positive is a
+possible sell-high and negative is a possible buy-low. The Section 7.3 market-
+ECR gap is corroboration or the explicit `ECR-PROXY`, not a third decision
+axis.
+For package fairness, use raw chart units only within one compatible source
+edition and include the required add/drop and any calibrated consolidation
+premium. A partial or stale chart disables those claims rather than shifting
+players or filling missing prices.
+
+The fairness result retains both raw package sums and a premium-adjusted,
+normalized gap. Its sign is always from the user's perspective: positive means
+the user receives more market price (`USER_UNDERPAY`), negative means the user
+sends more (`USER_OVERPAY`), and only a calibrated interval is `FAIR`. The
+interval and any structure premium are printed rather than hidden in a grade.
+
+The board is a search and pricing input, not a prerequisite for exact football
+analysis. `trade search` uses it to identify price gaps, construct packages,
+and enforce a fairness band before spending exact-evaluation budget.
+`trade evaluate` remains able to calculate the intrinsic outcome with no chart;
+it adds the independent fairness result only when a fresh compatible board is
+present or labels the fallback explicitly.
+
 ## 8. Weekly lineup and team value
 
 ### 8.1 Legal lineup optimizer
@@ -488,6 +549,33 @@ IR/reserve eligibility is validated from Sleeper state when available. If the
 API does not expose enough rule detail to prove legality, the evaluator reports
 `MANUAL LEGALITY CHECK` rather than guessing.
 
+### 8.4 Recent performance and target discovery
+
+For each completed week, pair the immutable actual outcome with only the
+projection or weekly rank captured before that game. Build position-aware point
+and rank residuals, exclude bye/inactive and unsupported partial-game cases,
+and shrink short windows toward zero. Current ROS ranks remain authoritative;
+residuals are never fed back into expert order or future projections.
+
+Target discovery is deterministic and precedes package enumeration:
+
+1. `BUY_LOW`: selected remaining-horizon value exceeds the comparable market
+   price after audited percentile/tier alignment, compatible recent residuals
+   are negative when available, and the player improves a real user lineup or
+   depth need.
+2. `SELL_HIGH`: trade-market price exceeds selected remaining-horizon value
+   after the same alignment, compatible recent residuals are positive when
+   available, and the user's exact marginal cost is contained by usable depth.
+3. `CONSOLIDATE`: one opponent asset materially upgrades the user's starters,
+   while a pair of user assets is expendable and addresses at least two partner
+   lineup/depth uses after the required drop.
+4. `NEED_FIT`: the existing bilateral need/surplus path remains available when
+   neither performance nor pricing supplies a valid signal.
+
+Every target retains evidence components rather than a hidden blended score.
+Targets without a passing package remain visible as `WATCH`; they are not
+called obtainable.
+
 ## 9. Risk and correlation design
 
 Risk is a vector, not a trade tax. `RiskProfile` retains:
@@ -534,18 +622,24 @@ value gates for the chosen risk posture.
 1. validate ownership, uniqueness, supported asset types, and roster IDs;
 2. apply the full exchange and resolve explicit or proposed adds/drops;
 3. validate both post-trade rosters;
-4. calculate sent/received selected, market, and raw values;
+4. calculate sent/received selected, market-consensus, and raw values;
 5. calculate both teams' weekly lineups and usable-depth deltas;
 6. calculate both risk profiles and scenario deltas;
-7. identify best/worst weeks and reversal conditions; and
-8. derive a transparent label from the component gates.
+7. derive the intrinsic `WIN/NEUTRAL/LOSS` outcome from those exact team
+   effects;
+8. when available, compare optional trade-market package prices and derive the
+   separate `FAIR/USER_UNDERPAY/USER_OVERPAY` result;
+9. identify best/worst weeks and reversal conditions;
+10. for unequal packages, calculate consolidation premium, roster-slot value,
+   incoming-player use, and both secondary moves; and
+11. derive a transparent recommendation label without collapsing the axes.
 
 Labels do not come from one opaque grade:
 
 | Label | Design rule |
 | --- | --- |
-| `ACCEPTABLE` | user central team value is positive across required selected/reconciled views, no hard downside gate fails, and partner is at least near-neutral in a market or need-based view |
-| `TARGET` | an `ACCEPTABLE` search result also exploits a material selected-versus-market gap or solves a documented roster need |
+| `ACCEPTABLE` | user intrinsic/team value is positive across required selected/reconciled views, no hard downside gate fails, and partner exact-roster impact is at least near-neutral or solves a documented need; chart fairness is reported separately |
+| `TARGET` | an `ACCEPTABLE` search result also lies inside the calibrated market-price bargaining band and exploits a material intrinsic-versus-market gap or documented roster need |
 | `COUNTER` | the concept helps but value, depth, risk, legality, or partner incentive misses a documented boundary that an adjacent package can address |
 | `DECLINE` | user value is negative across required views, a hard completeness/legality gate fails, or downside is unacceptable under the selected posture |
 
@@ -560,20 +654,33 @@ alternative package because offense-wide downside falls.”
 
 ## 11. League-wide search
 
-Search is a two-stage deterministic process so correctness stays tractable.
+Search is a target-first deterministic process so correctness stays tractable
+and the output follows the manager's actual workflow.
+
+Its optimization contract is: maximize the user's intrinsic/team-value gain,
+subject to a compatible market-price fairness band, partner exact-roster
+plausibility, legality, and downside gates. Market value constrains and prunes
+the search; intrinsic value ranks the passing football outcomes.
 
 1. Diagnose every team's weekly starters, weak slots, surplus usable depth,
-   waiver alternatives, and selected-versus-market gaps.
-2. For each opponent, enumerate unique player-only 1-for-1, 2-for-1, 1-for-2,
-   and bounded 2-for-2 packages.
-3. Apply cheap admissible filters: ownership, supported positions, legal
-   roster count, broad market-value band, a plausible need for both teams, and
-   no clearly dominated asset bundle.
-4. Run the exact `TradeEvaluator` on survivors, including add/drop effects.
-5. Remove duplicate and Pareto-dominated packages.
-6. Return a small frontier spanning best expected-points gain, best lower-risk
-   alternative, strongest market-gap opportunity, and easiest partner-positive
-   construction.
+   waiver alternatives, intrinsic-versus-trade-market gaps, market-ECR
+   corroboration, and compatible recent-performance residuals.
+2. Produce auditable `BUY_LOW`, `SELL_HIGH`, `CONSOLIDATE`, and `NEED_FIT`
+   target lanes before constructing offers.
+3. For each target/opponent, seed outgoing assets from user surplus, trade-
+   market price, low exact marginal cost, and partner need. Enumerate unique
+   player-only 1-for-1, 2-for-1, 1-for-2, and bounded 2-for-2 packages.
+4. Apply cheap admissible filters: ownership, supported positions, legal
+   roster count, the broad trade-market fairness band, a plausible need for
+   both teams, and no clearly dominated asset bundle.
+5. Reserve independent exact-evaluation budgets by target lane and package
+   size so 1-for-1 candidates cannot consume the 2-for-1 budget, then run the
+   exact `TradeEvaluator` on survivors including add/drop effects.
+6. Remove duplicates and Pareto-dominated packages within each lane. Do not let
+   asset count alone dominate an otherwise superior consolidation result.
+7. Return target cards plus a small frontier spanning buy-low, sell-high,
+   consolidation, best expected-points gain, lower risk, and easiest
+   partner-positive construction.
 
 Search is not restricted to same-position swaps. A partner's “surplus” means a
 player is displaced from useful weekly lineups and can be replaced above the
@@ -581,12 +688,18 @@ waiver floor; roster count alone is insufficient.
 
 Default ordering is lexicographic, not a hidden weighted sum:
 
-1. pass user-value and downside gates;
-2. pass partner near-neutral/need gate;
-3. maximize balanced expected weekly gain;
+1. pass user intrinsic-value and downside gates;
+2. pass trade-market fairness and partner near-neutral/need gates;
+3. maximize the user's expected weekly/team-value gain;
 4. prefer stronger cross-model agreement;
 5. apply the selected risk posture; and
 6. prefer fewer assets and no forced drop when otherwise tied.
+
+The final tie-break in step 6 applies within an objective lane. It cannot make
+the `SIMPLE` lane suppress the best passing `CONSOLIDATE` result. A 2-for-1
+must additionally show the target's starter upgrade, the user's open-slot add,
+the partner's forced drop, each incoming asset's partner use, and the visible
+market premium applied to the best player.
 
 ## 12. CLI and report design
 
@@ -596,6 +709,7 @@ All commands live under a visible `trade` namespace:
 python -m roster_theory trade refresh league_alpha
 python -m roster_theory trade diagnose league_alpha
 python -m roster_theory trade gaps league_alpha
+python -m roster_theory trade targets league_alpha
 python -m roster_theory trade evaluate league_alpha --send PLAYER --receive PLAYER
 python -m roster_theory trade search league_alpha
 python -m roster_theory trade compare league_alpha --packages FILE
@@ -618,16 +732,21 @@ TRADE ASSISTANT — League Alpha — Half-PPR — Weeks 1-17
 Data: Sleeper current | WEEKLY-PROXY ranks 4h | weekly projections 2h | injuries 18m
 ```
 
-It then presents, in order:
+`trade targets` stops after target discovery and does not imply that a passing
+offer exists. `trade search` reuses the identical target evidence, constructs
+packages, and presents, in order:
 
-1. verdict and one-sentence football consequence;
-2. user weekly starter-point, depth, and playoff deltas;
-3. concentration/downside/upside changes;
-4. partner lineup/depth result and market fairness;
-5. selected, pre-shrink, market, raw projection, and disagreement views;
-6. best/worst affected weeks and add/drop consequences;
-7. strongest reversal condition; and
-8. completeness, freshness, and provenance warnings.
+1. `BUY LOW`, `SELL HIGH`, and `CONSOLIDATE` target cards, including `WATCH`
+   targets with no current package;
+2. proposed offers grouped under the target that generated them;
+3. user weekly starter-point, depth, and playoff deltas;
+4. concentration/downside/upside changes;
+5. partner lineup/depth result and market fairness;
+6. selected, pre-shrink, market-consensus, optional trade-market, raw
+   projection, performance-context, and disagreement views;
+7. best/worst affected weeks and add/drop consequences;
+8. strongest reversal condition; and
+9. completeness, freshness, and provenance warnings.
 
 JSON is the canonical full result. CSV exports contain flat player-value,
 weekly-impact, and candidate-summary tables. Terminal output never collapses
@@ -675,6 +794,13 @@ risk scenarios, but it disables selected-versus-market opportunity claims.
 Rank-only mode may show a value sensitivity but may not claim projected weekly
 points. Current ownership is never allowed to degrade to a stale recommendation.
 
+`ECR-PROXY` is the normal trade-market degraded mode when no supported current
+chart exists. It permits target and package analysis using the two existing
+rank boards, but disables chart-price, chart-change, and consolidation-premium
+claims. Missing compatible actual-versus-pregame evidence suppresses the
+performance label only; it does not suppress an otherwise supported intrinsic
+target. Partial performance samples remain visible and cannot clear a gate.
+
 ## 15. Verification strategy
 
 Unit tests use recorded, minimized fixtures and never call live providers.
@@ -691,9 +817,16 @@ Required test groups are:
   John Doe/Joe Smith fixture;
 - monotone overall-rank curves and positional-order preservation;
 - valuation-gap sign and tier direction;
+- supported trade-market normalization, variant selection, freshness,
+  no-direct-VORP-subtraction, and `ECR-PROXY` fallback;
+- leakage-safe actual-versus-pregame joins, availability exclusions, small-
+  sample shrinkage, and missing-performance behavior;
 - weekly team marginal value and package symmetry;
 - correlation shrinkage and offense-wide scenarios;
 - candidate pruning without loss of controlled optimal packages;
+- target-lane and package-size budget isolation, including a 2-for-1 that the
+  former shared exact-evaluation bound would miss;
+- consolidation premium, user add, partner drop, and incoming-use accounting;
 - decision labels and reversal explanations;
 - freshness, incomplete coverage, and `ECR-ONLY` behavior; and
 - deterministic evidence reproduction from an identical manifest.
@@ -707,6 +840,12 @@ Golden integration fixtures cover:
 5. a market-favored sell-high that also solves the partner's need; and
 6. a 2-for-1 whose required drop reverses the apparent result.
 
+Phase 13 adds golden cases for an underperforming player whose selected ROS
+value remains strong, an overperforming expendable user asset, a valid
+two-for-one in which both partner additions start, a rejected nominally fair
+two-for-one whose second asset is unusable, and identical search behavior in
+`ECR-PROXY` except for disabled chart-specific claims.
+
 The entire existing Draft Assistant suite remains a regression gate after each
 shared extraction. Live authenticated probes are manual integration checks
 that record only schemas, counts, parameters, and coverage; they are not unit
@@ -715,7 +854,11 @@ tests and must respect the request budget.
 ## 16. Design gates and deferred choices
 
 This design deliberately leaves empirical values out of code until evidence is
-available. Before implementation can be called recommendation-ready, separate
+available. On September 21 the user approved explicit, unvalidated starting
+assumptions for read-only Trade Finder review; they are versioned provisional
+policies, not empirical values or a recommendation-ready claim. TA-1310 retains
+the rolling-origin promotion gate. Before implementation can be called
+recommendation-ready, separate
 studies must settle:
 
 - available historical weekly in-season accuracy years and the selected-expert

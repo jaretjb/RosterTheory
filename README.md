@@ -2,14 +2,53 @@
 
 ![Roster Theory in oversized, chunky bright-yellow 1990s arcade lettering](docs/assets/roster-theory-terminal-90s.svg)
 
-A command-line fantasy football assistant for Sleeper leagues.
+A command-line decision engine for Sleeper leagues, built to answer the
+question a generic rankings page cannot: **what is the best move for this
+roster, in this league, right now?**
 
-RosterTheory helps with drafts, trades, and waivers. It reads your league's
-settings and combines them with FantasyPros rankings and projections to give
-you league-specific advice.
+FantasyPros supplies authoritative expert rankings and projection data.
+RosterTheory turns that evidence into league-specific draft, trade, and waiver
+advice. It reads the actual Sleeper scoring and roster rules, models the players
+likely to remain available, optimizes legal starting lineups, and keeps every
+recommendation tied to its source and decision horizon.
 
-It never makes a pick, sends a trade, submits a waiver claim, or changes your
-lineup. It only shows recommendations. You decide what to do with them.
+## Why use it with FantasyPros?
+
+RosterTheory is not another set of invented player rankings, and it does not
+claim that one model knows more than the experts. Its advantage is the decision
+work that begins after the rankings arrive:
+
+- **Thousands of simulated drafts, not a static cheat sheet.** A standard
+  strategy comparison runs 1,000 seeded Monte Carlo trials for each of two
+  default policies—2,000 simulated draft paths from your configured slot. The
+  engine tests roster construction, opponent behavior, positional runs,
+  acquisition timing, and whether a target is likely to survive to your next
+  pick.
+- **Your scoring, not a canned point total.** Raw projection statistics are
+  rescored from the league's real Sleeper settings, then evaluated against its
+  exact lineup and roster constraints.
+- **Expert evidence with an audit trail.** When authorized accuracy history is
+  available, the draft board can weight experts by their demonstrated,
+  position-specific performance. Rankings stay authoritative only for their
+  declared preseason, weekly, or rest-of-season horizon. Missing, stale,
+  partial, or ambiguously matched data is reported instead of silently replaced
+  with a guess.
+- **Whole-roster decisions.** Trade and waiver analysis compares optimized
+  legal lineups before and after a move, including replacement value, schedule,
+  availability risk, and the cost of the player or roster spot being given up.
+- **Advice without account risk.** The app is read-only: it can follow a live
+  room and explain a recommendation, but it cannot make a pick, send a trade,
+  submit a claim, or change a lineup.
+
+There is also a concrete project sanity check. In a documented 2026 live draft,
+the user followed RosterTheory's displayed leader on all 15 picks; the resulting
+roster received a **98/100 FantasyPros Draft Wizard score** and was projected to
+finish first. That is one draft—not proof of universal outperformance—but it
+shows that the simulation-driven process can produce an excellent result by
+FantasyPros' own evaluation.
+
+You remain the manager. RosterTheory shows its recommendation and evidence;
+you decide what to do with them.
 
 ## What it does
 
@@ -162,12 +201,13 @@ roster-theory watch-mock SLEEPER_DRAFT_URL --league home_league --board PATH_TO_
 
 ## Trade
 
-Request a current read-only roster diagnosis or trade search directly. Each
+Request a current read-only roster diagnosis or target-first trade search. Each
 analysis refreshes stale schedule/expert evidence, current Sleeper ownership,
 and value boards automatically while reusing fresh caches:
 
 ```text
 roster-theory trade diagnose home_league
+roster-theory trade targets home_league
 roster-theory trade search home_league
 ```
 
@@ -179,7 +219,14 @@ roster-theory trade evaluate home_league --send "Player A" --receive "Player B"
 
 Repeat `--send` or `--receive` for multi-player trades.
 `trade gaps` and `trade compare` use the same automatic preparation. The
-lower-level `inputs prepare`, `trade refresh`, and `trade values` commands remain
+`targets` command shows `WATCH` cards without implying an offer exists;
+`search` adds exact, grouped offers with separate intrinsic and market verdicts.
+These Phase 13 commands require an explicit, league-scoped `trade_target`
+policy (or `--target-policy PATH`). Until its thresholds are supported for that
+league, they stop as uncalibrated; fixture premiums are not production defaults.
+`--ecr-proxy` disables chart claims, while `--trade-market-import PATH` uses an
+authorized local chart. `--snapshot PATH` replays saved evidence offline.
+The lower-level `inputs prepare`, `trade refresh`, and `trade values` commands remain
 available for diagnostics and reproducible operations; they are not normal
 end-user prerequisites.
 

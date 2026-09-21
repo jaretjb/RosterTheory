@@ -2,12 +2,11 @@
 
 Updated: September 14, 2026 (America/Los_Angeles)
 
-Read this file alone at startup. Select one route from the user's request and
-load only that row. A `section` or `task row` means targeted heading/ID lookup,
-not the whole document.
+At task start, read only this file. Select one route and load only its row.
+Load named sections/task rows by heading/ID.
 
-Implementation and provider/data-operation routes also load the short shared
-rules in `.codex/context/IMPLEMENTATION_POLICY.md`.
+Implementation/provider routes also load
+`.codex/context/IMPLEMENTATION_POLICY.md`.
 
 | Route | Load after this file |
 | --- | --- |
@@ -33,6 +32,11 @@ rules in `.codex/context/IMPLEMENTATION_POLICY.md`.
 Never preload all track files, whole backlogs, full designs, completed records,
 runbooks, or private local history evidence. Only
 `.codex/context/ACTIVE_MILESTONE.md` authorizes implementation.
+
+## Git workflow
+
+Never commit/push to `main`; use a separate branch and GitHub pull request.
+Never bypass branch protection.
 
 Keep Draft, Trade, Waiver, and future-assistant policy separate. Shared code may
 own only feature-neutral provider, identity, scoring, projection, lineup,
