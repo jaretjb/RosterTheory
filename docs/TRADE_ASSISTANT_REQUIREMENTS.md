@@ -1,6 +1,6 @@
 # RosterTheory trade assistant requirements
 
-Status: Approved baseline; expert-horizon policy amended September 5, 2026  
+Status: Approved baseline; target-first Phase 13 requirements added September 19, 2026
 Created: September 4, 2026 (America/Los_Angeles)  
 Scope: Requirements only; this document does not authorize implementation
 
@@ -29,6 +29,8 @@ into one trade grade:
    rules, making the proposal plausibly fair?
 4. Where does the selected-expert view disagree with market consensus strongly
    enough to create a buy-low or sell-high opportunity?
+5. Which underperformers, overperforming surplus assets, and 2-for-1
+   consolidation targets deserve attention before a specific offer is built?
 
 The assistant must not recommend diversification at any price. Three starters
 from one offense are a reason to measure correlated risk, not an automatic
@@ -102,6 +104,8 @@ coverable while newly measuring multi-week offense-wide downside.
 
 The user can ask for targets across the league. The assistant must:
 
+- lead with actionable players before constructing offers, separated into
+  buy-low targets, sell-high assets, and consolidation targets;
 - identify players who improve a real lineup or depth need rather than merely
   adding total projected points to the bench;
 - identify managers whose roster construction gives them a plausible reason
@@ -116,28 +120,53 @@ Candidate generation must not be limited to same-position swaps. It must be
 able to recognize mutually useful exchanges such as surplus WR depth for RB
 depth, while enforcing legal rosters and usable starting lineups.
 
+Target discovery and offer construction are separate stages. A target may be
+worth monitoring even when no current package clears both teams' gates. The
+report must not hide that target merely because package search fails, and it
+must not call the target obtainable without a partner-credible offer.
+
+The finder must optimize on two independent axes. It maximizes the user's
+league-specific intrinsic/team-value improvement while using the current
+trade-market board to constrain candidate packages to a plausible market price
+band. Market balance helps decide which offers to construct; it must never make
+an intrinsically harmful trade look beneficial.
+
 ### 3.3 Find valuation gaps
 
 The user can request a league-wide valuation-gap report. The assistant must:
 
-- maintain horizon-matched selected-expert and market-consensus boards as
-  separate player orders (`WEEKLY-PROXY` before ROS publishes, then `ROS`);
-- identify players the market values materially higher than the selected
-  experts do as possible sell-high assets;
-- identify players the selected experts value materially higher than the
-  market does as possible buy-low targets;
+- maintain the horizon-matched selected-expert intrinsic board, the market-ECR
+  corroboration board, and—when supported—the current trade-market price board
+  as separate evidence;
+- identify players whose trade-market price is materially higher than their
+  selected-expert intrinsic value as possible sell-high assets;
+- identify players whose selected-expert intrinsic value is materially higher
+  than their trade-market price as possible buy-low targets;
 - locate each candidate on the authoritative Sleeper rosters;
 - combine the valuation gap with each team's actual lineup needs and depth;
 - use the market view as a proxy for how a typical opponent may value a player,
   not as proof that a specific manager agrees; and
-- show rank gap, tier gap, rank-implied value gap, and source disagreement
-  before proposing a trade package.
+- show the intrinsic-versus-trade-market percentile/tier gap, raw chart value
+  and change, market-ECR corroboration, and source disagreement before
+  proposing a trade package.
 
-The default market proxy is complete current FantasyPros ECR at the active
-horizon: weekly ECR before ROS publishes, then ROS ECR. Other market signals
-may be added only as separately labeled inputs. Sleeper ownership and add/drop
-trends may show popularity or momentum, but they must not silently replace the
-market-value board.
+When a fresh supported trade-market board is available, it is the finder's
+primary estimate of community exchange price. Complete current FantasyPros ECR
+at the active horizon remains separate corroborating evidence and the explicit
+`ECR-PROXY` fallback. Sleeper ownership and add/drop trends may show popularity
+or momentum, but they must not silently replace either market input.
+
+A supported weekly trade-value chart is a separate `trade-market` price input,
+not another expert rank or projection. When available, the assistant must show
+its source week, scoring/format variant, numeric value, and week-over-week
+change. It must not subtract chart values directly from rank-implied VORP;
+comparisons require an audited monotone mapping, percentile/tier comparison, or
+another documented common scale. When no supported chart is available, reports
+must say `ECR-PROXY` and disable chart-specific fairness claims.
+
+Recent over- or underperformance is also separate context. It may make a
+player more plausible to shop or acquire, but it must not change authoritative
+expert order or prove what a manager believes.
 
 ### 3.4 Evaluate a proposed trade
 
@@ -160,6 +189,13 @@ The output must use decision language such as `ACCEPTABLE`, `TARGET`,
 `COUNTER`, or `DECLINE` only when a documented threshold is met. It must never
 present a false precision such as a predicted acceptance percentage until a
 separately validated offer-outcome model exists.
+
+Entered-package evaluation must not require a trade-market chart. Its core
+outcome answers whether the user's exact roster improves under league scoring,
+remaining-horizon football value, depth, and risk. When a fresh compatible
+chart is already available, the evaluator may also show a separate market-
+fairness result; otherwise it reports market fairness as unavailable or
+`ECR-PROXY` without weakening the intrinsic verdict.
 
 ### 3.5 Compare alternatives
 
@@ -229,7 +265,9 @@ FantasyPros is the primary source for:
 - weekly rankings for matchup timing and a future start/sit assistant;
 - injuries, practice status/probabilities where supplied, and player news;
 - scored player points over a requested week range for validation and
-  correlation research; and
+  correlation research;
+- weekly redraft trade-market values and changes only if a documented,
+  licensed API or export capability is verified; and
 - canonical player metadata and external-ID cross-references when Sleeper's
   mapping is absent or ambiguous.
 
@@ -240,6 +278,17 @@ probe must verify the exact 2026 parameters and coverage for `ROS`, weekly,
 and selected-expert calls. Public FantasyPros trade-analyzer pages may be used
 as external validation, but RosterTheory must not scrape or depend on a private
 trade-grade formula or an undocumented write/integration endpoint.
+
+As of the Phase 13 planning baseline, the public v2 catalog does not document a
+trade-value endpoint even though FantasyPros publishes weekly trade-value
+articles. Implementation must first obtain provider capability and licensing
+evidence. It must not guess an endpoint, scrape an article, or reverse-engineer
+an unpublished FantasyPros formula. A separately documented provider may
+supply the trade-market board when its terms authorize application use and its
+identity, freshness, format, value, change, coverage, and request contracts are
+verified. Otherwise allow a user-supplied, provenance-checked local import and
+retain the explicitly labeled `ECR-PROXY` mode. Provider rows remain ignored
+local data and are never committed or redistributed.
 
 The existing one-request-per-second and 500-request-per-day project limits
 remain controlling unless the actual key reports a stricter limit. Requests
@@ -391,8 +440,18 @@ remain distinct. Do not average the two boards together before calculating the
 valuation gap.
 
 The selected-expert board represents RosterTheory's football opinion. The
-market-consensus board estimates a typical public valuation. Neither one alone
-proves what a particular opponent believes.
+market-consensus board is an independent public-rank benchmark and uncertainty
+check. When a supported trade-market board exists, market ECR does not replace
+its direct exchange-price evidence. Neither source proves what a particular
+opponent believes.
+
+An optional `trade-market` board may retain cross-position weekly exchange
+prices from a supported, license-compatible provider or authorized local
+import. It does not replace either horizon-matched board, determine league-
+scored team value, or reorder authoritative experts. Its format must match the
+league where the source supplies a relevant 1QB, superflex/2QB, tight-end-
+premium, or reception variant; otherwise it is context-only and the limitation
+is explicit.
 
 ### 6.3 League-scored projection inputs
 
@@ -493,6 +552,21 @@ weekly projection evidence for RosterTheory's team-impact score. It must not
 merge away the selected-versus-market valuation gap used to find trade
 opportunities.
 
+### 6.8 Leakage-safe recent performance context
+
+Buy-low and sell-high discovery may compare completed-game production with the
+projection or weekly rank captured before that game. Never compare an outcome
+with a projection refreshed after the game, and never use future evidence in a
+historical decision. Retain the expected value, actual value or finish,
+residual, capture times, sample size, and excluded weeks.
+
+Exclude or separately label byes, verified inactive games, partial games where
+availability makes the comparison misleading, and weeks without compatible
+league-scored evidence. Shrink small samples and report both point and rank
+surprise when supported. A performance residual is manager-sentiment context;
+it cannot alter selected-expert order, replace ROS value, or independently
+trigger a trade recommendation.
+
 ## 7. Risk requirements
 
 ### 7.1 Risk is multidimensional
@@ -554,14 +628,27 @@ clear need-based rationale for the other manager. RosterTheory should show the
 partner's lineup, depth, and risk changes using the same inputs, while noting
 that the partner may have different preferences.
 
-### 8.2 Selected-expert, market, and team value
+### 8.2 Two decision axes and their supporting evidence
 
-The assistant must keep these three concepts distinct:
+The assistant must expose two independent decision axes:
+
+- `intrinsic outcome` answers whether the trade improves the user's actual
+  team. It is determined from selected-expert remaining-horizon football value,
+  league-scored projections, exact weekly lineup use, replacement depth, and
+  risk. The partner receives the same exact-roster calculation.
+- `market fairness` answers whether the exchanged packages are similarly
+  priced by the community. It is determined from one fresh, compatible trade-
+  market board, with any consolidation premium shown explicitly. If that board
+  is unavailable, the result is `ECR-PROXY` or unavailable—not invented.
+
+The evidence underneath those axes remains distinct:
 
 - `selected-expert value`: RosterTheory's opinion from the in-season-accuracy-
   weighted active-horizon board and its rank-aligned projection curve;
-- `market value`: current full same-horizon ECR, its independently aligned
-  value curve, and optional observed market context; and
+- `market-consensus value`: current full same-horizon ECR and its independently
+  aligned value curve;
+- `trade-market value`: an optional weekly exchange-price chart or an explicit
+  `ECR-PROXY`, never silently substituted for the chart; and
 - `team value`: marginal effect on this exact roster under this league's rules.
 
 A player can have greater team value than market value because he fills a
@@ -569,17 +656,31 @@ scarce starter slot, or lower team value because equivalent depth sits unused.
 That difference is a source of mutually beneficial trades, not an error to
 average away.
 
-The opportunity search must calculate a signed selected-versus-market gap on a
-common rank-implied point or VORP scale:
+The two outputs must remain independently legible. A result may be an
+intrinsic `WIN` but a market overpay, or market-fair but an intrinsic `LOSS`.
+Market price must never be added to projected points, used to reorder experts,
+or allowed to rescue a negative intrinsic/team-value result.
 
-- market value materially above selected-expert value is a possible sell-high
+The opportunity search must calculate a signed trade-market premium after an
+audited percentile/tier alignment:
+
+- with percentiles oriented so larger means more valuable, positive
+  `market_price_percentile - intrinsic_percentile` is a possible sell-high
   signal; and
-- selected-expert value materially above market value is a possible buy-low
-  signal.
+- a negative result is a possible buy-low signal.
+
+The complete market-ECR board corroborates that gap and supplies the explicit
+`ECR-PROXY` calculation when no supported chart exists. It does not become a
+third decision outcome or override direct trade-market prices.
 
 The signal becomes actionable only after lineup impact, replacement depth,
-risk, and the partner's needs are evaluated. Rank disagreement alone is not a
-trade recommendation.
+risk, the partner's needs, and market-package fairness are evaluated. Rank
+disagreement alone is not a trade recommendation.
+
+Buy-low targeting requires positive remaining-horizon conviction plus a
+plausible current discount; sell-high targeting requires a market premium plus
+low marginal cost to the user's roster. Recent performance surprise may
+strengthen the explanation but cannot manufacture either value edge.
 
 ### 8.3 Acceptance claims
 
@@ -601,11 +702,30 @@ assets, and three-team trades are future extensions. The normalized trade
 asset model should allow these types later without placing dynasty logic in the
 MVP scorer.
 
+### 8.5 Consolidation and deconsolidation
+
+Two-for-one consolidation is a first-class search objective. The assistant
+must look for one incoming player who materially improves the user's starting
+lineup while two outgoing players are replaceable by existing depth or the
+resulting open-slot addition. It must separately test whether both outgoing
+players improve the partner's starters, usable depth, or explicit absence
+coverage after the partner's required drop.
+
+Package construction may apply a visible, calibrated consolidation premium to
+the market return demanded for the best player. The exact evaluator remains
+authoritative: it applies both rosters' adds/drops, starter displacement,
+weekly points, depth, and risk. Asset-count preference alone must neither
+promote nor suppress a 2-for-1, and the assistant must not call two nominal
+values additive when one incoming player would be unusable.
+
 ## 9. Explanation and presentation requirements
 
 Every evaluated package must lead with football consequences and include:
 
 - a one-sentence verdict;
+- the user's separate intrinsic `WIN`, `NEUTRAL`, or `LOSS` outcome;
+- market `FAIR`, `USER_UNDERPAY`, `USER_OVERPAY`, `ECR-PROXY`, or
+  `UNAVAILABLE` status without blending it into the intrinsic outcome;
 - expected weekly starter-point change over the stated horizon;
 - best and worst affected weeks;
 - depth/replacement change;
@@ -614,11 +734,19 @@ Every evaluated package must lead with football consequences and include:
 - source freshness and completeness; and
 - the strongest reason to disagree with the verdict.
 
+League-wide discovery must lead with target cards before package results. Each
+card names the opportunity type, owner, intrinsic/market evidence, compatible
+recent-performance context, user lineup fit, owner disposability, freshness,
+and whether a partner-credible offer was found. The compact report then groups
+offers under `BUY LOW`, `SELL HIGH`, and `CONSOLIDATE` rather than presenting an
+undifferentiated package list.
+
 Detailed output should expose player-level ranks, projected points, tier,
 lineup usage, waiver replacement, risk contribution, selected-expert rank,
-market ECR, signed valuation gap, and expert disagreement. Do not combine
-projected points, rank slots, and standardized scores under a single unlabeled
-number.
+market ECR, raw trade-market value/change, normalized intrinsic-versus-market
+premium, package-fairness gap, and expert disagreement. Do not combine projected
+points, rank slots, chart units, and standardized scores under a single
+unlabeled number.
 
 Warnings must be prominent for stale data, current injury/news conflicts,
 missing weekly projections, ambiguous identity, incomplete free-agent pools,

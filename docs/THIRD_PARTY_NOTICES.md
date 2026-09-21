@@ -80,6 +80,7 @@ endorsed by nflverse, the NFL, any club, FantasyPros, or Sleeper.
 | Artifact | Source and transformation | Necessity | Terms / attribution | Disposition |
 | --- | --- | --- | --- | --- |
 | `config/leagues.example.json` | Invented league, owner, and draft values | Public setup schema | None | `SYNTHETIC_FIXTURE` |
+| `config/trade-target.provisional.example.json` | Project-authored, explicitly unvalidated Trade Finder starting assumptions | Synthetic target-policy example | No third-party rows or league evidence | `SYNTHETIC_FIXTURE` |
 | `config/defense_draft_order_2026.csv` | Contributor-authored editorial ordering; no copied rankings | Optional Draft preference | NFL/club marks acknowledged above | `REDISTRIBUTE` |
 | `config/trade/phase6_policy.json` | Project-authored scenario and decision thresholds derived from RosterTheory tests | Trade evaluation default | No third-party rows; FantasyPros/Sleeper credited above for research context | `REDISTRIBUTE` |
 | `config/trade/phase7_search_policy.json` | Project-authored search thresholds derived from RosterTheory tests | Trade search default | No third-party rows; FantasyPros/Sleeper credited above for research context | `REDISTRIBUTE` |

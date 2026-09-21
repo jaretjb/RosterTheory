@@ -32,6 +32,9 @@ request.
 
 ## Patches
 
+- Create a separate branch for every change. Direct commits and pushes to
+  `main` are prohibited; all changes to `main` must be merged through a GitHub
+  pull request.
 - Open an issue for a material behavior or policy change before implementing
   it, unless a maintainer has already identified the task.
 - Keep patches bounded, include tests for changed behavior, and explain the

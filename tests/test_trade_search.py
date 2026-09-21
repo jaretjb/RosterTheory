@@ -945,7 +945,7 @@ class SearchCliTests(unittest.TestCase):
         ])
         with (
             patch("roster_theory.cli._prepare_trade_analysis") as prepare,
-            patch("roster_theory.cli.load_search_evidence", return_value={"ok": True}),
+            patch("roster_theory.cli.load_target_workflow_evidence", return_value={"ok": True}),
             patch("roster_theory.cli._print_json"),
         ):
             command_trade_search(args)
