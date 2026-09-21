@@ -1,32 +1,44 @@
 # Trade Assistant current status
 
-Updated: September 18, 2026 (America/Los_Angeles)
+Updated: September 21, 2026 (America/Los_Angeles)
 
-Stopping point: Phase 12 is complete. `trade diagnose`, `evaluate`, `gaps`,
-`search`, and `compare` now prepare stale/missing schedule and in-season expert
-evidence automatically, then refresh current Sleeper ownership and value boards.
-Fresh caches are reused. Explicit policy/expert overrides and search/evaluation
-snapshot replay remain available; replay performs no live preparation.
+Stopping point: TA-1309 Phase 13 read-only gate is complete. TA-1301–TA-1309
+are complete; TA-1310 retains empirical rolling-origin calibration after
+sufficient evidence exists. No Trade implementation is active.
 
-The default per-user config now references the existing calibrated policies for
-each league. Legacy same-league Trade policies gained season/artifact metadata
-with backups; no calibration moved between leagues. Lower-level `inputs
-prepare`, `trade refresh`, and `trade values` remain diagnostic tools rather
-than end-user prerequisites.
+TA-1309 now keeps current chart pricing for covered targets and packages,
+excludes missing assets explicitly, and supports a league-local archived
+prior-week chart for whole-package indicative analysis without current FAIR
+or accepted-offer claims. Fresh separate league runs used the current chart:
+one found four offers, the other none. No completed-performance history
+exists yet and the 5% premium remains provisional. All 649 tests and Ruff pass.
+Details: `docs/COMPLETED_TRADE_ASSISTANT_TA_1309.md`.
 
-Runtime result: profiling showed ordinary two-FLEX lineups were misclassified
-as 4,096-shape problems rather than nine full-lineup allocation shapes, forcing
-the general bitmask solver. Correct fast-path selection plus precomputed
-per-position count selections reduced League Beta from about 225 seconds to
-about 63 seconds without reducing search breadth. League Alpha remains about
-31 seconds.
+TA-1308 connects prospective pregame-versus-completed performance context to
+the normal finder, labels separate league-local policies
+`PROVISIONAL_HEURISTIC`, shows direct-chart 0/5/10% consolidation fairness
+sensitivity, and writes non-overwriting feedback templates. Its separate-axis
+rolling-origin study harness remains unpromoted because local history is
+insufficient. At the TA-1308 handoff, 643 tests and Ruff passed and no live
+finder had run. Details:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1308.md`.
 
-Live result: both leagues completed direct diagnosis and full search from the
-default config. League Alpha enumerated 5,094 packages and evaluated 27;
-League Beta enumerated 6,226 and evaluated 33. Both returned no target, with
-identical rejection counts and policy versions before and after optimization.
+TA-1303 joins completed results only to compatible pregame point/rank captures
+at a rolling-origin decision time. It retains exclusion/provenance rows,
+position-aware shrinkage, and claim-disabled small/stale samples. Expert order
+is unchanged. Six focused tests, all 630 tests, and Ruff pass. No live history
+or private evidence was read. Details:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1303.md`.
 
-Validation: complete tests, Ruff, package/privacy/release gates, external push,
-and remote verification pass. No Sleeper write occurred. Phase 10's ranking-
-exclusion and roster-context behavior remains intact. No Trade milestone is
-active.
+TA-1307 adds target-first CLI cards/offers and separate intrinsic/market
+verdicts. Fresh read-only league validation remains TA-1309. Details:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1307.md`.
+
+TA-1306 adds exact 2-for-1 consolidation with visible premium, add/drop, and
+partner-use evidence. TA-1310 owns empirical calibration. Details:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1306.md`.
+
+Earlier ingestion, discovery, and optimizer details:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1302.md`,
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1304.md`, and
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1305.md`.

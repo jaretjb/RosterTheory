@@ -50,3 +50,7 @@ class AvailabilitySource(Protocol):
 class PlayerPointsSource(Protocol):
     def player_points(self, season: int, **params: Any) -> Mapping[str, Any]: ...
 
+
+@runtime_checkable
+class TradeMarketSource(Protocol):
+    def players(self) -> Mapping[str, Any]: ...

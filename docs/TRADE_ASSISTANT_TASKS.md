@@ -1,6 +1,6 @@
 # RosterTheory Trade Assistant task list
 
-Status: Phase 10 complete; no open Trade development task
+Status: TA-1303 complete; TA-1308 active
 Created: September 4, 2026 (America/Los_Angeles)  
 Requirements: `docs/TRADE_ASSISTANT_REQUIREMENTS.md`  
 Design: `docs/TRADE_ASSISTANT_DESIGN.md`
@@ -44,6 +44,9 @@ Priorities are `P0` (required foundation), `P1` (MVP), and `P2` (post-MVP).
 | 8 | The read-only MVP is recommendation-ready | Phase 7 gate passes |
 | 9 | League Beta's 12-team, two-FLEX format is supported and optimized | TA-801 passes and the user approves prioritizing League Beta |
 | 10 | Trade reports survive legitimate ranking exclusions and automatic targets respect roster-context utility | User approves the September 18 correctness milestone |
+| 11 | Every Trade analysis prepares current evidence from one user-facing command | Phase 10 passes and the user approves workflow simplification |
+| 12 | Search runtime improves without changing recommendation semantics | Phase 11 passes and profiling identifies safe deterministic optimization |
+| 13 | Trade discovery starts with buy-low, sell-high, and consolidation targets, then constructs credible packages | Phase 12 passes, Phase 13 design is reviewed, and the active milestone explicitly authorizes implementation |
 
 ## Phase 0 — Activation and baseline
 
@@ -455,6 +458,46 @@ changing candidate coverage or recommendation semantics, deterministic tests
 and live league-isolated comparisons pass, no private artifact enters the
 commit, release gates pass, and the resulting commit is verified on the public
 remote. No Sleeper write is authorized.
+
+## Phase 13 — Target-first trade discovery and consolidation
+
+Football consequence: the manager should first see whom to acquire, whom to
+shop, and which roster-upgrading 2-for-1s are plausible. Package search should
+then build offers around those opportunities instead of asking a small generic
+candidate pool to discover the strategy accidentally. It maximizes intrinsic
+team improvement inside a separate community-price fairness band; neither axis
+is blended into the other.
+
+The user approved this planning work on September 19 and activated Phase 13 on
+September 20. TA-1301, TA-1302, TA-1304, TA-1305, and TA-1306 are complete.
+TA-1303, TA-1307, and provisional TA-1308 are complete; TA-1309 remains planned. The existing
+exact two-team evaluator remains the final decision gate, and all behavior
+stays read-only.
+
+| ID | P | Status | Work and deliverable | Depends | Context | Exit evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| TA-1301 | P0 | COMPLETE | Establish the weekly trade-market provider contract. FantasyPros has no documented chart endpoint; do not scrape its article or reverse-engineer its unpublished formula. The dated capability record selects the documented Stats Guy Fantasy redraft API, with provenance-checked local import and explicit `ECR-PROXY` fallbacks. | Phase 12 | R§3.3, §4.3, §6.2; D§5.3-5.4, §7.4, §14 | `docs/TRADE_MARKET_PROVIDER_CAPABILITY_2026-09-20.md` records licensing, schema, formats, freshness, Sleeper IDs, values, changes, coverage, twelve safe GETs, FantasyPros/CBS relative agreement, and no secret/provider row in Git. |
+| TA-1302 | P0 | COMPLETE | Implement the chosen `TradeMarketBoard` ingestion and normalization boundary for finder pricing: canonical Sleeper identity, provider-date freshness, completeness, 1QB/superflex selection, explicit reception/TEP market-blend limitations, raw value/change retention, attribution, ignored local storage, and degradation to authorized import or `ECR-PROXY`. Keep entered-package intrinsic evaluation operational without this board. Never treat provider units as projected points or directly subtract them from VORP. | TA-1301 | R§3.3-3.4, §4.3, §6.2, §8.2; D§4.3, §5.3-5.4, §7.4, §10, §13-14 | Fourteen synthetic tests cover format selection, identity/coverage/freshness failures, changes, replay, attribution, scoring limits, API/import/proxy modes, and chart-free evaluation. A one-GET live check normalized 396 rows to 211 1QB prices without retaining rows. All 605 tests and Ruff pass; details are in `docs/COMPLETED_TRADE_ASSISTANT_TA_1302.md`. |
+| TA-1303 | P1 | COMPLETE | Build optional leakage-safe recent-performance evidence by joining each completed outcome only to its pregame projection or weekly rank capture. Calculate position-aware point/rank residuals, exclude bye/inactive and unsupported partial-game cases, shrink small samples, and retain timestamps/sample/exclusions. Residuals may explain tradability but never reorder experts, independently pass a target, or block the core finder. | TA-414, TA-502 | R§6.8, §8.2, §11; D§4.3, §8.4, §13-15 | Six rolling-origin fixtures reject postgame/future inputs, preserve selected order, and distinguish valid under/overperformance from bye, inactive, partial, missing, stale, and small samples. All 630 tests and Ruff pass; details in `docs/COMPLETED_TRADE_ASSISTANT_TA_1303.md`. |
+| TA-1304 | P0 | COMPLETE | Add deterministic target discovery and evidence contracts for `BUY_LOW`, `SELL_HIGH`, `CONSOLIDATE`, and fallback `NEED_FIT`. Rank target cards from separate intrinsic/team value, trade-market price, market-ECR corroboration, optional performance context, user fit, and owner disposability without an opaque blended score. Preserve `WATCH` targets when no package clears both teams' gates. | TA-1302, TA-606 | R§3.2-3.3, §8.1-8.3, §9; D§4.3, §8.4, §11-13 | Seven focused fixtures/tests identify every intended opportunity type and owner, expose intrinsic and market axes separately with freshness limits, remain valid without performance context, prove deterministic lane ordering and whole-run `ECR-PROXY`, and never claim preference or obtainability. All 612 tests and Ruff pass; details are in `docs/COMPLETED_TRADE_ASSISTANT_TA_1304.md`. |
+| TA-1305 | P0 | COMPLETE | Rebuild candidate generation as a constrained optimizer around the target lanes: maximize user intrinsic/team-value gain subject to a trade-market fairness band, partner exact-roster plausibility, legality, and downside gates. Seed outgoing assets from usable surplus, market price, low exact marginal cost, and partner need; reserve exact-evaluation budgets by lane and package size; retain deterministic pruning and report coverage per lane. | TA-1304, TA-703-TA-706 | R§3.2-3.3, §8.1-8.3, §11; D§11, §15-16 | Controlled exhaustive fixtures retain the best intrinsic result in all 16 lane/package-size groups, distinguish fair losses from unfair wins, and give consolidation 2-for-1 an isolated exact budget. Six focused tests, all 618 tests, and Ruff pass; details are in `docs/COMPLETED_TRADE_ASSISTANT_TA_1305.md`. |
+| TA-1306 | P0 | COMPLETE | Make 2-for-1 consolidation a first-class exact objective. Apply a visible, versioned market premium; require a material user starter upgrade; include the user's resulting add and partner's required drop; prove both outgoing assets supply partner lineup/depth use; and prevent asset-count simplicity from dominating the consolidation lane. Empirical, league-local premium calibration remains TA-1310. | TA-1302, TA-1304, TA-504, TA-1305 | R§6.5-6.6, §8.1-8.2, §8.5; D§8.2-8.4, §10-11, §15-16 | Four focused fixtures accept mutually useful consolidation, reject an unusable second asset, reverse on the correct drop/add, and expose every premium and marginal-use component. All 622 tests and Ruff pass; details in `docs/COMPLETED_TRADE_ASSISTANT_TA_1306.md`. |
+| TA-1307 | P1 | COMPLETE | Add `trade targets` and make `trade search` lead with identical `BUY LOW`, `SELL HIGH`, and `CONSOLIDATE` target cards before grouped offers. Every offer prints separate intrinsic `WIN/NEUTRAL/LOSS` and market `FAIR/USER_UNDERPAY/USER_OVERPAY/ECR-PROXY/UNAVAILABLE` results. Keep compact terminal output, canonical JSON/CSV evidence, replay, one-command preparation, and advanced overrides; clearly label `WATCH` and missing context. | TA-1304-TA-1306, TA-1101 | R§3.2-3.6, §9, §11; D§12-14 | Synthetic CLI/service fixtures prove target/search identity, two axes, `WATCH`, grouped offers, JSON/CSV, proxy, replay, and clean machine output. All 624 tests and Ruff pass. Live use awaits league-scoped TA-1308 policy; details in `docs/COMPLETED_TRADE_ASSISTANT_TA_1307.md`. |
+| TA-1308 | P0 | COMPLETE | Deliver an explicitly provisional, league-local Trade Finder policy for read-only review while preserving separate intrinsic and market axes. Wire leakage-safe recent-performance history into normal target discovery; prospectively capture pregame expectations, exclude unavailable outcomes, and keep expert order unchanged. Start with a labeled 5% consolidation premium, display 0/5/10% chart-fairness sensitivity, reserve lane/size budgets, and create non-overwriting feedback templates. Retain the rolling-origin study harness without promoting its fixture settings. Do not claim historical calibration or acceptance probabilities. | TA-1303-TA-1307 | R§6.8, §8.3, §11; D§8.4, §11, §15-16 | Separate ignored policies load for each league; synthetic tests prove performance wiring and no-lookahead exclusions, sensitivity affects market verdict only, feedback survives repeat runs, and JSON/CSV/human output labels assumptions and missing history. All 643 tests and Ruff pass. Empirical calibration is deferred to TA-1310; details in `docs/COMPLETED_TRADE_ASSISTANT_TA_1308.md`. |
+| TA-1309 | P0 | COMPLETE | Run the Phase 13 gate: focused/full regressions, deterministic replay, privacy/licensing/GET-only checks, chart-free entered evaluation, cache-only finder fallback, and separately authorized fresh read-only validation for each configured league. Reconcile both decision axes for target cards, one buy-low, one sell-high, and one consolidation calculation where evidence exists; report no-opportunity outcomes honestly. | TA-1301-TA-1308 | R§2.1, §3, §9-13; D§13-16 | Both fresh league-local runs used current chart pricing after per-asset coverage repair; one yielded four modeled WIN/FAIR offers, the other none. Dated prior-chart fallback and no-mixed-date packages pass fixtures. All 649 tests, Ruff, hash replay, ignored-artifact and read-only checks pass; provisional limits and lack of live prior archive are recorded in `docs/COMPLETED_TRADE_ASSISTANT_TA_1309.md`. |
+| TA-1310 | P1 | PLANNED | Replace provisional Trade Finder assumptions only when each league has enough independent point-in-time decisions. Run the separate intrinsic, community-fairness, performance-window, and per-lane exhaustive grids on rolling-origin holdouts; publish uncertainty, runtime/coverage, rejected alternatives, and league-local policy decisions. Never transfer one league's result or infer acceptance probability from completed trades alone. | TA-1308, TA-1309, sufficient dated evidence | R§6.8, §8.3, §11; D§8.4, §11, §15-16 | Reproducible league-specific studies support every promoted change; otherwise retain the clearly labeled provisional policy and report insufficient evidence. |
+
+### Phase 13 gate
+
+Phase 13 completes only when target discovery is visibly separate from package
+construction; every offer keeps intrinsic outcome separate from market
+fairness; supported trade-market data or `ECR-PROXY` is explicit; entered
+evaluation remains useful without a chart; recent performance is leakage-safe
+context rather than invented rank; buy-low, sell-high, and consolidation lanes
+each retain bounded exact-evaluation coverage; every 2-for-1 includes both
+secondary roster moves and partner use; league calibrations remain separate;
+replay/privacy/licensing/full regression gates pass; and no Sleeper write or
+acceptance-probability claim occurs.
 
 ## Deferred beyond the player-only redraft MVP
 
