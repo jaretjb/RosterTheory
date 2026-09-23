@@ -128,6 +128,16 @@ class PlayerValueInput:
     normalization_basis: str = "LEAGUE_POSITIONAL_VORP"
     long_term_value_horizon: str = "ROS"
     selected_rest_of_season_position_rank: int | None = None
+    season_points: float | None = None
+    season_position_rank: int | None = None
+    recent_points_per_game: float | None = None
+    recent_position_rank: int | None = None
+    recent_opportunities_per_game: float | None = None
+    recent_opportunity_rank: int | None = None
+    recent_yards_per_game: float | None = None
+    recent_yards_rank: int | None = None
+    recent_completed_weeks: tuple[int, ...] = ()
+    performance_source: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,6 +192,10 @@ class OwnershipDelta:
     current_week_drop_rank: int | None
     rest_of_season_add_rank: int | None
     rest_of_season_drop_rank: int | None
+    season_add_rank: int | None
+    season_drop_rank: int | None
+    recent_add_rank: int | None
+    recent_drop_rank: int | None
     long_term_value_horizon_add: str
     long_term_value_horizon_drop: str | None
     fresh_rank_dominance: bool
@@ -375,6 +389,8 @@ class SkillPlayerDecisionEvidence:
 @dataclass(frozen=True, slots=True)
 class DropCandidateEvaluation:
     drop_player_id: str | None
+    drop_position: str | None
+    same_position: bool
     ownership: OwnershipDelta
     lineup: TeamImpact
     risk: RiskImpact
@@ -505,6 +521,10 @@ def _ownership_delta(
         rest_of_season_drop_rank=(
             drop.rest_of_season_position_rank if drop else None
         ),
+        season_add_rank=add.season_position_rank,
+        season_drop_rank=drop.season_position_rank if drop else None,
+        recent_add_rank=add.recent_position_rank,
+        recent_drop_rank=drop.recent_position_rank if drop else None,
         long_term_value_horizon_add=add.long_term_value_horizon,
         long_term_value_horizon_drop=(drop.long_term_value_horizon if drop else None),
         fresh_rank_dominance=fresh_rank_dominates(
@@ -1643,6 +1663,15 @@ def evaluate_waiver(
         candidates.append(
             DropCandidateEvaluation(
                 drop_player_id=drop_id,
+                drop_position=(
+                    _waiver_position(player_by_id[drop_id])
+                    if drop_id is not None
+                    else None
+                ),
+                same_position=(
+                    drop_id is not None
+                    and add_position == _waiver_position(player_by_id[drop_id])
+                ),
                 ownership=ownership,
                 lineup=lineup_impact,
                 risk=scenario_impact,
@@ -1850,7 +1879,7 @@ def evaluate_waiver(
     warnings.append("No Waiver decision policy was applied; no final label is available")
     user_settings = dict(snapshot.league.platform_settings)
     base = WaiverEvaluation(
-        schema_version=14,
+        schema_version=15,
         product="WAIVER ASSISTANT",
         operation="ENTERED ADD/DROP EVALUATION",
         league_key=snapshot.league_key,
@@ -1937,7 +1966,7 @@ def save_waiver_evaluation_inputs(
     if not availability_source.strip():
         raise ValueError("Waiver evaluation inputs require availability provenance")
     unsigned = {
-        "schema_version": 7,
+        "schema_version": 8,
         "product": "WAIVER ASSISTANT",
         "league_key": league_key,
         "captured_at": captured_at.astimezone(timezone.utc),
@@ -1976,7 +2005,7 @@ def save_waiver_evaluation_inputs(
 def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
     schema_version = int(value.get("schema_version") or 0)
-    if schema_version not in {1, 2, 3, 4, 5, 6, 7}:
+    if schema_version not in {1, 2, 3, 4, 5, 6, 7, 8}:
         raise ValueError("Unsupported Waiver evaluation-input schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Evaluation inputs must be Waiver-scoped")
@@ -2042,6 +2071,54 @@ def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
             selected_rest_of_season_position_rank=(
                 int(row["selected_rest_of_season_position_rank"])
                 if row.get("selected_rest_of_season_position_rank") is not None
+                else None
+            ),
+            season_points=(
+                float(row["season_points"])
+                if row.get("season_points") is not None
+                else None
+            ),
+            season_position_rank=(
+                int(row["season_position_rank"])
+                if row.get("season_position_rank") is not None
+                else None
+            ),
+            recent_points_per_game=(
+                float(row["recent_points_per_game"])
+                if row.get("recent_points_per_game") is not None
+                else None
+            ),
+            recent_position_rank=(
+                int(row["recent_position_rank"])
+                if row.get("recent_position_rank") is not None
+                else None
+            ),
+            recent_opportunities_per_game=(
+                float(row["recent_opportunities_per_game"])
+                if row.get("recent_opportunities_per_game") is not None
+                else None
+            ),
+            recent_opportunity_rank=(
+                int(row["recent_opportunity_rank"])
+                if row.get("recent_opportunity_rank") is not None
+                else None
+            ),
+            recent_yards_per_game=(
+                float(row["recent_yards_per_game"])
+                if row.get("recent_yards_per_game") is not None
+                else None
+            ),
+            recent_yards_rank=(
+                int(row["recent_yards_rank"])
+                if row.get("recent_yards_rank") is not None
+                else None
+            ),
+            recent_completed_weeks=tuple(
+                int(week) for week in row.get("recent_completed_weeks") or ()
+            ),
+            performance_source=(
+                str(row["performance_source"])
+                if row.get("performance_source") is not None
                 else None
             ),
         )

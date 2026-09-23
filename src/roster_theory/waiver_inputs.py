@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from roster_theory.core.models import Projection
+from roster_theory.core.scoring import score_stats
 from roster_theory.sleeper import SleeperClient, resolve_league_policy_path
 from roster_theory.waiver.evaluation import (
     ContingencyScenarioInput,
@@ -25,6 +26,147 @@ from roster_theory.waiver.ww_evidence import (
 
 SUPPORTED_POSITIONS = frozenset({"QB", "RB", "WR", "TE", "K", "DST", "DEF"})
 SPECIAL_TEAM_POSITIONS = frozenset({"K", "DST", "DEF"})
+
+
+def _waiver_position(player: object) -> str | None:
+    positions = {
+        "DST" if str(item).upper() == "DEF" else str(item).upper()
+        for item in getattr(player, "positions", ())
+    }
+    return next(
+        (item for item in ("QB", "RB", "WR", "TE", "K", "DST") if item in positions),
+        None,
+    )
+
+
+def _stat_number(row: dict[str, object], *names: str) -> float:
+    for name in names:
+        raw = row.get(name)
+        if raw not in (None, "", "-"):
+            try:
+                return float(raw)
+            except (TypeError, ValueError):
+                continue
+    return 0.0
+
+
+def _opportunities(row: dict[str, object], position: str) -> float | None:
+    if position == "QB":
+        return _stat_number(row, "pass_att") + _stat_number(row, "rush_att")
+    if position == "RB":
+        return _stat_number(row, "rush_att") + _stat_number(row, "rec_tgt")
+    if position in {"WR", "TE"}:
+        return _stat_number(row, "rec_tgt") + _stat_number(row, "rush_att")
+    if position == "K":
+        return (
+            _stat_number(row, "fgm")
+            + _stat_number(row, "fgmiss")
+            + _stat_number(row, "xpm")
+            + _stat_number(row, "xpmiss")
+        )
+    return None
+
+
+def _yards(row: dict[str, object], position: str) -> float | None:
+    if position not in {"QB", "RB", "WR", "TE"}:
+        return None
+    return (
+        _stat_number(row, "pass_yd")
+        if position == "QB"
+        else _stat_number(row, "rush_yd") + _stat_number(row, "rec_yd")
+    )
+
+
+def _rank_by_position(
+    metric: dict[str, float], players: dict[str, object]
+) -> dict[str, int]:
+    grouped: dict[str, list[tuple[str, float]]] = {}
+    for player_id, value in metric.items():
+        player = players.get(player_id)
+        position = _waiver_position(player) if player is not None else None
+        if position is not None:
+            grouped.setdefault(position, []).append((player_id, value))
+    return {
+        player_id: rank
+        for rows in grouped.values()
+        for rank, (player_id, _value) in enumerate(
+            sorted(rows, key=lambda item: (-item[1], item[0])), 1
+        )
+    }
+
+
+def _performance_evidence(
+    *,
+    client: SleeperClient,
+    season: int,
+    current_week: int,
+    players: dict[str, object],
+    scoring: dict[str, float],
+) -> tuple[dict[str, dict[str, object]], tuple[int, ...]]:
+    completed_weeks = tuple(
+        range(max(1, current_week - 2), current_week)
+    )
+    season_rows = client.season_stats(season)
+    weekly_rows = {
+        week: client.weekly_stats(season, week) for week in completed_weeks
+    }
+    season_points = {
+        player_id: score_stats(row, scoring).points
+        for player_id, row in season_rows.items()
+        if player_id in players
+    }
+    recent_points: dict[str, float] = {}
+    recent_opportunities: dict[str, float] = {}
+    recent_yards: dict[str, float] = {}
+    recent_samples: dict[str, int] = {}
+    for player_id, player in players.items():
+        position = _waiver_position(player)
+        if position is None:
+            continue
+        rows = tuple(
+            weekly_rows[week][player_id]
+            for week in completed_weeks
+            if player_id in weekly_rows[week]
+        )
+        if not rows:
+            continue
+        recent_samples[player_id] = len(rows)
+        recent_points[player_id] = round(
+            sum(score_stats(row, scoring).points for row in rows) / len(rows), 3
+        )
+        opportunity_values = tuple(
+            value for row in rows if (value := _opportunities(row, position)) is not None
+        )
+        yard_values = tuple(
+            value for row in rows if (value := _yards(row, position)) is not None
+        )
+        if opportunity_values:
+            recent_opportunities[player_id] = round(
+                sum(opportunity_values) / len(opportunity_values), 3
+            )
+        if yard_values:
+            recent_yards[player_id] = round(sum(yard_values) / len(yard_values), 3)
+    season_ranks = _rank_by_position(season_points, players)
+    recent_ranks = _rank_by_position(recent_points, players)
+    opportunity_ranks = _rank_by_position(recent_opportunities, players)
+    yard_ranks = _rank_by_position(recent_yards, players)
+    return (
+        {
+            player_id: {
+                "season_points": season_points.get(player_id),
+                "season_position_rank": season_ranks.get(player_id),
+                "recent_points_per_game": recent_points.get(player_id),
+                "recent_position_rank": recent_ranks.get(player_id),
+                "recent_opportunities_per_game": recent_opportunities.get(player_id),
+                "recent_opportunity_rank": opportunity_ranks.get(player_id),
+                "recent_yards_per_game": recent_yards.get(player_id),
+                "recent_yards_rank": yard_ranks.get(player_id),
+                "recent_sample_size": recent_samples.get(player_id, 0),
+            }
+            for player_id in players
+        },
+        completed_weeks,
+    )
 
 
 def load_contingency_inputs(
@@ -226,6 +368,14 @@ def build_waiver_inputs(
         and row.player_id in players
     } - skill_ids - special_ids
     covered_ids = skill_ids | special_ids | notable_visibility_ids
+    sleeper = SleeperClient()
+    performance, completed_weeks = _performance_evidence(
+        client=sleeper,
+        season=waiver_state.league.season,
+        current_week=waiver_state.manifest.current_week,
+        players=players,
+        scoring=dict(waiver_state.league.scoring),
+    )
     raw_projection = {
         player_id: sum(
             row.league_points
@@ -254,6 +404,22 @@ def build_waiver_inputs(
             ),
             normalization_basis="LEAGUE_POSITIONAL_VORP",
             long_term_value_horizon=board.stage.mode,
+            season_points=performance[player_id]["season_points"],
+            season_position_rank=performance[player_id]["season_position_rank"],
+            recent_points_per_game=performance[player_id]["recent_points_per_game"],
+            recent_position_rank=performance[player_id]["recent_position_rank"],
+            recent_opportunities_per_game=performance[player_id][
+                "recent_opportunities_per_game"
+            ],
+            recent_opportunity_rank=performance[player_id][
+                "recent_opportunity_rank"
+            ],
+            recent_yards_per_game=performance[player_id]["recent_yards_per_game"],
+            recent_yards_rank=performance[player_id]["recent_yards_rank"],
+            recent_completed_weeks=completed_weeks,
+            performance_source=(
+                "Sleeper public season and weekly stats scored under this league's rules"
+            ),
             warnings=tuple(
                 sorted(
                     {
@@ -296,7 +462,7 @@ def build_waiver_inputs(
         snapshot=snapshot,
         projections=projections,
     )
-    matchups = SleeperClient().league_matchups(
+    matchups = sleeper.league_matchups(
         waiver_state.league.league_id, waiver_state.manifest.current_week
     )
     user_matchup = next(
@@ -345,6 +511,10 @@ def build_waiver_inputs(
         "captured_at": captured_at.isoformat(),
         "covered_value_players": len(values),
         "weekly_projection_rows": len(projections),
+        "performance_completed_weeks": list(completed_weeks),
+        "performance_players": sum(
+            1 for row in performance.values() if row["season_points"] is not None
+        ),
         "contingency_relationships": len(contingencies),
         "user_drop_legality_rows": len(active_supported_ids),
         "user_players_missing_value_inputs": sorted(active_supported_ids - covered_ids),

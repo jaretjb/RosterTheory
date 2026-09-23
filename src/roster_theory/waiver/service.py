@@ -462,6 +462,24 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
     names = {
         player.player_id: player.name for player in result.refresh.snapshot.players
     }
+    plan_lines = []
+    for claim in search.claim_plan:
+        add_name = names.get(claim.add_player_id, claim.add_player_id)
+        drop_name = (
+            names.get(claim.drop_player_id, claim.drop_player_id)
+            if claim.drop_player_id
+            else "open roster slot"
+        )
+        conflict = (
+            " | alternatives "
+            + ", ".join(f"#{number}" for number in claim.mutually_exclusive_priorities)
+            if claim.mutually_exclusive_priorities
+            else " | independent"
+        )
+        plan_lines.append(
+            f"{claim.priority}. {claim.position} {add_name} -> drop {drop_name}"
+            f"{conflict}"
+        )
     best_evaluation = next(
         (
             row
@@ -507,6 +525,9 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
             ),
             f"This week: projected lineup change {selected.current_week_delta:+.2f} points.",
         ]
+
+    if plan_lines:
+        lines = ["CLAIM PLAN", *plan_lines, "", *lines]
 
     dst_lines = _special_team_lines(search.exact_evaluations, names, "DST")
     if dst_lines:
