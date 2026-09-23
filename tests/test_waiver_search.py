@@ -194,6 +194,55 @@ def input_payload(*, league_key="league_alpha"):
 
 
 class WaiverSearchTests(unittest.TestCase):
+    def test_waiver_value_pruning_keeps_the_highest_scored_target_exact(self):
+        rank_by_id = {
+            "add": 1,
+            "fa_rb": 10,
+            "fa_wr": 10,
+            "fa_te": 10,
+            "qb": 2,
+            "rb": 2,
+            "wr": 2,
+            "bench": 3,
+            "ir": 4,
+            "other": 5,
+        }
+        ranked_values = tuple(
+            replace(
+                row,
+                current_week_position_rank=rank_by_id[row.player_id],
+                selected_rest_of_season_position_rank=rank_by_id[row.player_id],
+            )
+            for row in complete_values()
+        )
+        policy = replace(
+            load_waiver_policy(POLICY_PATH),
+            priority_enabled=True,
+            priority_exact_candidate_count=1,
+        )
+        result = search_waiver_candidates(
+            complete_search_snapshot(),
+            weeks=weeks(),
+            projections=complete_projections(),
+            values=ranked_values,
+            drop_legality=legality(),
+            news_fresh=news(),
+            waiver_wire_evidence=waiver_wire_evidence(),
+            input_bundle_hash="controlled-bundle-hash",
+            availability_source="controlled fixture",
+            policy=policy,
+            enable_pruning=True,
+            now=NOW,
+        )
+        self.assertEqual(result.exact_evaluations[0].add_player_id, "add")
+        self.assertNotIn("add", {row.player_id for row in result.pruned_candidates})
+        self.assertTrue(
+            any(
+                row.reason.startswith("WAIVER_VALUE_BELOW_EXACT_CUTOFF")
+                for row in result.pruned_candidates
+            )
+        )
+
     def test_emerging_candidate_below_ordinary_ownership_floor_is_exact(self):
         from tests.test_waiver_emerging_policy import waiver_wire
         from tests.test_waiver_emerging_value import emergence_bundle, scored_snapshot
@@ -550,8 +599,8 @@ class WaiverSearchTests(unittest.TestCase):
 
     def test_exhaustive_search_covers_every_skill_position_and_legal_drop(self):
         result = search()
-        self.assertEqual(result.schema_version, 8)
-        self.assertEqual(result.evaluation_schema_version, 13)
+        self.assertEqual(result.schema_version, 9)
+        self.assertEqual(result.evaluation_schema_version, 14)
         self.assertEqual(
             set(result.eligible_candidate_ids), {"add", "fa_rb", "fa_wr", "fa_te"}
         )

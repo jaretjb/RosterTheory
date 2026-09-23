@@ -34,6 +34,10 @@ from roster_theory.waiver.policy import (
     emerging_role_signal_strength,
     evaluation_options_for_policy,
 )
+from roster_theory.waiver.priority import (
+    WaiverPriorityWeights,
+    build_waiver_priority_scores,
+)
 from roster_theory.waiver.snapshot import (
     ACQUIRABLE_STATES,
     AcquisitionState,
@@ -44,7 +48,7 @@ from roster_theory.waiver.snapshot import (
 
 SUPPORTED_POSITIONS = frozenset({"QB", "RB", "WR", "TE", "K", "DST", "DEF"})
 AFFIRMATIVE_LABELS = frozenset({"ADD NOW", "CLAIM", "ACQUIRE"})
-PRUNING_VERSION = "wa-021-fresh-rank-dominance-v8"
+PRUNING_VERSION = "wa-024-three-signal-priority-v9"
 LABEL_TIER = {"ADD NOW": 0, "CLAIM": 0, "ACQUIRE": 0, "WATCH": 1, "PASS": 2}
 
 
@@ -123,6 +127,7 @@ class WaiverSearch:
     input_bundle_hash: str
     availability_source: str
     emergence_evidence: EmergenceEvidence | None
+    ros_panel_evidence: Mapping[str, object] | None
     strongest_uncertainty: str
     warnings: tuple[str, ...]
     sleeper_write_performed: bool
@@ -136,9 +141,16 @@ def _evaluation_sort_key(evaluation: WaiverEvaluation) -> tuple[object, ...]:
         if evaluation.decision is not None
         else selected.lineup.after_weighted_points
     )
+    acquisition_priority = (
+        evaluation.waiver_priority.composite_score
+        if evaluation.waiver_priority is not None
+        and evaluation.waiver_priority.composite_score is not None
+        else -1.0
+    )
     return (
         LABEL_TIER[evaluation.decision_label or "PASS"],
         -priority_score,
+        -acquisition_priority,
         -selected.lineup.after_weighted_points,
         selected.ownership.current_week_add_rank or 10_000,
         selected.ownership.rest_of_season_add_rank or 10_000,
@@ -674,6 +686,7 @@ def search_waiver_candidates(
     news_fresh: Mapping[str, bool],
     contingencies: Sequence[ContingencyScenarioInput] = (),
     waiver_wire_evidence: WaiverWireEvidence | None = None,
+    ros_panel_evidence: Mapping[str, object] | None = None,
     emergence_evidence: EmergenceEvidence | None = None,
     input_bundle_hash: str,
     availability_source: str,
@@ -728,6 +741,64 @@ def search_waiver_candidates(
             for position in player_by_id[player_id].positions
         }.intersection({"K", "DST"})
     }
+    priority_by_id = (
+        build_waiver_priority_scores(
+            players=snapshot.players,
+            values=values,
+            waiver_wire_evidence=waiver_wire_evidence,
+            owner_by_player=dict(snapshot.owner_by_player),
+            current_bye_teams=ordered_weeks[0].bye_teams,
+            weights=WaiverPriorityWeights(
+                weekly=policy.priority_weekly_weight,
+                waiver=policy.priority_waiver_weight,
+                ros=policy.priority_ros_weight,
+            ),
+        )
+        if policy.priority_enabled
+        else {}
+    )
+    scored_priority_candidates = tuple(
+        sorted(
+            (
+                player_id
+                for player_id in eligible_ids
+                if player_id not in special_team_candidates
+                and priority_by_id.get(player_id) is not None
+                and priority_by_id[player_id].composite_score is not None
+            ),
+            key=lambda player_id: (
+                not bool(player_by_id[player_id].active),
+                str(player_by_id[player_id].injury_status or "").upper()
+                in {"IR", "PUP", "SUSP", "OUT"},
+                not news_fresh.get(player_id, False),
+                -float(priority_by_id[player_id].composite_score or 0.0),
+                player_id,
+            ),
+        )
+    )
+    if enable_pruning and scored_priority_candidates:
+        cutoff_index = min(
+            policy.priority_exact_candidate_count,
+            len(scored_priority_candidates),
+        ) - 1
+        cutoff_score = priority_by_id[
+            scored_priority_candidates[cutoff_index]
+        ].composite_score
+        priority_exact_candidates = {
+            player_id
+            for player_id in scored_priority_candidates
+            if (
+                priority_by_id[player_id].composite_score is not None
+                and priority_by_id[player_id].composite_score >= float(cutoff_score or 0.0)
+            )
+        }
+    else:
+        priority_exact_candidates = set(scored_priority_candidates)
+    priority_prunable_candidates = (
+        set(scored_priority_candidates) - priority_exact_candidates
+        if enable_pruning
+        else set()
+    )
     skill_roster = {
         player_id
         for player_id in supported_roster
@@ -845,7 +916,8 @@ def search_waiver_candidates(
     }
     ownership_policy_prunable_candidates -= emerging_candidate_ids
     ownership_policy_prunable_candidates -= rank_dominance_candidates
-    must_exact_candidates = set(special_team_candidates) | rank_dominance_candidates | (
+    ownership_policy_prunable_candidates -= set(scored_priority_candidates)
+    must_exact_candidates = set(special_team_candidates) | rank_dominance_candidates | priority_exact_candidates | (
         (set(qb_hold_candidates) | contingency_add_candidates | emerging_candidate_ids)
         & ownership_watch_possible_candidates
     ) | emerging_candidate_ids
@@ -863,6 +935,12 @@ def search_waiver_candidates(
             eligible_ids,
             key=lambda player_id: (
                 player_id not in must_exact_candidates,
+                -float(
+                    priority_by_id[player_id].composite_score
+                    if priority_by_id.get(player_id) is not None
+                    and priority_by_id[player_id].composite_score is not None
+                    else -1.0
+                ),
                 -raw_bounds[player_id],
                 -value_map[player_id].selected_value,
                 -value_map[player_id].market_value,
@@ -889,6 +967,27 @@ def search_waiver_candidates(
     evaluation_cache = {}
     baseline_score: float | None = None
     for index, bound in enumerate(bounds):
+        if bound.player_id in priority_prunable_candidates:
+            if baseline_score is None:
+                baseline_score = _baseline_score(
+                    snapshot,
+                    roster_player_ids=skill_roster,
+                    weeks=ordered_weeks,
+                    projections=projections,
+                    options=options,
+                )
+            pruned.append(
+                WaiverSearchPruning(
+                    player_id=bound.player_id,
+                    maximum_after_weighted_points=bound.maximum_after_weighted_points,
+                    incumbent_after_weighted_points=baseline_score,
+                    reason=(
+                        "WAIVER_VALUE_BELOW_EXACT_CUTOFF; a higher-valued active "
+                        "candidate faces the same legal skill-player drop pool"
+                    ),
+                )
+            )
+            continue
         if bound.player_id in ownership_policy_prunable_candidates:
             if baseline_score is None:
                 baseline_score = _baseline_score(
@@ -959,6 +1058,8 @@ def search_waiver_candidates(
                     news_fresh=news_fresh,
                     contingencies=contingencies,
                     waiver_wire_evidence=waiver_wire_evidence,
+                    waiver_priorities=priority_by_id,
+                    ros_panel_evidence=ros_panel_evidence,
                     emergence_evidence=emergence_evidence,
                     input_bundle_hash=input_bundle_hash,
                     availability_source=availability_source,
@@ -1012,6 +1113,12 @@ def search_waiver_candidates(
             "pruning_version": PRUNING_VERSION,
             "contingencies": contingencies,
             "emerging_candidate_ids": tuple(sorted(emerging_candidate_ids)),
+            "priority_exact_candidate_ids": tuple(sorted(priority_exact_candidates)),
+            "priority_prunable_candidate_ids": tuple(
+                sorted(priority_prunable_candidates)
+            ),
+            "waiver_priority": priority_by_id,
+            "ros_panel_evidence": ros_panel_evidence,
         }
     )
     value_input_hash = stable_hash(
@@ -1041,8 +1148,8 @@ def search_waiver_candidates(
             )
     if pruned:
         warnings.add(
-            f"{len(pruned)} eligible candidate(s) were safely pruned below an "
-            "affirmative incumbent"
+            f"{len(pruned)} eligible candidate(s) were pruned by audited Waiver "
+            "Value, ownership, or lineup bounds"
         )
     if enable_pruning and non_lineup_priority_candidates:
         warnings.add(
@@ -1059,14 +1166,24 @@ def search_waiver_candidates(
             "Potential affirmative or WATCH emergence candidates were evaluated "
             "exactly before ordinary pruning, including every legal drop"
         )
+    if enable_pruning and priority_exact_candidates:
+        warnings.add(
+            f"The top {len(priority_exact_candidates)} candidates by calculable "
+            "Waiver Value were evaluated exactly"
+        )
+    if priority_prunable_candidates:
+        warnings.add(
+            f"{len(priority_prunable_candidates)} lower Waiver Value candidate(s) "
+            "were safely pruned behind higher-valued candidates facing the same drop pool"
+        )
     if ownership_policy_prunable_candidates:
         warnings.add(
             f"{len(ownership_policy_prunable_candidates)} skill-player candidate(s) "
             "were proved below both necessary WATCH ownership floors"
         )
     base = WaiverSearch(
-        schema_version=8,
-        evaluation_schema_version=13,
+        schema_version=9,
+        evaluation_schema_version=14,
         product="WAIVER ASSISTANT",
         operation="COMPLETE WAIVER SEARCH",
         league_key=snapshot.league_key,
@@ -1078,11 +1195,10 @@ def search_waiver_candidates(
         pruning_version=PRUNING_VERSION,
         pruning_enabled=effective_pruning,
         ranking_basis=(
-            "Waiver decision tier, incremental policy priority (emerging option "
-            "value minus miss loss, protected-upside gated, net-hold adjusted for "
-            "one-QB backups, and current-week weighted for K/DST), "
-            "remaining-week optimal-lineup points, authoritative weekly/ROS position "
-            "ranks, ownership views, current week, depth, then stable player IDs"
+            "Waiver decision tier, add-minus-drop Waiver Value from weekly/Waiver "
+            "Wire/selected-panel ROS ranks, absolute add Waiver Value, then explanatory "
+            "lineup, ownership, projection, depth, and stable-ID tie breakers; K/DST "
+            "retain their separate streaming policy"
         ),
         eligible_candidate_ids=eligible_ids,
         candidate_bounds=bounds,
@@ -1101,6 +1217,7 @@ def search_waiver_candidates(
         input_bundle_hash=input_bundle_hash,
         availability_source=availability_source,
         emergence_evidence=emergence_evidence,
+        ros_panel_evidence=ros_panel_evidence,
         strongest_uncertainty=(
             best.strongest_uncertainty
             if best
@@ -1120,7 +1237,7 @@ def save_waiver_search(search: WaiverSearch, path: str | Path) -> Path:
 
 def load_waiver_search(path: str | Path) -> dict[str, object]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
-    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8}:
+    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9}:
         raise ValueError("Unsupported Waiver search-evidence schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Search evidence must be Waiver-scoped")

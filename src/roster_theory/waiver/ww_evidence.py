@@ -6,7 +6,7 @@ import time
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Protocol, Sequence
 
 from roster_theory.core.call_plan import CallPlan, PlannedCall, build_call_plan
 from roster_theory.core.errors import CoverageIncomplete
@@ -26,6 +26,14 @@ from roster_theory.providers.fantasypros import (
 )
 
 
+class AccuracyExpert(Protocol):
+    expert_id: str
+    name: str
+    source_name: str
+    latest_weekly_accuracy: tuple[tuple[str, int], ...]
+    prior_weekly_accuracy: tuple[tuple[str, int], ...]
+
+
 DEFAULT_WAIVER_CONFIG_DIR = Path("config/waiver")
 _SAFE_LEAGUE_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
 
@@ -38,6 +46,8 @@ class WaiverWireConfig:
     maximum_age_hours: float
     trusted_expert_ids: tuple[str, ...]
     config_hash: str
+    minimum_trustworthy_experts: int = 3
+    poor_accuracy_rank_cutoff: int = 100
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +56,18 @@ class WaiverWireExpertRank:
     overall_rank: float | None
     position_rank: float | None
     updated_at: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class WaiverWireExpertSelection:
+    expert_id: str
+    expert_name: str | None
+    source_name: str | None
+    latest_accuracy_rank: int | None
+    prior_accuracy_rank: int | None
+    accuracy_score: float | None
+    status: str
+    reason: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,6 +108,8 @@ class WaiverWireEvidence:
     stamps: tuple[DataStamp, ...]
     warnings: tuple[str, ...]
     config_hash: str
+    ranking_source: str
+    expert_selection: tuple[WaiverWireExpertSelection, ...]
     evidence_hash: str
 
 
@@ -150,7 +174,8 @@ def _stamp_from_json(value: Mapping[str, Any]) -> DataStamp:
 
 
 def waiver_wire_evidence_from_json(value: Mapping[str, Any]) -> WaiverWireEvidence:
-    if int(value.get("schema_version") or 0) != 1:
+    schema_version = int(value.get("schema_version") or 0)
+    if schema_version not in {1, 2}:
         raise ValueError("Unsupported Waiver Wire evidence schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Waiver Wire evidence must be Waiver-scoped")
@@ -218,7 +243,7 @@ def waiver_wire_evidence_from_json(value: Mapping[str, Any]) -> WaiverWireEviden
         for row in value.get("players") or ()
     )
     return WaiverWireEvidence(
-        schema_version=1,
+        schema_version=schema_version,
         product="WAIVER ASSISTANT",
         league_key=str(value["league_key"]),
         horizon=str(value["horizon"]),
@@ -254,6 +279,48 @@ def waiver_wire_evidence_from_json(value: Mapping[str, Any]) -> WaiverWireEviden
         stamps=tuple(_stamp_from_json(row) for row in value.get("stamps") or ()),
         warnings=tuple(str(item) for item in value.get("warnings") or ()),
         config_hash=str(value.get("config_hash") or ""),
+        ranking_source=str(
+            value.get("ranking_source")
+            or (
+                "TRUSTED_EXPERT_PANEL"
+                if value.get("selected_experts_complete")
+                and len(value.get("trusted_expert_ids") or ()) >= 3
+                else "LATEST_ECR"
+            )
+        ),
+        expert_selection=tuple(
+            WaiverWireExpertSelection(
+                expert_id=str(row["expert_id"]),
+                expert_name=(
+                    str(row["expert_name"])
+                    if row.get("expert_name") is not None
+                    else None
+                ),
+                source_name=(
+                    str(row["source_name"])
+                    if row.get("source_name") is not None
+                    else None
+                ),
+                latest_accuracy_rank=(
+                    int(row["latest_accuracy_rank"])
+                    if row.get("latest_accuracy_rank") is not None
+                    else None
+                ),
+                prior_accuracy_rank=(
+                    int(row["prior_accuracy_rank"])
+                    if row.get("prior_accuracy_rank") is not None
+                    else None
+                ),
+                accuracy_score=(
+                    float(row["accuracy_score"])
+                    if row.get("accuracy_score") is not None
+                    else None
+                ),
+                status=str(row.get("status") or "UNKNOWN"),
+                reason=str(row.get("reason") or "legacy_evidence"),
+            )
+            for row in value.get("expert_selection") or ()
+        ),
         evidence_hash=expected,
     )
 
@@ -296,6 +363,14 @@ def load_waiver_wire_config(path: str | Path, *, league_key: str) -> WaiverWireC
     trusted = tuple(str(item).strip() for item in value.get("trusted_expert_ids") or ())
     if any(not item for item in trusted) or len(set(trusted)) != len(trusted):
         raise ValueError("Waiver Wire trusted expert IDs must be non-empty and unique")
+    minimum_trustworthy_experts = int(
+        value.get("minimum_trustworthy_experts") or 3
+    )
+    poor_accuracy_rank_cutoff = int(value.get("poor_accuracy_rank_cutoff") or 100)
+    if minimum_trustworthy_experts < 3:
+        raise ValueError("Waiver Wire selection requires at least three trustworthy experts")
+    if poor_accuracy_rank_cutoff < 1:
+        raise ValueError("Waiver Wire poor-accuracy cutoff must be positive")
     return WaiverWireConfig(
         league_key=league_key,
         scoring=scoring,
@@ -303,6 +378,8 @@ def load_waiver_wire_config(path: str | Path, *, league_key: str) -> WaiverWireC
         maximum_age_hours=maximum_age_hours,
         trusted_expert_ids=trusted,
         config_hash=stable_hash(value),
+        minimum_trustworthy_experts=minimum_trustworthy_experts,
+        poor_accuracy_rank_cutoff=poor_accuracy_rank_cutoff,
     )
 
 
@@ -411,12 +488,105 @@ def _unique_observations(
     return result
 
 
+def _overall_accuracy_rank(rows: Sequence[tuple[str, int]]) -> int | None:
+    return dict(rows).get("ALL")
+
+
+def select_waiver_wire_experts(
+    *,
+    contributor_ids: Sequence[str],
+    current_experts: Sequence[AccuracyExpert],
+    minimum_experts: int = 3,
+    poor_accuracy_rank_cutoff: int = 100,
+) -> tuple[str, tuple[str, ...], tuple[WaiverWireExpertSelection, ...]]:
+    """Choose the best accurate WW contributors or explicitly fall back to ECR."""
+
+    current_by_id = {row.expert_id: row for row in current_experts}
+    eligible: list[tuple[float, AccuracyExpert]] = []
+    audit: list[WaiverWireExpertSelection] = []
+    for expert_id in sorted(
+        {str(value) for value in contributor_ids},
+        key=lambda value: (int(value) if value.isdigit() else 10**12, value),
+    ):
+        expert = current_by_id.get(expert_id)
+        latest = (
+            _overall_accuracy_rank(expert.latest_weekly_accuracy)
+            if expert is not None
+            else None
+        )
+        prior = (
+            _overall_accuracy_rank(expert.prior_weekly_accuracy)
+            if expert is not None
+            else None
+        )
+        score = (
+            round(0.70 * latest + 0.30 * prior, 6)
+            if latest is not None and prior is not None
+            else None
+        )
+        if expert is None:
+            reason = "missing_expert_directory_identity"
+        elif latest is None or prior is None:
+            reason = "missing_two_season_accuracy"
+        elif latest >= poor_accuracy_rank_cutoff and prior >= poor_accuracy_rank_cutoff:
+            reason = "poor_accuracy_both_seasons"
+        else:
+            reason = "accuracy_eligible"
+            assert score is not None
+            eligible.append((score, expert))
+        audit.append(
+            WaiverWireExpertSelection(
+                expert_id=expert_id,
+                expert_name=expert.name if expert else None,
+                source_name=expert.source_name if expert else None,
+                latest_accuracy_rank=latest,
+                prior_accuracy_rank=prior,
+                accuracy_score=score,
+                status="ELIGIBLE" if reason == "accuracy_eligible" else "EXCLUDED",
+                reason=reason,
+            )
+        )
+
+    selected = tuple(
+        expert.expert_id
+        for _, expert in sorted(
+            eligible,
+            key=lambda item: (
+                item[0],
+                _overall_accuracy_rank(item[1].latest_weekly_accuracy) or 10**9,
+                _overall_accuracy_rank(item[1].prior_weekly_accuracy) or 10**9,
+                item[1].expert_id,
+            ),
+        )[:minimum_experts]
+    )
+    if len(selected) < minimum_experts:
+        return "LATEST_ECR", (), tuple(audit)
+    selected_ids = set(selected)
+    return (
+        "TRUSTED_EXPERT_PANEL",
+        selected,
+        tuple(
+            replace(
+                row,
+                status="SELECTED" if row.expert_id in selected_ids else row.status,
+                reason=(
+                    "top_three_accuracy_eligible"
+                    if row.expert_id in selected_ids
+                    else row.reason
+                ),
+            )
+            for row in audit
+        ),
+    )
+
+
 def build_waiver_wire_evidence(
     *,
     config: WaiverWireConfig,
     players: Sequence[Player],
     market: RankingDataset,
     selected: Mapping[str, RankingDataset],
+    current_experts: Sequence[AccuracyExpert] = (),
     now: datetime | None = None,
 ) -> WaiverWireEvidence:
     current = now or datetime.now(timezone.utc)
@@ -426,6 +596,24 @@ def build_waiver_wire_evidence(
         raise CoverageIncomplete(
             f"FantasyPros market Waiver horizon is incomplete: {market.raw_horizon or 'missing'}"
         )
+    dynamic_selection = bool(current_experts) and not config.trusted_expert_ids
+    if dynamic_selection:
+        ranking_source, resolved_expert_ids, expert_selection = (
+            select_waiver_wire_experts(
+                contributor_ids=market.contributor_ids,
+                current_experts=current_experts,
+                minimum_experts=config.minimum_trustworthy_experts,
+                poor_accuracy_rank_cutoff=config.poor_accuracy_rank_cutoff,
+            )
+        )
+    else:
+        resolved_expert_ids = config.trusted_expert_ids
+        ranking_source = (
+            "TRUSTED_EXPERT_PANEL"
+            if len(resolved_expert_ids) >= config.minimum_trustworthy_experts
+            else "LATEST_ECR"
+        )
+        expert_selection = ()
     unexpected = tuple(sorted(set(selected) - set(config.trusted_expert_ids)))
     if unexpected:
         raise CoverageIncomplete(
@@ -443,10 +631,17 @@ def build_waiver_wire_evidence(
         selected_by_expert[expert_id] = _unique_observations(
             dataset.observations, label=f"expert {expert_id}"
         )
+    if dynamic_selection and ranking_source == "TRUSTED_EXPERT_PANEL":
+        for expert_id in resolved_expert_ids:
+            selected_by_expert[expert_id] = {
+                row.player_id: row
+                for row in market.contributor_observations
+                if row.expert_id == expert_id
+            }
 
     missing_experts = tuple(
         expert_id
-        for expert_id in config.trusted_expert_ids
+        for expert_id in resolved_expert_ids
         if expert_id not in selected_by_expert
     )
     captured_fresh = is_fresh(
@@ -486,7 +681,11 @@ def build_waiver_wire_evidence(
         )
         for expert_id, dataset in selected.items()
     }
-    selected_fresh = all(selected_fresh_by_expert.values())
+    selected_fresh = (
+        captured_fresh and provider_fresh and scoring_matches
+        if dynamic_selection and ranking_source == "TRUSTED_EXPERT_PANEL"
+        else all(selected_fresh_by_expert.values())
+    )
 
     evidence_rows: list[WaiverWirePlayerEvidence] = []
     unmatched: list[str] = []
@@ -500,11 +699,19 @@ def build_waiver_wire_evidence(
         expert_rows = tuple(
             WaiverWireExpertRank(
                 expert_id=expert_id,
-                overall_rank=expert_observation.overall_rank,
-                position_rank=expert_observation.position_rank,
+                overall_rank=(
+                    expert_observation.overall_rank
+                    if expert_observation.overall_rank is not None
+                    else expert_observation.position_rank
+                ),
+                position_rank=(
+                    expert_observation.position_rank
+                    if expert_observation.overall_rank is not None
+                    else None
+                ),
                 updated_at=expert_observation.updated_at,
             )
-            for expert_id in config.trusted_expert_ids
+            for expert_id in resolved_expert_ids
             if (
                 expert_observation := selected_by_expert.get(expert_id, {}).get(
                     fantasypros_id
@@ -533,7 +740,12 @@ def build_waiver_wire_evidence(
             )
         )
 
-    selected_complete = not missing_experts and selected_fresh
+    selected_complete = (
+        ranking_source == "TRUSTED_EXPERT_PANEL"
+        and len(resolved_expert_ids) >= config.minimum_trustworthy_experts
+        and not missing_experts
+        and selected_fresh
+    )
     warnings: list[str] = []
     if not captured_fresh:
         warnings.append("FantasyPros Waiver market capture is stale")
@@ -555,6 +767,11 @@ def build_waiver_wire_evidence(
         warnings.append(
             "One or more selected-expert Waiver datasets are stale, empty, or use the wrong scoring"
         )
+    if ranking_source == "LATEST_ECR":
+        warnings.append(
+            "Fewer than three trustworthy current Waiver Wire contributors; "
+            "FantasyPros Latest ECR is the Waiver ranking source"
+        )
     if unmatched:
         warnings.append(
             f"{len(unmatched)} FantasyPros Waiver player(s) are unmatched"
@@ -568,7 +785,7 @@ def build_waiver_wire_evidence(
         and provider_fresh
         and scoring_matches
         and bool(market.observations)
-        and selected_complete
+        and (selected_complete or ranking_source == "LATEST_ECR")
         and not unmatched
         and not ambiguous
     )
@@ -611,11 +828,11 @@ def build_waiver_wire_evidence(
             ),
             fresh=selected_fresh_by_expert.get(expert_id, False),
         )
-        for expert_id in config.trusted_expert_ids
+        for expert_id in resolved_expert_ids
         if expert_id in selected
     )
     base = WaiverWireEvidence(
-        schema_version=1,
+        schema_version=2,
         product="WAIVER ASSISTANT",
         league_key=config.league_key,
         horizon="WAIVER",
@@ -633,7 +850,7 @@ def build_waiver_wire_evidence(
         ),
         selected_experts_complete=selected_complete,
         complete=complete,
-        trusted_expert_ids=config.trusted_expert_ids,
+        trusted_expert_ids=resolved_expert_ids,
         contributor_ids=market.contributor_ids,
         players=tuple(sorted(evidence_rows, key=lambda row: (row.player_id, row.fantasypros_id))),
         unmatched_fantasypros_ids=tuple(sorted(unmatched)),
@@ -642,6 +859,8 @@ def build_waiver_wire_evidence(
         stamps=stamps,
         warnings=tuple(warnings),
         config_hash=config.config_hash,
+        ranking_source=ranking_source,
+        expert_selection=expert_selection,
         evidence_hash="",
     )
     return replace(base, evidence_hash=stable_hash(asdict(base)))
@@ -674,6 +893,7 @@ def refresh_waiver_wire_evidence(
     season: int,
     week: int,
     players: Sequence[Player],
+    current_experts: Sequence[AccuracyExpert] = (),
     client: FantasyProsClient | None = None,
     cache_dir: str | Path = "data/cache/waiver/fantasypros/ww",
     budget_path: str | Path = "data/cache/trade/fantasypros/daily_budget.json",
@@ -778,6 +998,7 @@ def refresh_waiver_wire_evidence(
             expert_id: datasets[f"expert_{expert_id}"]
             for expert_id in config.trusted_expert_ids
         },
+        current_experts=current_experts,
         now=current,
     )
     target = Path(
