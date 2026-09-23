@@ -1002,19 +1002,19 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 )
                 self.assertFalse(result.decision.elite_dst_exception)
 
-    def test_future_dst_advantage_is_watch_only_regardless_of_ros_rank(self):
+    def test_top_ranked_dst_can_clear_negative_projection_with_rank_evidence(self):
         elite = self.special_team_evaluation(
             "DST", current_delta=-1.0, future_delta=1.0, ros_rank=2
         )
         ordinary = self.special_team_evaluation(
             "DST", current_delta=-1.0, future_delta=1.0, ros_rank=4
         )
-        self.assertEqual(elite.decision_label, "WATCH")
-        self.assertEqual(elite.decision.decision_path, "SPECIAL_TEAM_NEAR_THRESHOLD")
+        self.assertEqual(elite.decision_label, "ADD NOW")
+        self.assertEqual(elite.decision.decision_path, "DST_ROLLING_STREAM")
         self.assertFalse(elite.decision.elite_dst_exception)
-        self.assertEqual(ordinary.decision_label, "WATCH")
+        self.assertEqual(ordinary.decision_label, "ADD NOW")
 
-    def test_dst_target_must_beat_attainable_four_week_streaming_baseline(self):
+    def test_dst_rank_evidence_can_override_attainable_streaming_baseline(self):
         result = self.special_team_evaluation(
             "DST",
             current_delta=-0.94,
@@ -1023,7 +1023,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
             ros_rank=3,
         )
         evidence = result.candidates[0].dst_streaming
-        self.assertEqual(result.decision_label, "WATCH")
+        self.assertEqual(result.decision_label, "ADD NOW")
         self.assertEqual(evidence.horizon_weights, (1.0, 0.5, 0.25))
         self.assertLess(evidence.weighted_advantage, 0.0)
         self.assertEqual(evidence.weeks[1].baseline_player_id, "stream_dst")

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from statistics import median
+from statistics import median, pstdev
 from typing import TYPE_CHECKING, Mapping, Sequence
 
 from roster_theory.core.models import Player
@@ -50,6 +50,12 @@ class WaiverPriorityEvidence:
     configured_weights: WaiverPriorityWeights
     weighting_method: str
     acquisition_only: bool
+    base_score: float | None = None
+    performance_score: float | None = None
+    performance_adjustment: float = 0.0
+    score_purpose: str = "ACQUISITION"
+    retention_protected: bool = False
+    retention_protection_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,11 +155,25 @@ def _waiver_wire_ranks(
             if item.overall_rank is not None
         )
         if len(panel_ranks) >= 2:
+            panel_median = float(median(panel_ranks))
+            dispersion = float(pstdev(panel_ranks))
+            if dispersion <= 3.0:
+                confidence = max(0.60, min(1.0, 1.0 - dispersion / 20.0))
+                blended_rank = (
+                    confidence * panel_median
+                    + (1.0 - confidence) * float(row.market_overall_rank)
+                )
+                source = (
+                    "agreement-adjusted trusted-expert WW panel blended with Latest ECR"
+                )
+            else:
+                blended_rank = float(row.market_overall_rank)
+                source = "FantasyPros Latest ECR (trusted panel materially disagreed)"
             aggregate.append(
                 (
                     row.player_id,
-                    float(median(panel_ranks)),
-                    "accuracy-filtered three-expert WW median",
+                    blended_rank,
+                    source,
                 )
             )
         else:
@@ -171,6 +191,35 @@ def _waiver_wire_ranks(
             for rank, (player_id, _aggregate_rank, source) in enumerate(ordered, 1)
         },
         len(ordered),
+    )
+
+
+def _performance_score(
+    value: PlayerValueInput,
+    *,
+    position: str,
+    scopes: Mapping[str, Mapping[str, int]],
+) -> float | None:
+    ranked = (
+        ("SEASON", value.season_position_rank, 0.45),
+        ("RECENT", value.recent_position_rank, 0.30),
+        ("OPPORTUNITY", value.recent_opportunity_rank, 0.15),
+        ("YARDS", value.recent_yards_rank, 0.10),
+    )
+    available = tuple(
+        (signal, rank, weight, scopes.get(signal, {}).get(position, 0))
+        for signal, rank, weight in ranked
+        if rank is not None and scopes.get(signal, {}).get(position, 0) > 0
+    )
+    total_weight = sum(weight for _signal, _rank, weight, _scope in available)
+    if not available or total_weight <= 0:
+        return None
+    return round(
+        sum(
+            _rank_score(float(rank), scope) * weight / total_weight
+            for _signal, rank, weight, scope in available
+        ),
+        6,
     )
 
 
@@ -194,6 +243,12 @@ def build_waiver_priority_scores(
     }
     weekly_scope: dict[str, int] = {}
     ros_scope: dict[str, int] = {}
+    performance_scopes: dict[str, dict[str, int]] = {
+        "SEASON": {},
+        "RECENT": {},
+        "OPPORTUNITY": {},
+        "YARDS": {},
+    }
     for value in values:
         position = position_by_id.get(value.player_id)
         if position is None:
@@ -207,6 +262,16 @@ def build_waiver_priority_scores(
         ros_rank = selected_ros if selected_ros is not None else fallback_ros
         if ros_rank is not None:
             ros_scope[position] = max(ros_scope.get(position, 0), ros_rank)
+        for signal, rank in (
+            ("SEASON", value.season_position_rank),
+            ("RECENT", value.recent_position_rank),
+            ("OPPORTUNITY", value.recent_opportunity_rank),
+            ("YARDS", value.recent_yards_rank),
+        ):
+            if rank is not None:
+                performance_scopes[signal][position] = max(
+                    performance_scopes[signal].get(position, 0), rank
+                )
 
     replacement_ranks = league_replacement_ranks(
         players, owner_by_player or {}
@@ -224,6 +289,7 @@ def build_waiver_priority_scores(
     for player_id, value in value_by_id.items():
         player = player_by_id.get(player_id)
         position = position_by_id.get(player_id)
+        owned = player_id in (owner_by_player or {})
         available: list[
             tuple[str, float, str, int, int | None, str, float]
         ] = []
@@ -234,6 +300,10 @@ def build_waiver_priority_scores(
             weekly_rank is not None
             and position is not None
             and weekly_scope.get(position)
+            and (
+                not owned
+                or weekly_rank <= replacement_ranks[position]
+            )
         ):
             replacement = replacement_ranks[position]
             available.append(
@@ -257,12 +327,20 @@ def build_waiver_priority_scores(
                 and player.nfl_team
                 and player.nfl_team.upper() in bye_teams
             )
-            missing.append(
-                ("WEEKLY", "BYE_WEEK" if on_bye else "WEEKLY_RANK_UNAVAILABLE")
-            )
+            missing.append((
+                "WEEKLY",
+                (
+                    "BELOW_RETENTION_WEEKLY_CUTOFF"
+                    if owned
+                    and weekly_rank is not None
+                    and position is not None
+                    and weekly_rank > replacement_ranks[position]
+                    else "BYE_WEEK" if on_bye else "WEEKLY_RANK_UNAVAILABLE"
+                ),
+            ))
 
         waiver_rank = ww_by_id.get(player_id)
-        if waiver_rank is not None and ww_scope:
+        if not owned and waiver_rank is not None and ww_scope:
             rank, source = waiver_rank
             available.append(
                 (
@@ -279,9 +357,10 @@ def build_waiver_priority_scores(
             missing.append(
                 (
                     "WAIVER",
-                    "WW_MARKET_INCOMPLETE"
-                    if waiver_wire_evidence is None
-                    or not waiver_wire_evidence.market_complete
+                    "ACQUISITION_ONLY_NOT_APPLICABLE_TO_ROSTERED_PLAYER"
+                    if owned
+                    else "WW_MARKET_INCOMPLETE"
+                    if waiver_wire_evidence is None or not waiver_wire_evidence.market_complete
                     else "NOT_LISTED_OR_ABOVE_WW_OWNERSHIP_SCOPE",
                 )
             )
@@ -331,7 +410,7 @@ def build_waiver_priority_scores(
             )
             for signal, rank, scope, scope_size, replacement, source, score in available
         )
-        composite = (
+        base_score = (
             round(
                 sum(row.normalized_score * row.applied_weight for row in components),
                 6,
@@ -339,24 +418,84 @@ def build_waiver_priority_scores(
             if components
             else None
         )
-        coverage = {
-            3: "COMPLETE",
-            2: "PARTIAL",
-            1: "LIMITED",
-            0: "MISSING",
-        }[len(components)]
+        performance_score = (
+            _performance_score(
+                value,
+                position=position,
+                scopes=performance_scopes,
+            )
+            if position is not None
+            else None
+        )
+        performance_adjustment = (
+            round(max(-6.0, min(6.0, (performance_score - 50.0) * 0.12)), 6)
+            if performance_score is not None
+            else 0.0
+        )
+        composite = (
+            round(max(0.0, min(100.0, base_score + performance_adjustment)), 6)
+            if base_score is not None
+            else None
+        )
+        expected_signals = 2 if owned else 3
+        coverage = (
+            "COMPLETE"
+            if len(components) == expected_signals
+            else "PARTIAL"
+            if len(components) >= 2
+            else "LIMITED"
+            if components
+            else "MISSING"
+        )
+        selected_ros = value.selected_rest_of_season_position_rank
+        retention_ros = (
+            selected_ros
+            if selected_ros is not None
+            else value.rest_of_season_position_rank
+        )
+        injury_status = str(player.injury_status or "").upper() if player else ""
+        retention_protected = bool(
+            owned
+            and position is not None
+            and retention_ros is not None
+            and retention_ros <= replacement_ranks[position]
+            and injury_status
+            in {
+                "Q",
+                "QUESTIONABLE",
+                "D",
+                "DOUBTFUL",
+                "OUT",
+                "IR",
+                "PUP",
+                "SUSP",
+                "SUSPENDED",
+            }
+        )
         result[player_id] = WaiverPriorityEvidence(
             player_id=player_id,
             composite_score=composite,
+            base_score=base_score,
+            performance_score=performance_score,
+            performance_adjustment=performance_adjustment,
             coverage_status=coverage,
             components=components,
             missing_signals=tuple(missing),
             configured_weights=weights,
             weighting_method=(
-                "league-replacement-adjusted weekly and ROS ranks plus overall "
-                "Waiver Wire rank; missing signals are neutral and weights renormalize"
+                "acquisition uses league-adjusted weekly, Waiver Wire, and ROS ranks; "
+                "retention excludes acquisition-only Waiver rank and below-replacement "
+                "weekly rank; available rank weights renormalize; audited performance "
+                "is a bounded plus/minus-six modifier"
             ),
-            acquisition_only=False,
+            acquisition_only=not owned,
+            score_purpose="RETENTION" if owned else "ACQUISITION",
+            retention_protected=retention_protected,
+            retention_protection_reason=(
+                "Injury uncertainty cannot override above-replacement ROS value"
+                if retention_protected
+                else None
+            ),
         )
     return result
 

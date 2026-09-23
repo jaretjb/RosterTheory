@@ -46,6 +46,7 @@ class WaiverDecisionPolicy:
     priority_waiver_weight: float
     priority_ros_weight: float
     priority_minimum_value_gain: float
+    priority_minimum_lineup_gain: float
     priority_watch_value_gain: float
     priority_exact_candidate_count: int
     selected_value_floor: float
@@ -122,6 +123,7 @@ def load_waiver_policy(
         "waiver_weight": 0.30,
         "ros_weight": 0.20,
         "minimum_value_gain": 0.0,
+        "minimum_lineup_gain": 0.0,
         "watch_value_gain": -3.0,
         "exact_candidate_count": 12,
         **(priority_config or {}),
@@ -130,6 +132,7 @@ def load_waiver_policy(
     priority_waiver_weight = float(priority["waiver_weight"])
     priority_ros_weight = float(priority["ros_weight"])
     priority_minimum_value_gain = float(priority["minimum_value_gain"])
+    priority_minimum_lineup_gain = float(priority["minimum_lineup_gain"])
     priority_watch_value_gain = float(priority["watch_value_gain"])
     priority_exact_candidate_count = int(priority["exact_candidate_count"])
     if not (
@@ -361,6 +364,7 @@ def load_waiver_policy(
         priority_waiver_weight=priority_waiver_weight,
         priority_ros_weight=priority_ros_weight,
         priority_minimum_value_gain=priority_minimum_value_gain,
+        priority_minimum_lineup_gain=priority_minimum_lineup_gain,
         priority_watch_value_gain=priority_watch_value_gain,
         priority_exact_candidate_count=priority_exact_candidate_count,
         special_teams_current_week_weight=special_numeric["current_week_weight"],
@@ -918,6 +922,37 @@ def _assess_composite_waiver_value_candidate(
     delta = comparison.value_delta
     comparable = comparison.comparable and delta is not None
     value_passed = comparable and delta > policy.priority_minimum_value_gain
+    lineup_passed = (
+        selected.lineup.weighted_delta >= policy.priority_minimum_lineup_gain
+    )
+    retention_protected = bool(
+        comparison.drop is not None and comparison.drop.retention_protected
+    )
+    add_ros = next(
+        (
+            row.raw_rank
+            for row in (comparison.add.components if comparison.add else ())
+            if row.signal == "ROS"
+        ),
+        None,
+    )
+    drop_ros = next(
+        (
+            row.raw_rank
+            for row in (comparison.drop.components if comparison.drop else ())
+            if row.signal == "ROS"
+        ),
+        None,
+    )
+    same_position_ros_passed = bool(
+        not selected.same_position
+        or selected.drop_player_id is None
+        or (
+            add_ros is not None
+            and drop_ros is not None
+            and add_ros < drop_ros
+        )
+    )
     news_passed = evaluation.material_news_fresh
     gates = (
         _gate(
@@ -935,6 +970,30 @@ def _assess_composite_waiver_value_candidate(
             policy.priority_minimum_value_gain,
             value_passed,
             "The added player's Waiver Value must exceed the displaced player's value",
+        ),
+        _gate(
+            "nonnegative_lineup_impact",
+            selected.lineup.weighted_delta,
+            ">=",
+            policy.priority_minimum_lineup_gain,
+            lineup_passed,
+            "A claim must not make the projected remaining-week lineup worse",
+        ),
+        _gate(
+            "drop_retention_protection",
+            retention_protected,
+            "==",
+            False,
+            not retention_protected,
+            "An injured rostered player with above-replacement ROS value is protected",
+        ),
+        _gate(
+            "same_position_ros_improvement",
+            same_position_ros_passed,
+            "==",
+            True,
+            same_position_ros_passed,
+            "A same-position claim must have a strictly better authoritative ROS rank",
         ),
         _gate(
             "player_currently_active",
@@ -969,7 +1028,7 @@ def _assess_composite_waiver_value_candidate(
             label = "ACQUIRE"
         decision_path = "THREE_SIGNAL_WAIVER_VALUE"
         uncertainty = (
-            "The initial 50/30/20 Waiver Value weights require real-world calibration"
+            "The league-local Waiver Value weights and bounded performance modifier require real-world calibration"
         )
     elif watch:
         label = "WATCH"
@@ -994,6 +1053,8 @@ def _assess_composite_waiver_value_candidate(
                 "The added player becomes currently inactive",
                 "Material-news freshness becomes unproved",
                 "Weekly, Waiver Wire, or ROS evidence materially changes",
+                "The move produces a negative remaining-week lineup impact",
+                "The drop becomes retention-protected",
             ),
         ),
         uncertainty,
@@ -1373,11 +1434,35 @@ def _assess_special_team_candidate(
         ownership.current_week_add_rank is not None
         and ownership.current_week_add_rank >= 1
     )
+    weekly_rank_improvement = bool(
+        ownership.current_week_add_rank is not None
+        and ownership.current_week_drop_rank is not None
+        and ownership.current_week_add_rank < ownership.current_week_drop_rank
+    )
+    season_rank_improvement = bool(
+        ownership.season_add_rank is not None
+        and ownership.season_drop_rank is not None
+        and ownership.season_add_rank < ownership.season_drop_rank
+    )
+    ros_rank_improvement = bool(
+        ownership.rest_of_season_add_rank is not None
+        and ownership.rest_of_season_drop_rank is not None
+        and ownership.rest_of_season_add_rank
+        < ownership.rest_of_season_drop_rank
+    )
+    rank_fallback_complete = weekly_rank_complete and any(
+        rank_value is not None
+        for rank_value in (
+            ownership.season_add_rank,
+            ownership.recent_add_rank,
+            ownership.rest_of_season_add_rank,
+        )
+    )
     evidence_complete = (
         evaluation.material_news_fresh
         and evaluation.value_inputs_complete
-        and evaluation.projection_inputs_complete
         and weekly_rank_complete
+        and (evaluation.projection_inputs_complete or rank_fallback_complete)
     )
     elite = (
         evaluation.add_position == "DST"
@@ -1391,14 +1476,48 @@ def _assess_special_team_candidate(
         else policy.dst_current_week_gain_floor
     )
     dst_streaming = selected.dst_streaming
+    if evaluation.add_position == "K":
+        rank_stream_pass = bool(
+            selected.same_position
+            and (
+                (
+                    weekly_rank_improvement
+                    and ownership.current_week_add_rank is not None
+                    and ownership.current_week_add_rank <= 10
+                )
+                or ownership.season_add_rank == 1
+            )
+        )
+    else:
+        rank_stream_pass = bool(
+            selected.same_position
+            and (
+                (
+                    weekly_rank_improvement
+                    and ownership.current_week_add_rank is not None
+                    and ownership.current_week_add_rank <= 10
+                )
+                or (
+                    season_rank_improvement
+                    and ownership.season_add_rank is not None
+                    and ownership.season_add_rank <= 3
+                )
+                or (
+                    ros_rank_improvement
+                    and ownership.rest_of_season_add_rank is not None
+                    and ownership.rest_of_season_add_rank <= 6
+                )
+            )
+        )
     if evaluation.add_position == "DST":
-        stream_pass = (
+        projection_stream_pass = (
             dst_streaming.applicable
             and dst_streaming.current_week_advantage >= stream_floor
             and dst_streaming.weighted_advantage >= 0.0
         )
     else:
-        stream_pass = selected.current_week_delta >= stream_floor
+        projection_stream_pass = selected.current_week_delta >= stream_floor
+    stream_pass = projection_stream_pass or rank_stream_pass
     gates = (
         _gate(
             "complete_special_team_evidence",
@@ -1406,7 +1525,7 @@ def _assess_special_team_candidate(
             "==",
             True,
             evidence_complete,
-            "Weekly rank, league-scored projections, value coverage, and material news must be complete",
+            "Weekly rank plus either discriminating league-scored projections or audited season/recent ranks, value coverage, and material news must be complete",
         ),
         _gate(
             "player_currently_active",
@@ -1427,10 +1546,9 @@ def _assess_special_team_candidate(
             True,
             stream_pass,
             (
-                "DST must improve this week and beat the four-week weighted "
-                "incumbent/streamer baseline"
+                "DST must improve by discriminating projections or weekly/season/recent/ROS rank"
                 if evaluation.add_position == "DST"
-                else "K must improve the current week"
+                else "K must improve by discriminating projections or weekly/season/recent rank"
             ),
         ),
     )
@@ -1444,10 +1562,14 @@ def _assess_special_team_candidate(
                 or dst_streaming.best_future_week_advantage > 0.0
                 or elite
             )
+            or rank_stream_pass
         )
         if evaluation.add_position == "DST"
-        else selected.current_week_delta
-        >= policy.special_teams_watch_current_week_gain_floor
+        else (
+            selected.current_week_delta
+            >= policy.special_teams_watch_current_week_gain_floor
+            or rank_stream_pass
+        )
     )
     if affirmative:
         if evaluation.acquisition_state == AcquisitionState.FREE_AGENT.value:
@@ -1476,15 +1598,53 @@ def _assess_special_team_candidate(
         decision_path = "SPECIAL_TEAM_WEEKLY_FAILURE"
         first_failed = next(gate for gate in gates if not gate.passed)
         strongest_uncertainty = first_failed.explanation
-    if evaluation.add_position == "DST":
-        priority_score = dst_streaming.weighted_advantage
-    else:
+    def rank_advantage(add_rank: int | None, drop_rank: int | None) -> float:
+        if add_rank is None or drop_rank is None:
+            return 0.0
+        return float(drop_rank - add_rank)
+
+    weekly_advantage = rank_advantage(
+        ownership.current_week_add_rank,
+        ownership.current_week_drop_rank,
+    )
+    season_advantage = rank_advantage(
+        ownership.season_add_rank,
+        ownership.season_drop_rank,
+    )
+    recent_advantage = rank_advantage(
+        ownership.recent_add_rank,
+        ownership.recent_drop_rank,
+    )
+    ros_advantage = rank_advantage(
+        ownership.rest_of_season_add_rank,
+        ownership.rest_of_season_drop_rank,
+    )
+    if evaluation.add_position == "K":
+        rank_priority_score = round(
+            5.0 * weekly_advantage
+            + season_advantage
+            + 0.5 * recent_advantage
+            + 0.25 * ros_advantage
+            + (15.0 if ownership.season_add_rank == 1 else 0.0),
+            3,
+        )
         residual = selected.lineup.weighted_delta - selected.current_week_delta
-        priority_score = round(
+        projection_priority_score = round(
             policy.special_teams_current_week_weight * selected.current_week_delta
             + residual,
             3,
         )
+    else:
+        rank_priority_score = round(
+            3.0 * weekly_advantage
+            + season_advantage
+            + 0.5 * recent_advantage
+            + 0.5 * ros_advantage
+            + 2.0 * selected.current_week_delta,
+            3,
+        )
+        projection_priority_score = dst_streaming.weighted_advantage
+    priority_score = max(rank_priority_score, projection_priority_score)
     decision = WaiverDecisionAssessment(
         label=label,
         decision_path=decision_path,
@@ -1533,6 +1693,7 @@ def apply_waiver_policy(
                 label_tier[row[1].label],
                 row[0].contingency.drop_protected
                 and not row[0].contingency.incremental_gate_passed,
+                not row[0].same_position,
                 -row[1].priority_score,
                 -row[0].lineup.after_weighted_points,
                 -row[0].ownership.selected_delta,

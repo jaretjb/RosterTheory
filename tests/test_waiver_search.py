@@ -19,6 +19,7 @@ from roster_theory.waiver.evaluation import (
 )
 from roster_theory.waiver.policy import load_waiver_policy
 from roster_theory.waiver.search import (
+    _claim_plan,
     load_waiver_search,
     save_waiver_search,
     search_waiver_candidates,
@@ -599,8 +600,8 @@ class WaiverSearchTests(unittest.TestCase):
 
     def test_exhaustive_search_covers_every_skill_position_and_legal_drop(self):
         result = search()
-        self.assertEqual(result.schema_version, 9)
-        self.assertEqual(result.evaluation_schema_version, 14)
+        self.assertEqual(result.schema_version, 10)
+        self.assertEqual(result.evaluation_schema_version, 15)
         self.assertEqual(
             set(result.eligible_candidate_ids), {"add", "fa_rb", "fa_wr", "fa_te"}
         )
@@ -623,6 +624,44 @@ class WaiverSearchTests(unittest.TestCase):
             )
         self.assertEqual(result.best_add_player_id, "add")
         self.assertEqual(result.recommended_action, "MOVE")
+
+    def test_claim_plan_marks_shared_drop_alternatives(self):
+        template = search().exact_evaluations[0]
+
+        def move(add_id, drop_id, position):
+            selected = replace(
+                template.candidates[0],
+                drop_player_id=drop_id,
+                drop_position=position,
+                same_position=True,
+            )
+            return replace(
+                template,
+                add_player_id=add_id,
+                add_position=position,
+                selected_drop_player_id=drop_id,
+                candidates=(selected,),
+                decision_label="ACQUIRE",
+            )
+
+        plan = _claim_plan(
+            (
+                move("boston", "pittman", "WR"),
+                move("wicks", "pittman", "WR"),
+                move("coleman", "black", "RB"),
+            )
+        )
+        by_add = {row.add_player_id: row for row in plan}
+        self.assertEqual(len(plan), 3)
+        self.assertEqual(by_add["coleman"].mutually_exclusive_priorities, ())
+        self.assertEqual(
+            by_add["boston"].mutually_exclusive_priorities,
+            (by_add["wicks"].priority,),
+        )
+        self.assertEqual(
+            by_add["wicks"].mutually_exclusive_priorities,
+            (by_add["boston"].priority,),
+        )
 
     def test_emergence_bundle_is_preserved_without_changing_search_policy(self):
         baseline = search()
