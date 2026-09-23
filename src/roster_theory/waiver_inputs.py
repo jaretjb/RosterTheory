@@ -13,6 +13,7 @@ from roster_theory.waiver.evaluation import (
     projection_coverage_is_complete,
     save_waiver_evaluation_inputs,
 )
+from roster_theory.waiver.expert_panel import WaiverRosPanelSelector
 from roster_theory.trade.board_service import refresh_value_boards
 from roster_theory.waiver.policy import load_waiver_policy
 from roster_theory.waiver.service import refresh_waiver_snapshot
@@ -156,6 +157,7 @@ def build_waiver_inputs(
         weekly_ranking_max_age=timedelta(hours=2),
         ros_ranking_max_age=timedelta(hours=2),
         ros_experts_max_age=timedelta(hours=2),
+        expert_pool_resolver=WaiverRosPanelSelector(league_key),
     )
     snapshot = board.refresh.snapshot
     waiver_state = refresh_waiver_snapshot(
@@ -174,6 +176,7 @@ def build_waiver_inputs(
         season=waiver_state.league.season,
         week=waiver_state.manifest.current_week,
         players=board.refresh.snapshot.players,
+        current_experts=board.current_experts,
     )
     selected = {row.player_id: row for row in board.selected_final.players}
     market = {row.player_id: row for row in board.market.players}
@@ -239,6 +242,11 @@ def build_waiver_inputs(
             raw_projection=(selected[player_id].raw_projection if player_id in skill_ids else raw_projection[player_id]),
             current_week_position_rank=current_position_rank.get(player_id),
             rest_of_season_position_rank=ros_position_rank.get(player_id),
+            selected_rest_of_season_position_rank=(
+                selected[player_id].position_rank
+                if player_id in skill_ids
+                else None
+            ),
             coverage_status=(
                 "complete"
                 if player_id in (skill_ids | special_ids)
@@ -327,6 +335,7 @@ def build_waiver_inputs(
         news_fresh={player_id: True for player_id in sorted(covered_ids)},
         contingencies=contingencies,
         waiver_wire_evidence=waiver_wire_refresh.evidence,
+        ros_panel_evidence=board.expert_pool_evidence,
     )
     return {
         "operation": "WAIVER LIVE INPUT BUILD",
@@ -353,7 +362,23 @@ def build_waiver_inputs(
         "waiver_wire_selected_experts_complete": (
             waiver_wire_refresh.evidence.selected_experts_complete
         ),
+        "waiver_wire_ranking_source": waiver_wire_refresh.evidence.ranking_source,
+        "waiver_wire_trusted_expert_ids": list(
+            waiver_wire_refresh.evidence.trusted_expert_ids
+        ),
+        "waiver_wire_expert_selection": [
+            {
+                "expert_id": row.expert_id,
+                "expert_name": row.expert_name,
+                "latest_accuracy_rank": row.latest_accuracy_rank,
+                "prior_accuracy_rank": row.prior_accuracy_rank,
+                "status": row.status,
+                "reason": row.reason,
+            }
+            for row in waiver_wire_refresh.evidence.expert_selection
+        ],
         "waiver_wire_warnings": list(waiver_wire_refresh.evidence.warnings),
+        "ros_panel": dict(board.expert_pool_evidence or {}),
         "fantasypros_remaining_after_plan": (
             board.call_plan.fantasypros_remaining_after_plan
         ),

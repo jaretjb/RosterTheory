@@ -1,6 +1,6 @@
 # Waiver Assistant current status
 
-Updated: September 18, 2026 (America/Los_Angeles)
+Updated: September 22, 2026 (America/Los_Angeles)
 
 The Waiver Assistant is read-only for both leagues. Detailed task evidence and
 exit proofs remain in the selected rows of `docs/WAIVER_ASSISTANT_TASKS.md`.
@@ -25,6 +25,12 @@ exit proofs remain in the selected rows of `docs/WAIVER_ASSISTANT_TASKS.md`.
   visible but ineligible.
 - WA-021 allows a legal same-position add with superior fresh weekly rank, ROS
   ECR, and projection to override stale non-ROS ownership gates only.
+- WA-024 makes the 50/30/20 weekly/Waiver Wire/ROS score the skill-player
+  Waiver Value for both adds and drops. Missing lists are neutral and their
+  weights renormalize. Waiver Wire uses the three best trustworthy current
+  contributors or FantasyPros Latest ECR when fewer than three qualify; ROS
+  uses a separate two- or three-expert Waiver panel. The live `fourth_and_20`
+  proof and all 658 tests passed without a Sleeper write.
 
 WA-006 audits recur. WA-016 remains optional fail-closed shadow research;
 probability or threshold promotion requires its evidence and a new milestone.

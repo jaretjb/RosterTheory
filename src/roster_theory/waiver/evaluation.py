@@ -40,6 +40,11 @@ from roster_theory.waiver.snapshot import (
     assert_current,
     resolve_player_acquisition,
 )
+from roster_theory.waiver.priority import (
+    WaiverPriorityEvidence,
+    WaiverValueComparison,
+    compare_waiver_values,
+)
 from roster_theory.waiver.ww_evidence import (
     WaiverWireEvidence,
     WaiverWireExpertRank,
@@ -122,6 +127,7 @@ class PlayerValueInput:
     warnings: tuple[str, ...] = ()
     normalization_basis: str = "LEAGUE_POSITIONAL_VORP"
     long_term_value_horizon: str = "ROS"
+    selected_rest_of_season_position_rank: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,6 +157,7 @@ class WaiverEvaluationInputs:
     contingencies: tuple[ContingencyScenarioInput, ...]
     waiver_wire_evidence: WaiverWireEvidence | None
     emergence_evidence: EmergenceEvidence | None
+    ros_panel_evidence: Mapping[str, Any] | None
     input_hash: str
 
 
@@ -382,6 +389,7 @@ class DropCandidateEvaluation:
     current_week_add_points: float
     current_week_drop_points: float | None
     dst_streaming: DstStreamingEvidence
+    waiver_value: WaiverValueComparison
 
 
 @dataclass(frozen=True, slots=True)
@@ -410,6 +418,8 @@ class WaiverEvaluation:
     input_bundle_hash: str | None
     availability_source: str | None
     waiver_wire_evidence: WaiverWireEvidence | None
+    waiver_priority: WaiverPriorityEvidence | None
+    ros_panel_evidence: Mapping[str, Any] | None
     emergence_evidence: EmergenceEvidence | None
     material_news_fresh: bool
     add_currently_active: bool
@@ -1211,6 +1221,8 @@ def evaluate_waiver(
     news_fresh: Mapping[str, bool] | None = None,
     contingencies: Sequence[ContingencyScenarioInput] = (),
     waiver_wire_evidence: WaiverWireEvidence | None = None,
+    waiver_priorities: Mapping[str, WaiverPriorityEvidence] | None = None,
+    ros_panel_evidence: Mapping[str, Any] | None = None,
     emergence_evidence: EmergenceEvidence | None = None,
     input_bundle_hash: str | None = None,
     availability_source: str | None = None,
@@ -1222,6 +1234,7 @@ def evaluate_waiver(
     evaluation_cache: dict[str, Any] | None = None,
 ) -> WaiverEvaluation:
     shared_cache = evaluation_cache if evaluation_cache is not None else {}
+    priority_by_id = dict(waiver_priorities or {})
     assert_current(snapshot, now=now)
     projections = reconcile_current_week_inactive_omissions(snapshot, projections)
     evaluation_time = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
@@ -1664,12 +1677,23 @@ def evaluate_waiver(
                     else None
                 ),
                 dst_streaming=dst_streaming,
+                waiver_value=compare_waiver_values(
+                    priority_by_id,
+                    add_player_id=add_player.player_id,
+                    drop_player_id=drop_id,
+                ),
             )
         )
     ordered = tuple(
         sorted(
             candidates,
             key=lambda row: (
+                row.waiver_value.value_delta is None,
+                -(
+                    row.waiver_value.value_delta
+                    if row.waiver_value.value_delta is not None
+                    else 0.0
+                ),
                 -row.lineup.after_weighted_points,
                 -row.ownership.selected_delta,
                 -row.ownership.market_delta,
@@ -1694,6 +1718,7 @@ def evaluate_waiver(
             "news_fresh": tuple(sorted((news_fresh or {}).items())),
             "contingencies": contingencies,
             "waiver_wire_evidence": waiver_wire_evidence,
+            "waiver_priorities": priority_by_id,
             "emergence_evidence": emergence_evidence,
         }
     )
@@ -1825,7 +1850,7 @@ def evaluate_waiver(
     warnings.append("No Waiver decision policy was applied; no final label is available")
     user_settings = dict(snapshot.league.platform_settings)
     base = WaiverEvaluation(
-        schema_version=13,
+        schema_version=14,
         product="WAIVER ASSISTANT",
         operation="ENTERED ADD/DROP EVALUATION",
         league_key=snapshot.league_key,
@@ -1858,6 +1883,8 @@ def evaluate_waiver(
         input_bundle_hash=input_bundle_hash,
         availability_source=availability_source,
         waiver_wire_evidence=waiver_wire_evidence,
+        waiver_priority=priority_by_id.get(add_player.player_id),
+        ros_panel_evidence=ros_panel_evidence,
         emergence_evidence=emergence_evidence,
         material_news_fresh=news_is_fresh,
         add_currently_active=(
@@ -1902,6 +1929,7 @@ def save_waiver_evaluation_inputs(
     news_fresh: Mapping[str, bool],
     contingencies: Sequence[ContingencyScenarioInput] = (),
     waiver_wire_evidence: WaiverWireEvidence | None = None,
+    ros_panel_evidence: Mapping[str, Any] | None = None,
     emergence_evidence: EmergenceEvidence | None = None,
 ) -> Path:
     if captured_at.tzinfo is None:
@@ -1909,7 +1937,7 @@ def save_waiver_evaluation_inputs(
     if not availability_source.strip():
         raise ValueError("Waiver evaluation inputs require availability provenance")
     unsigned = {
-        "schema_version": 6,
+        "schema_version": 7,
         "product": "WAIVER ASSISTANT",
         "league_key": league_key,
         "captured_at": captured_at.astimezone(timezone.utc),
@@ -1936,6 +1964,7 @@ def save_waiver_evaluation_inputs(
             )
         ),
         "waiver_wire_evidence": waiver_wire_evidence,
+        "ros_panel_evidence": ros_panel_evidence,
         "emergence_evidence": emergence_evidence,
     }
     return atomic_write_json(
@@ -1947,7 +1976,7 @@ def save_waiver_evaluation_inputs(
 def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
     schema_version = int(value.get("schema_version") or 0)
-    if schema_version not in {1, 2, 3, 4, 5, 6}:
+    if schema_version not in {1, 2, 3, 4, 5, 6, 7}:
         raise ValueError("Unsupported Waiver evaluation-input schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Evaluation inputs must be Waiver-scoped")
@@ -2009,6 +2038,11 @@ def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
             ),
             long_term_value_horizon=str(
                 row.get("long_term_value_horizon") or "ROS"
+            ),
+            selected_rest_of_season_position_rank=(
+                int(row["selected_rest_of_season_position_rank"])
+                if row.get("selected_rest_of_season_position_rank") is not None
+                else None
             ),
         )
         for row in value.get("values") or ()
@@ -2096,6 +2130,11 @@ def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
         contingencies=contingencies,
         waiver_wire_evidence=waiver_wire_evidence,
         emergence_evidence=emergence_evidence,
+        ros_panel_evidence=(
+            dict(value["ros_panel_evidence"])
+            if isinstance(value.get("ros_panel_evidence"), dict)
+            else None
+        ),
         input_hash=computed_hash,
     )
 

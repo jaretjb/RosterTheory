@@ -7,6 +7,7 @@ from pathlib import Path
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.models import Player
 from roster_theory.providers.fantasypros import normalize_rankings
+from roster_theory.trade.experts import CurrentExpert
 from roster_theory.waiver.ww_evidence import (
     WaiverWireConfig,
     build_waiver_wire_evidence,
@@ -61,7 +62,90 @@ def dataset(*, expert_id=None, player_id="10", captured_at=NOW, updated_at=None)
     )
 
 
+def current_expert(expert_id, latest, prior):
+    return CurrentExpert(
+        expert_id=str(expert_id),
+        name=f"Expert {expert_id}",
+        source_name=f"Source {expert_id}",
+        position_updates=(),
+        latest_weekly_accuracy=(("ALL", latest),),
+        prior_weekly_accuracy=(("ALL", prior),),
+    )
+
+
+def dynamic_market():
+    return normalize_rankings(
+        {
+            "year": "2026",
+            "week": "2",
+            "scoring": "PPR",
+            "ranking_type_name": "Waiver Wire",
+            "last_updated": NOW.isoformat(),
+            "expert_names": {
+                "17": "Best",
+                "29": "Poor",
+                "30": "Good",
+                "31": "Solid",
+            },
+            "players": [
+                {
+                    "player_id": "10",
+                    "player_name": "Runner",
+                    "player_position_id": "RB",
+                    "rank_ecr": 2,
+                    "pos_rank": "RB1",
+                    "experts": {"17": "1", "29": "4", "30": "2", "31": "3"},
+                }
+            ],
+        },
+        requested_horizon="WAIVER",
+        board_source="market",
+        captured_at=NOW,
+    )
+
+
 class WaiverWireEvidenceTests(unittest.TestCase):
+    def test_dynamic_panel_excludes_consistently_poor_expert(self):
+        evidence = build_waiver_wire_evidence(
+            config=config(experts=()),
+            players=(Player("s1", "Runner", ("RB",), fantasypros_id="10"),),
+            market=dynamic_market(),
+            selected={},
+            current_experts=(
+                current_expert("17", 5, 10),
+                current_expert("29", 110, 120),
+                current_expert("30", 25, 30),
+                current_expert("31", 45, 50),
+            ),
+            now=NOW,
+        )
+        self.assertEqual(evidence.ranking_source, "TRUSTED_EXPERT_PANEL")
+        self.assertEqual(evidence.trusted_expert_ids, ("17", "30", "31"))
+        self.assertTrue(evidence.selected_experts_complete)
+        self.assertTrue(evidence.complete)
+        excluded = next(
+            row for row in evidence.expert_selection if row.expert_id == "29"
+        )
+        self.assertEqual(excluded.reason, "poor_accuracy_both_seasons")
+
+    def test_dynamic_panel_falls_back_to_latest_ecr_below_three(self):
+        evidence = build_waiver_wire_evidence(
+            config=config(experts=()),
+            players=(Player("s1", "Runner", ("RB",), fantasypros_id="10"),),
+            market=dynamic_market(),
+            selected={},
+            current_experts=(
+                current_expert("17", 5, 10),
+                current_expert("29", 110, 120),
+            ),
+            now=NOW,
+        )
+        self.assertEqual(evidence.ranking_source, "LATEST_ECR")
+        self.assertEqual(evidence.trusted_expert_ids, ())
+        self.assertFalse(evidence.selected_experts_complete)
+        self.assertTrue(evidence.complete)
+        self.assertTrue(any("Latest ECR" in row for row in evidence.warnings))
+
     def test_config_is_waiver_and_league_scoped(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.json"
