@@ -865,3 +865,71 @@ of Trade. The read-only `fourth_and_20` run used three trustworthy experts for
 both ranking horizons, completed within the freshness window, evaluated 57
 candidates exactly, pruned 75 behind higher Waiver Values, and made no Sleeper
 write. Ruff and all 658 repository tests pass.
+
+## WA-025 — Retention-safe Waiver Value and ordered claim portfolio
+
+Status: completed September 22, 2026
+
+Depends on: WA-023 and WA-024
+
+Goal: prevent one-week injury or matchup rankings from creating destructive
+drops, incorporate recent league-scored performance, make specialist evidence
+usable when projections are absent, and produce an ordered waiver-claim plan
+rather than unrelated single-move alternatives.
+
+Context: load Waiver requirements sections 4–6 and Waiver design sections
+Architecture, Data flow, and Fail-closed boundaries.
+
+Acceptance:
+
+- Treat Waiver Wire rank as acquisition urgency rather than a symmetric keep-
+  value signal. Its structural absence for a widely owned rostered player must
+  not make weekly rank dominate that player's retention value.
+- For a rostered drop candidate, exclude a weekly rank worse than the league's
+  position-specific replacement rank from retention value and preserve the
+  reason. An injury-depressed rank means bench this week, not automatically
+  drop; unresolved injury duration fails closed on an affirmative cut.
+- Block an affirmative move when it materially reduces modeled lineup value,
+  violates a positional retention floor, or replaces a same-position player
+  with an inferior ROS anchor without sufficiently stronger evidence.
+- Start 4th & 20 target ordering at league-local 40/35/25 weekly/Waiver/ROS
+  weights, preserve a two-point equivalence band, and resolve close cases with
+  recent league-scored production, opportunity, lineup gain, and disagreement-
+  aware Waiver evidence. Do not transfer these settings to another league.
+- Use season-to-date and the two most recent completed weeks as audited,
+  scoring-compatible evidence. Missing or unmatched performance remains
+  visible and cannot be invented.
+- For K/DST, use authoritative weekly/ROS ranks and league-scored recent
+  performance when projections are missing or non-discriminating. Preserve the
+  separate one-week streaming and ROS holding views.
+- Return an ordered claim portfolio that distinguishes claims able to execute
+  together from mutually exclusive alternatives sharing a drop player.
+- The 4th & 20 acceptance fixture protects Caleb Williams and Rico Dowdle and
+  targets, in order: Denzel Boston for Michael Pittman; Jonah Coleman for
+  Kaelon Black; Dontayvion Wicks for Pittman; Adonai Mitchell for Pittman; Evan
+  McPherson then Eddy Pineiro for Cameron Dicker; Carolina, Cincinnati, then
+  Minnesota for Tampa Bay. This is a ranking proof, never a Sleeper write.
+- Controlled tests, Ruff, the full suite, and a fresh read-only live search pass
+  before publication. Trade behavior remains unchanged.
+
+Completion proof: Waiver Wire evidence is acquisition-only; owned-player
+retention excludes weekly ranks below the league replacement cutoff and marks
+the reason. An unresolved injury plus above-replacement ROS rank creates a
+visible drop protection. Season-to-date and Weeks 1–2 Sleeper stats were scored
+under the league's actual settings and applied only as a bounded plus/minus-six
+modifier. The decision policy now requires nonnegative lineup impact and a
+strict same-position ROS improvement, with same-position affirmative moves
+preferred. K/DST preserve weekly and long-term evidence and can act on rank/
+performance support when projections are zero, tied, or contradicted by the
+authoritative rank views. Search schema 10 and evaluation schema 15 expose an
+ordered claim plan and the priorities that share a drop player.
+
+The final read-only `fourth_and_20` run evaluated 57 candidates, pruned 75, and
+performed no Sleeper write. It protected Caleb Williams and Rico Dowdle. The
+claim plan began Boston/Pittman, Coleman/Black, Wicks/Pittman,
+Mitchell/Pittman, McPherson/Dicker, and Pineiro/Dicker exactly as requested.
+Fresh defense evidence had changed since the dated acceptance list: Minnesota
+was DST7/season7/ROS6, New England DST11/season1/ROS7, and Carolina
+DST9/season6, while Cincinnati was DST17/season3/ROS19. The engine therefore
+returned Minnesota, New England, and Carolina and did not hard-code the older
+Carolina/Cincinnati/Minnesota order. Ruff and all 661 tests pass.

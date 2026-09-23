@@ -1,6 +1,24 @@
 # Active milestone
 
-No product implementation milestone is active.
+No product milestone is active.
+
+WA-025 — Retention-safe Waiver Value and ordered claim portfolio completed
+September 22, 2026 (America/Los_Angeles). Waiver Wire rank now affects only
+acquisition; roster retention excludes below-replacement weekly ranks and
+protects injury-uncertain, above-replacement ROS players. League-scored season
+and last-two-week performance provide a bounded modifier. Same-position ROS,
+nonnegative-lineup, and retention gates prevent destructive drops. K/DST can
+use weekly, ROS, and league-scored season/recent ranks when projections do not
+settle the choice. Search schema 10 returns a nine-item claim plan with shared-
+drop alternatives identified.
+
+The fresh read-only `fourth_and_20` proof protected Caleb Williams and Rico
+Dowdle and exactly reproduced the four requested skill moves and two kicker
+moves. Current defensive evidence changed after the user's dated list and now
+ranks Minnesota, New England, and Carolina; Cincinnati fell to DST17 for the
+week and was not forced into the result. The run evaluated 57 candidates,
+pruned 75, and performed no Sleeper write. Ruff and all 661 tests pass. The
+40/35/25 calibration remains league-local and was not transferred.
 
 WA-024 completed September 22, 2026 (America/Los_Angeles). Waiver now combines
 normalized weekly, Waiver Wire, and selected-panel ROS ranks at initial

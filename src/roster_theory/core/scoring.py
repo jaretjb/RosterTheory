@@ -32,6 +32,24 @@ STAT_ALIASES: dict[str, tuple[str, ...]] = {
     "pts_allow_21_27": ("pts_allow_21_27", "def_pa_e"),
     "pts_allow_28_34": ("pts_allow_28_34", "def_pa_f"),
     "pts_allow_35p": ("pts_allow_35p", "def_pa_g"),
+    "fgm": ("fgm",),
+    "fgm_0_19": ("fgm_0_19",),
+    "fgm_20_29": ("fgm_20_29",),
+    "fgm_30_39": ("fgm_30_39",),
+    "fgm_40_49": ("fgm_40_49",),
+    "fgm_50_59": ("fgm_50_59",),
+    "fgm_50p": ("fgm_50p",),
+    "fgm_60p": ("fgm_60p",),
+    "fgmiss": ("fgmiss",),
+    "fgmiss_0_19": ("fgmiss_0_19",),
+    "fgmiss_20_29": ("fgmiss_20_29",),
+    "fgmiss_30_39": ("fgmiss_30_39",),
+    "fgmiss_40_49": ("fgmiss_40_49",),
+    "fgmiss_50_59": ("fgmiss_50_59",),
+    "fgmiss_50p": ("fgmiss_50p",),
+    "fgmiss_60p": ("fgmiss_60p",),
+    "xpm": ("xpm",),
+    "xpmiss": ("xpmiss",),
 }
 
 
@@ -91,4 +109,3 @@ def score_stats(
         used_settings=tuple(sorted(used)),
         unsupported_settings=unsupported,
     )
-

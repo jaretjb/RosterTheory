@@ -123,9 +123,11 @@ class WaiverPriorityTests(unittest.TestCase):
         }
         self.assertEqual(owned_weights, {"WEEKLY": 0.714286, "ROS": 0.285714})
         self.assertIn(
-            ("WAIVER", "NOT_LISTED_OR_ABOVE_WW_OWNERSHIP_SCOPE"),
+            ("WAIVER", "ACQUISITION_ONLY_NOT_APPLICABLE_TO_ROSTERED_PLAYER"),
             scores["owned"].missing_signals,
         )
+        self.assertEqual(scores["owned"].score_purpose, "RETENTION")
+        self.assertFalse(scores["owned"].acquisition_only)
 
     def test_add_drop_delta_uses_the_two_composite_values(self):
         scores = build_waiver_priority_scores(
@@ -148,6 +150,86 @@ class WaiverPriorityTests(unittest.TestCase):
             scores, add_player_id="add", drop_player_id=None
         )
         self.assertEqual(open_slot.value_delta, scores["add"].composite_score)
+
+    def test_rostered_low_weekly_rank_is_excluded_from_retention(self):
+        players = tuple(
+            Player(
+                player_id,
+                player_id,
+                ("RB",),
+                nfl_team="AAA",
+                injury_status=("Questionable" if player_id == "protected" else None),
+            )
+            for player_id in ("protected", "owned-2", "available")
+        )
+        values = (
+            PlayerValueInput(
+                "protected",
+                0,
+                0,
+                0,
+                current_week_position_rank=66,
+                selected_rest_of_season_position_rank=3,
+            ),
+            PlayerValueInput(
+                "owned-2",
+                0,
+                0,
+                0,
+                current_week_position_rank=10,
+                selected_rest_of_season_position_rank=20,
+            ),
+            PlayerValueInput(
+                "available",
+                0,
+                0,
+                0,
+                current_week_position_rank=1,
+                selected_rest_of_season_position_rank=1,
+            ),
+        )
+        scores = build_waiver_priority_scores(
+            players=players,
+            values=values,
+            waiver_wire_evidence=None,
+            owner_by_player={"protected": "1", "owned-2": "2"},
+        )
+        protected = scores["protected"]
+        self.assertEqual(
+            {row.signal for row in protected.components},
+            {"ROS"},
+        )
+        self.assertIn(
+            ("WEEKLY", "BELOW_RETENTION_WEEKLY_CUTOFF"),
+            protected.missing_signals,
+        )
+        self.assertTrue(protected.retention_protected)
+        self.assertEqual(protected.composite_score, 50.0)
+
+    def test_recent_performance_is_bounded_to_six_points(self):
+        values = (
+            PlayerValueInput(
+                "add",
+                0,
+                0,
+                0,
+                current_week_position_rank=1,
+                selected_rest_of_season_position_rank=3,
+                season_position_rank=1,
+                recent_position_rank=1,
+                recent_opportunity_rank=1,
+                recent_yards_rank=1,
+            ),
+            *self.values[1:],
+        )
+        score = build_waiver_priority_scores(
+            players=self.players,
+            values=values,
+            waiver_wire_evidence=waiver_evidence(),
+            owner_by_player={"owned": "1"},
+        )["add"]
+        self.assertEqual(score.performance_adjustment, 6.0)
+        self.assertAlmostEqual(score.composite_score, score.base_score + 6.0)
 
 
 if __name__ == "__main__":

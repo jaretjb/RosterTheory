@@ -124,6 +124,33 @@ class SleeperClient:
         value = self._get(f"league/{league_id}/matchups/{int(week)}")
         return value if isinstance(value, list) else []
 
+    def weekly_stats(
+        self,
+        season: int,
+        week: int,
+        season_type: str = "regular",
+    ) -> dict[str, dict[str, Any]]:
+        value = self._get(
+            f"stats/nfl/{season_type}/{int(season)}/{int(week)}"
+        )
+        return (
+            {str(key): row for key, row in value.items() if isinstance(row, dict)}
+            if isinstance(value, dict)
+            else {}
+        )
+
+    def season_stats(
+        self,
+        season: int,
+        season_type: str = "regular",
+    ) -> dict[str, dict[str, Any]]:
+        value = self._get(f"stats/nfl/{season_type}/{int(season)}")
+        return (
+            {str(key): row for key, row in value.items() if isinstance(row, dict)}
+            if isinstance(value, dict)
+            else {}
+        )
+
     def league_transactions(
         self, league_id: str, week: int
     ) -> list[dict[str, Any]]:

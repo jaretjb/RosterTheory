@@ -45,6 +45,8 @@ class SleeperClientTests(unittest.TestCase):
         client.league_winners_bracket("league-1")
         client.league_losers_bracket("league-1")
         client.trending_players(limit=10)
+        client.weekly_stats(2026, 2)
+        client.season_stats(2026)
 
         self.assertEqual(
             [url.split("/v1/")[1] for url in urls],
@@ -55,6 +57,8 @@ class SleeperClientTests(unittest.TestCase):
                 "league/league-1/winners_bracket",
                 "league/league-1/losers_bracket",
                 "players/nfl/trending/add?lookback_hours=24&limit=10",
+                "stats/nfl/regular/2026/2",
+                "stats/nfl/regular/2026",
             ],
         )
 

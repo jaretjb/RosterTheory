@@ -377,7 +377,7 @@ class WaiverEvaluationTests(unittest.TestCase):
         evidence = waiver_wire_evidence()
         result = self.evaluate(waiver_wire_evidence=evidence)
         selected = result.candidates[0].ownership
-        self.assertEqual(result.schema_version, 14)
+        self.assertEqual(result.schema_version, 15)
         self.assertEqual(selected.waiver_wire_market_add_rank, 2.0)
         self.assertEqual(selected.waiver_wire_market_add_position_rank, 1.0)
         self.assertEqual(selected.waiver_wire_selected_add_ranks[0].expert_id, "17")
@@ -710,7 +710,7 @@ class WaiverEvaluationInputAndCliTests(unittest.TestCase):
                 emergence_evidence=emergence_evidence(),
             )
             loaded = load_waiver_evaluation_inputs(path)
-            self.assertEqual(loaded.schema_version, 7)
+            self.assertEqual(loaded.schema_version, 8)
             self.assertEqual(loaded.league_key, "league_alpha")
             self.assertEqual(loaded.availability_source, "current roster delta")
             self.assertEqual(len(loaded.projections), len(projections()))
