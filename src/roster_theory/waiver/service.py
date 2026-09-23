@@ -30,6 +30,10 @@ from roster_theory.waiver.policy import (
     evaluation_options_for_policy,
     load_waiver_policy,
 )
+from roster_theory.waiver.priority import (
+    WaiverPriorityWeights,
+    build_waiver_priority_scores,
+)
 from roster_theory.waiver.search import (
     WaiverSearch,
     save_waiver_search,
@@ -231,6 +235,22 @@ def evaluate_entered_waiver(
         client=client,
         availability_by_player=dict(inputs.availability_by_player),
     )
+    priority_by_id = (
+        build_waiver_priority_scores(
+            players=refresh.snapshot.players,
+            values=inputs.values,
+            waiver_wire_evidence=inputs.waiver_wire_evidence,
+            owner_by_player=dict(refresh.snapshot.owner_by_player),
+            current_bye_teams=inputs.weeks[0].bye_teams,
+            weights=WaiverPriorityWeights(
+                weekly=policy.priority_weekly_weight,
+                waiver=policy.priority_waiver_weight,
+                ros=policy.priority_ros_weight,
+            ),
+        )
+        if policy.priority_enabled
+        else {}
+    )
     evaluation = apply_waiver_policy(
         evaluate_waiver(
             refresh.snapshot,
@@ -243,6 +263,8 @@ def evaluate_entered_waiver(
             news_fresh=dict(inputs.news_fresh),
             contingencies=inputs.contingencies,
             waiver_wire_evidence=inputs.waiver_wire_evidence,
+            waiver_priorities=priority_by_id,
+            ros_panel_evidence=inputs.ros_panel_evidence,
             emergence_evidence=inputs.emergence_evidence,
             input_bundle_hash=inputs.input_hash,
             availability_source=inputs.availability_source,
@@ -309,6 +331,7 @@ def search_waivers(
         news_fresh=dict(inputs.news_fresh),
         contingencies=inputs.contingencies,
         waiver_wire_evidence=inputs.waiver_wire_evidence,
+        ros_panel_evidence=inputs.ros_panel_evidence,
         emergence_evidence=inputs.emergence_evidence,
         input_bundle_hash=inputs.input_hash,
         availability_source=inputs.availability_source,
@@ -464,6 +487,24 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
             heading,
             f"{best_evaluation.decision_label}: add {add_name} -> drop {drop_name}",
             "Why: " + _best_waiver_reason(best_evaluation, selected),
+            (
+                "Waiver Value: "
+                f"{selected.waiver_value.add.composite_score:.1f} add"
+                + (
+                    f" vs {selected.waiver_value.drop.composite_score:.1f} drop"
+                    if selected.waiver_value.drop is not None
+                    and selected.waiver_value.drop.composite_score is not None
+                    else " vs 0.0 open slot"
+                )
+                + (
+                    f" ({selected.waiver_value.value_delta:+.1f})"
+                    if selected.waiver_value.value_delta is not None
+                    else " (not comparable)"
+                )
+                if selected.waiver_value.add is not None
+                and selected.waiver_value.add.composite_score is not None
+                else "Waiver Value: unavailable"
+            ),
             f"This week: projected lineup change {selected.current_week_delta:+.2f} points.",
         ]
 
@@ -554,6 +595,24 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
         f"Selected ownership {selected.ownership.selected_delta:+.2f}; market "
         f"{selected.ownership.market_delta:+.2f}; raw projection "
         f"{selected.ownership.raw_projection_delta:+.2f}",
+        (
+            "Waiver Value: "
+            f"add {selected.waiver_value.add.composite_score:.1f}; "
+            + (
+                f"drop {selected.waiver_value.drop.composite_score:.1f}; "
+                if selected.waiver_value.drop is not None
+                and selected.waiver_value.drop.composite_score is not None
+                else "drop 0.0 (open slot); "
+            )
+            + (
+                f"difference {selected.waiver_value.value_delta:+.1f}"
+                if selected.waiver_value.value_delta is not None
+                else "difference unavailable"
+            )
+            if selected.waiver_value.add is not None
+            and selected.waiver_value.add.composite_score is not None
+            else "Waiver Value: unavailable"
+        ),
         "FantasyPros Waiver Wire market overall rank (acquisition only): "
         + (
             str(selected.ownership.waiver_wire_market_add_rank)

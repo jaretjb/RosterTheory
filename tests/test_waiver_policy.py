@@ -15,6 +15,10 @@ from roster_theory.waiver.policy import (
     default_waiver_policy_path,
     load_waiver_policy,
 )
+from roster_theory.waiver.priority import (
+    WaiverPriorityEvidence,
+    WaiverPriorityWeights,
+)
 from tests.test_waiver_evaluation import (
     NOW,
     POINTS,
@@ -51,6 +55,53 @@ def target_values(*, bad_drop_case=False):
 
 
 class WaiverDecisionPolicyTests(unittest.TestCase):
+    def test_three_signal_value_owns_add_drop_comparison_when_enabled(self):
+        def priority(player_id, score):
+            return WaiverPriorityEvidence(
+                player_id=player_id,
+                composite_score=score,
+                coverage_status="COMPLETE",
+                components=(),
+                missing_signals=(),
+                configured_weights=WaiverPriorityWeights(),
+                weighting_method="fixture",
+                acquisition_only=False,
+            )
+
+        adjusted_values = tuple(
+            replace(row, selected_value=-50.0, market_value=-50.0)
+            if row.player_id == "add"
+            else replace(row, selected_value=100.0, market_value=100.0)
+            if row.player_id == "bench"
+            else row
+            for row in values()
+        )
+        evaluated = evaluate_waiver(
+            waiver_snapshot(),
+            add="Target Quarterback",
+            weeks=weeks(),
+            projections=projections(),
+            values=adjusted_values,
+            drop_legality=legality(),
+            news_fresh={"add": True},
+            waiver_priorities={
+                "add": priority("add", 80.0),
+                "qb": priority("qb", 90.0),
+                "rb": priority("rb", 55.0),
+                "wr": priority("wr", 50.0),
+                "bench": priority("bench", 40.0),
+            },
+            now=NOW,
+        )
+        result = apply_waiver_policy(
+            evaluated,
+            replace(load_waiver_policy(POLICY_PATH), priority_enabled=True),
+        )
+        self.assertEqual(result.selected_drop_player_id, "bench")
+        self.assertEqual(result.decision_label, "ADD NOW")
+        self.assertEqual(result.decision.decision_path, "THREE_SIGNAL_WAIVER_VALUE")
+        self.assertEqual(result.candidates[0].waiver_value.value_delta, 40.0)
+
     def evaluate_contingent_rb(
         self,
         *,

@@ -1,9 +1,24 @@
 # Active milestone
 
-Trade TA-1309 completed September 21, 2026 (America/Los_Angeles). No further
-Trade product implementation is active. TA-1310 remains planned for separate
-league-local empirical calibration when sufficient dated evidence exists.
-No Sleeper trade or roster write is allowed.
+No product implementation milestone is active.
+
+WA-024 completed September 22, 2026 (America/Los_Angeles). Waiver now combines
+normalized weekly, Waiver Wire, and selected-panel ROS ranks at initial
+50/30/20 weights. Missing ranks are neutral and the remaining weights
+renormalize. The score applies to both adds and drops and owns the skill-player
+value comparison. Waiver Wire uses the three most accurate trustworthy current
+contributors when at least three are available; otherwise it uses FantasyPros
+Latest ECR. Trade expert policy remains unchanged.
+
+The read-only `fourth_and_20` proof selected Pat Fitzmaurice, Derek Brown, and
+Andrew Erickson for Waiver Wire evidence and Pat Fitzmaurice, Derek Brown, and
+Scott Pianowski for ROS evidence. It evaluated 57 candidates exactly, pruned 75
+lower-valued candidates with audited bounds, and performed no Sleeper write.
+All 658 tests and Ruff pass.
+
+Trade TA-1309 completed September 21, 2026 (America/Los_Angeles). TA-1310
+remains planned for separate league-local empirical calibration when
+sufficient dated evidence exists.
 
 TA-1309 replaced the whole-universe chart gate with explicit per-target and
 per-package pricing coverage. Current chart prices remain primary; missing
