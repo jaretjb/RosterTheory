@@ -48,7 +48,7 @@ from roster_theory.waiver.snapshot import (
 
 SUPPORTED_POSITIONS = frozenset({"QB", "RB", "WR", "TE", "K", "DST", "DEF"})
 AFFIRMATIVE_LABELS = frozenset({"ADD NOW", "CLAIM", "ACQUIRE"})
-PRUNING_VERSION = "wa-024-three-signal-priority-v9"
+PRUNING_VERSION = "wa-025-retention-safe-priority-v10"
 LABEL_TIER = {"ADD NOW": 0, "CLAIM": 0, "ACQUIRE": 0, "WATCH": 1, "PASS": 2}
 
 
@@ -96,6 +96,19 @@ class WaiverNoActionOption:
 
 
 @dataclass(frozen=True, slots=True)
+class WaiverClaimRecommendation:
+    priority: int
+    add_player_id: str
+    drop_player_id: str | None
+    position: str
+    decision_label: str
+    claim_group: str
+    mutually_exclusive_priorities: tuple[int, ...]
+    waiver_value: float | None
+    performance_adjustment: float
+
+
+@dataclass(frozen=True, slots=True)
 class WaiverSearch:
     schema_version: int
     evaluation_schema_version: int
@@ -116,6 +129,7 @@ class WaiverSearch:
     pruned_candidates: tuple[WaiverSearchPruning, ...]
     omissions: tuple[WaiverSearchOmission, ...]
     notable_candidates: tuple[WaiverSearchNotableCandidate, ...]
+    claim_plan: tuple[WaiverClaimRecommendation, ...]
     best_add_player_id: str | None
     best_drop_player_id: str | None
     best_decision_label: str | None
@@ -162,6 +176,117 @@ def _evaluation_sort_key(evaluation: WaiverEvaluation) -> tuple[object, ...]:
         evaluation.add_player_id,
         selected.drop_player_id or "",
     )
+
+
+def _claim_plan(
+    evaluations: Sequence[WaiverEvaluation],
+) -> tuple[WaiverClaimRecommendation, ...]:
+    affirmative = tuple(
+        row
+        for row in evaluations
+        if row.decision_label in AFFIRMATIVE_LABELS
+        and row.candidates
+        and (row.candidates[0].same_position or row.candidates[0].drop_player_id is None)
+    )
+
+    def skill_key(row: WaiverEvaluation) -> tuple[object, ...]:
+        priority = row.waiver_priority
+        performance = priority.performance_score if priority else None
+        selected = row.candidates[0]
+        ww_rank = selected.ownership.waiver_wire_market_add_rank
+        return (
+            -float(performance if performance is not None else -1.0),
+            ww_rank if ww_rank is not None else 10_000,
+            selected.ownership.current_week_add_rank or 10_000,
+            selected.ownership.rest_of_season_add_rank or 10_000,
+            row.add_player_id,
+        )
+
+    skill_pool = sorted(
+        (row for row in affirmative if row.add_position in {"QB", "RB", "WR", "TE"}),
+        key=lambda row: (
+            -float(
+                row.waiver_priority.composite_score
+                if row.waiver_priority is not None
+                and row.waiver_priority.composite_score is not None
+                else -1.0
+            ),
+            row.add_player_id,
+        ),
+    )
+    skill: list[WaiverEvaluation] = []
+    while skill_pool and len(skill) < 4:
+        leader = skill_pool[0]
+        leader_score = float(
+            leader.waiver_priority.composite_score
+            if leader.waiver_priority is not None
+            and leader.waiver_priority.composite_score is not None
+            else -1.0
+        )
+        band = tuple(
+            row
+            for row in skill_pool
+            if float(
+                row.waiver_priority.composite_score
+                if row.waiver_priority is not None
+                and row.waiver_priority.composite_score is not None
+                else -1.0
+            )
+            >= leader_score - 2.0
+        )
+        skill.extend(sorted(band, key=skill_key))
+        band_ids = {id(row) for row in band}
+        skill_pool = [row for row in skill_pool if id(row) not in band_ids]
+
+    def specialist_key(row: WaiverEvaluation) -> tuple[object, ...]:
+        selected = row.candidates[0]
+        return (
+            -(row.decision.priority_score if row.decision else -100.0),
+            selected.ownership.current_week_add_rank or 10_000,
+            row.add_player_id,
+        )
+
+    skill = skill[:4]
+    kickers = sorted(
+        (row for row in affirmative if row.add_position == "K"),
+        key=specialist_key,
+    )[:2]
+    defenses = sorted(
+        (row for row in affirmative if row.add_position == "DST"),
+        key=specialist_key,
+    )[:3]
+    selected_rows = tuple(skill + kickers + defenses)
+    groups = tuple(
+        (
+            f"DROP:{row.selected_drop_player_id}"
+            if row.selected_drop_player_id is not None
+            else f"OPEN_SLOT:{index}"
+        )
+        for index, row in enumerate(selected_rows, 1)
+    )
+    result: list[WaiverClaimRecommendation] = []
+    for priority_number, (row, group) in enumerate(zip(selected_rows, groups), 1):
+        evidence = row.waiver_priority
+        result.append(
+            WaiverClaimRecommendation(
+                priority=priority_number,
+                add_player_id=row.add_player_id,
+                drop_player_id=row.selected_drop_player_id,
+                position=row.add_position,
+                decision_label=str(row.decision_label),
+                claim_group=group,
+                mutually_exclusive_priorities=tuple(
+                    other_priority
+                    for other_priority, other_group in enumerate(groups, 1)
+                    if other_group == group and other_priority != priority_number
+                ),
+                waiver_value=(evidence.composite_score if evidence else None),
+                performance_adjustment=(
+                    evidence.performance_adjustment if evidence else 0.0
+                ),
+            )
+        )
+    return tuple(result)
 
 
 def _validate_search_inputs(
@@ -1073,7 +1198,17 @@ def search_waiver_candidates(
         )
 
     ranked = tuple(sorted(exact, key=_evaluation_sort_key))
-    best = ranked[0] if ranked else None
+    claim_plan = _claim_plan(ranked)
+    best = (
+        next(
+            row
+            for row in ranked
+            if row.add_player_id == claim_plan[0].add_player_id
+            and row.selected_drop_player_id == claim_plan[0].drop_player_id
+        )
+        if claim_plan and claim_plan[0].drop_player_id is not None
+        else ranked[0] if ranked else None
+    )
     affirmative = best is not None and best.decision_label in AFFIRMATIVE_LABELS
     if best is not None:
         baseline = best.candidates[0].lineup.before_weighted_points
@@ -1110,6 +1245,7 @@ def search_waiver_candidates(
             "drop_legality": tuple(sorted(drop_legality.items())),
             "omissions": omissions,
             "notable_candidates": notable_candidates,
+            "claim_plan": claim_plan,
             "pruning_version": PRUNING_VERSION,
             "contingencies": contingencies,
             "emerging_candidate_ids": tuple(sorted(emerging_candidate_ids)),
@@ -1182,8 +1318,8 @@ def search_waiver_candidates(
             "were proved below both necessary WATCH ownership floors"
         )
     base = WaiverSearch(
-        schema_version=9,
-        evaluation_schema_version=14,
+        schema_version=10,
+        evaluation_schema_version=15,
         product="WAIVER ASSISTANT",
         operation="COMPLETE WAIVER SEARCH",
         league_key=snapshot.league_key,
@@ -1206,6 +1342,7 @@ def search_waiver_candidates(
         pruned_candidates=tuple(pruned),
         omissions=omissions,
         notable_candidates=notable_candidates,
+        claim_plan=claim_plan,
         best_add_player_id=best.add_player_id if best else None,
         best_drop_player_id=best.selected_drop_player_id if best else None,
         best_decision_label=best.decision_label if best else None,
@@ -1237,7 +1374,7 @@ def save_waiver_search(search: WaiverSearch, path: str | Path) -> Path:
 
 def load_waiver_search(path: str | Path) -> dict[str, object]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
-    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9}:
+    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}:
         raise ValueError("Unsupported Waiver search-evidence schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Search evidence must be Waiver-scoped")
