@@ -6,6 +6,7 @@ import time
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any, Mapping, Sequence
 
 from roster_theory.core.errors import (
@@ -171,6 +172,12 @@ class ExpertPoolMember:
 
 
 @dataclass(frozen=True, slots=True)
+class ExpertPoolResolution:
+    members: tuple[ExpertPoolMember, ...]
+    evidence: Mapping[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
 class BoardRefreshResult:
     refresh: RefreshResult
     selected_raw: ValueBoard
@@ -189,6 +196,8 @@ class BoardRefreshResult:
     weekly_rankings: tuple[RankObservation, ...] = ()
     ros_rankings: tuple[RankObservation, ...] = ()
     expert_pool: tuple[ExpertPoolMember, ...] = ()
+    expert_pool_evidence: Mapping[str, Any] | None = None
+    current_experts: tuple[CurrentExpert, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -957,6 +966,9 @@ def refresh_value_boards(
     weekly_ranking_max_age: timedelta = timedelta(hours=12),
     ros_ranking_max_age: timedelta = timedelta(hours=24),
     ros_experts_max_age: timedelta = timedelta(hours=12),
+    expert_pool_resolver: Callable[
+        [ValueInputs, datetime], ExpertPoolResolution
+    ] | None = None,
 ) -> BoardRefreshResult:
     # During Week 1 the final Draft boards own long-term value. The current
     # weekly feed is still fetched below, but only as a separate signal.
@@ -1003,10 +1015,25 @@ def refresh_value_boards(
         for row in dataset.observations
         if (mapped := _canonical_rank(row, identity_map, retain_unmatched_slot=True)) is not None
     )
-    pool = load_expert_pool(
-        expert_pool_path
-        or default_inseason_expert_pool_path(league_key, snapshot.league.season)
-    )
+    if expert_pool_resolver is None:
+        pool = load_expert_pool(
+            expert_pool_path
+            or default_inseason_expert_pool_path(league_key, snapshot.league.season)
+        )
+        pool_resolution = ExpertPoolResolution(
+            members=pool,
+            evidence={
+                "selection_method": "configured_expert_pool",
+                "members": [asdict(member) for member in pool],
+            },
+        )
+    else:
+        pool_resolution = expert_pool_resolver(inputs, datetime.now(timezone.utc))
+        pool = pool_resolution.members
+        if not pool or abs(sum(member.weight for member in pool) - 1.0) > 1e-6:
+            raise CoverageIncomplete(
+                "Resolved in-season expert pool must be non-empty and sum to one"
+            )
     weights = {member.expert_id: member.weight for member in pool}
     fresh_ros_ballots: tuple[RankObservation, ...] = ()
     selected_ros_complete = False
@@ -1421,6 +1448,7 @@ def refresh_value_boards(
         additional_evidence={
             "season_stage": asdict(stage),
             "horizon_views": [asdict(row) for row in horizon_views],
+            "expert_pool_selection": dict(pool_resolution.evidence),
             "ballot_freshness_exclusions": [
                 asdict(row) for row in freshness_exclusions
             ],
@@ -1452,6 +1480,8 @@ def refresh_value_boards(
         weekly_rankings=weekly_market_rows,
         ros_rankings=canonical_ros_rows,
         expert_pool=pool,
+        expert_pool_evidence=dict(pool_resolution.evidence),
+        current_experts=inputs.current_experts,
     )
 
 

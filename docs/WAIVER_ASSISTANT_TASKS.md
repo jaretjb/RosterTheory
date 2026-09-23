@@ -808,3 +808,60 @@ Acceptance:
   shapes, streaming alternatives, and same-position replacement floors. The
   full repository suite and Ruff pass, and both configured leagues are
   validated read-only before publication.
+
+## WA-024 — Three-signal Waiver Value with accuracy-filtered experts (complete)
+
+Status: completed September 22, 2026
+
+Depends on: WA-021 and WA-022
+
+Goal: make a Waiver-only player value from weekly, Waiver Wire, and ROS ranks,
+initially weighted 50/30/20. Apply it symmetrically to available players and
+drop candidates so its delta owns the skill-player comparison.
+
+Context: load Waiver requirements sections 4–6 and Waiver design sections
+Architecture, Data flow, and Fail-closed boundaries.
+
+Acceptance:
+
+- Select two or three eligible FantasyPros ROS contributors from the experts
+  actually present across the current QB/RB/WR/TE ROS feeds. Eligibility
+  requires current position coverage and documented weekly-accuracy evidence;
+  preserve identities, timestamps, weights, exclusions, and disagreement.
+- Prefer three eligible contributors and require at least two. Do not require a
+  five-expert ROS panel, silently substitute an unavailable expert, or reuse a
+  Trade expert policy.
+- Fetch the documented FantasyPros `type=WW` horizon and select the three best
+  trustworthy contributors by 70/30 recent/prior weekly accuracy after
+  excluding experts ranked 100th or worse in both seasons. If fewer than three
+  qualify, use the fresh FantasyPros Latest ECR and record that fallback.
+- Normalize weekly and ROS position ranks around the league's positional
+  replacement level and normalize the cross-position WW rank over its published
+  pool before applying 50/30/20 weights.
+- Never turn a missing rank into a bad rank. Remove that signal's weight and
+  renormalize the available weights; preserve the reason and coverage status.
+- Use the resulting Waiver Value for both the add and every legal drop. The
+  Waiver Value delta owns skill-player selection, ordering, and the affirmative
+  value gate; old ownership and lineup scores remain explanatory evidence.
+- A bye creates no current-week utility penalty to long-term ownership value.
+  Injury availability remains a separate explicit input, and matchup-only
+  weekly movement cannot overwrite the ROS anchor.
+- Preserve independent market consensus, league-local policy, incomplete-data
+  visibility, deterministic replay, request budgets, and read-only Sleeper
+  behavior. Trade behavior is unchanged.
+- Controlled fixtures cover a three-expert WW panel, fewer-than-three Latest
+  ECR fallback, poor-expert exclusion, a three/two/<two ROS panel, fresh/stale
+  evidence, symmetric add/drop comparisons, missing WW and bye-week
+  renormalization, injury handling, and matchup-driven weekly differences. The focused and full test
+  suites plus Ruff pass before publication.
+
+Completed September 22, 2026. The Waiver-only model now scores both sides of a
+move from weekly, Waiver Wire, and selected-panel ROS ranks at 50/30/20, then
+renormalizes over only the signals actually available. Waiver Wire dynamically
+selects the three best trustworthy current contributors by 70/30 recent/prior
+weekly accuracy and falls back to fresh Latest ECR when fewer than three
+qualify. The ROS panel selects two or three current contributors independently
+of Trade. The read-only `fourth_and_20` run used three trustworthy experts for
+both ranking horizons, completed within the freshness window, evaluated 57
+candidates exactly, pruned 75 behind higher Waiver Values, and made no Sleeper
+write. Ruff and all 658 repository tests pass.

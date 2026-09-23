@@ -41,6 +41,13 @@ class WaiverDecisionPolicy:
     version: str
     calibration_mode: str
     allow_watch_on_missing_news: bool
+    priority_enabled: bool
+    priority_weekly_weight: float
+    priority_waiver_weight: float
+    priority_ros_weight: float
+    priority_minimum_value_gain: float
+    priority_watch_value_gain: float
+    priority_exact_candidate_count: int
     selected_value_floor: float
     market_value_floor: float
     raw_projection_floor: float
@@ -109,6 +116,39 @@ def load_waiver_policy(
         raise ValueError("Waiver decision policy requires a version")
     if str(value.get("calibration_mode") or "") != "CONTROLLED_FIXTURES":
         raise ValueError("Waiver policy must identify controlled-fixture calibration")
+    priority_config = value.get("waiver_priority")
+    priority = {
+        "weekly_weight": 0.50,
+        "waiver_weight": 0.30,
+        "ros_weight": 0.20,
+        "minimum_value_gain": 0.0,
+        "watch_value_gain": -3.0,
+        "exact_candidate_count": 12,
+        **(priority_config or {}),
+    }
+    priority_weekly_weight = float(priority["weekly_weight"])
+    priority_waiver_weight = float(priority["waiver_weight"])
+    priority_ros_weight = float(priority["ros_weight"])
+    priority_minimum_value_gain = float(priority["minimum_value_gain"])
+    priority_watch_value_gain = float(priority["watch_value_gain"])
+    priority_exact_candidate_count = int(priority["exact_candidate_count"])
+    if not (
+        priority_weekly_weight > priority_waiver_weight > priority_ros_weight > 0
+    ):
+        raise ValueError(
+            "Waiver priority weights must be positive and ordered weekly > waiver > ROS"
+        )
+    if abs(
+        priority_weekly_weight + priority_waiver_weight + priority_ros_weight - 1.0
+    ) > 1e-6:
+        raise ValueError("Waiver priority weights must sum to one")
+    if priority_watch_value_gain > priority_minimum_value_gain:
+        raise ValueError("Waiver WATCH value-gain floor cannot exceed the affirmative floor")
+    if (
+        priority_exact_candidate_count < 1
+        or priority_exact_candidate_count != float(priority["exact_candidate_count"])
+    ):
+        raise ValueError("Waiver exact-priority candidate count must be a positive integer")
     thresholds = value.get("thresholds") or {}
     required = (
         "selected_value_floor",
@@ -316,6 +356,13 @@ def load_waiver_policy(
         version=version,
         calibration_mode="CONTROLLED_FIXTURES",
         allow_watch_on_missing_news=bool(value.get("allow_watch_on_missing_news")),
+        priority_enabled=priority_config is not None,
+        priority_weekly_weight=priority_weekly_weight,
+        priority_waiver_weight=priority_waiver_weight,
+        priority_ros_weight=priority_ros_weight,
+        priority_minimum_value_gain=priority_minimum_value_gain,
+        priority_watch_value_gain=priority_watch_value_gain,
+        priority_exact_candidate_count=priority_exact_candidate_count,
         special_teams_current_week_weight=special_numeric["current_week_weight"],
         kicker_current_week_gain_floor=special_numeric[
             "kicker_current_week_gain_floor"
@@ -862,6 +909,97 @@ def _emerging_policy_assessment(
     )
 
 
+def _assess_composite_waiver_value_candidate(
+    evaluation: WaiverEvaluation,
+    selected: DropCandidateEvaluation,
+    policy: WaiverDecisionPolicy,
+) -> tuple[WaiverDecisionAssessment, str]:
+    comparison = selected.waiver_value
+    delta = comparison.value_delta
+    comparable = comparison.comparable and delta is not None
+    value_passed = comparable and delta > policy.priority_minimum_value_gain
+    news_passed = evaluation.material_news_fresh
+    gates = (
+        _gate(
+            "waiver_value_comparable",
+            comparable,
+            "==",
+            True,
+            comparable,
+            "Both the added and displaced player need at least one usable ranking signal",
+        ),
+        _gate(
+            "waiver_value_gain",
+            delta if delta is not None else -100.0,
+            ">",
+            policy.priority_minimum_value_gain,
+            value_passed,
+            "The added player's Waiver Value must exceed the displaced player's value",
+        ),
+        _gate(
+            "player_currently_active",
+            evaluation.add_currently_active,
+            "==",
+            True,
+            evaluation.add_currently_active,
+            "A currently inactive target cannot receive an affirmative label",
+        ),
+        _gate(
+            "material_news_fresh",
+            news_passed,
+            "==",
+            True,
+            news_passed,
+            "Material-news freshness must be proved before an affirmative recommendation",
+        ),
+    )
+    affirmative = all(gate.passed for gate in gates)
+    watch = (
+        comparable
+        and delta >= policy.priority_watch_value_gain
+        and evaluation.add_currently_active
+        and (news_passed or policy.allow_watch_on_missing_news)
+    )
+    if affirmative:
+        if evaluation.acquisition_state == AcquisitionState.FREE_AGENT.value:
+            label = "ADD NOW"
+        elif evaluation.acquisition_state == AcquisitionState.WAIVERS.value:
+            label = "CLAIM"
+        else:
+            label = "ACQUIRE"
+        decision_path = "THREE_SIGNAL_WAIVER_VALUE"
+        uncertainty = (
+            "The initial 50/30/20 Waiver Value weights require real-world calibration"
+        )
+    elif watch:
+        label = "WATCH"
+        decision_path = "THREE_SIGNAL_WAIVER_VALUE_NEAR_THRESHOLD"
+        uncertainty = next(gate.explanation for gate in gates if not gate.passed)
+    else:
+        label = "PASS"
+        decision_path = "THREE_SIGNAL_WAIVER_VALUE_FAILURE"
+        uncertainty = next(gate.explanation for gate in gates if not gate.passed)
+    return (
+        WaiverDecisionAssessment(
+            label=label,
+            decision_path=decision_path,
+            policy_version=policy.version,
+            policy_hash=policy.policy_hash,
+            calibration_mode=policy.calibration_mode,
+            priority_score=round(delta if delta is not None else -100.0, 3),
+            elite_dst_exception=False,
+            gates=gates,
+            reversal_conditions=(
+                f"Waiver Value gain falls to {policy.priority_minimum_value_gain:+.1f} or below",
+                "The added player becomes currently inactive",
+                "Material-news freshness becomes unproved",
+                "Weekly, Waiver Wire, or ROS evidence materially changes",
+            ),
+        ),
+        uncertainty,
+    )
+
+
 def _assess_candidate(
     evaluation: WaiverEvaluation,
     selected: DropCandidateEvaluation,
@@ -869,6 +1007,10 @@ def _assess_candidate(
 ) -> tuple[WaiverDecisionAssessment, str]:
     if evaluation.add_position in {"K", "DST"}:
         return _assess_special_team_candidate(evaluation, selected, policy)
+    if policy.priority_enabled and selected.waiver_value.add is not None:
+        return _assess_composite_waiver_value_candidate(
+            evaluation, selected, policy
+        )
     ownership = selected.ownership
     holding = selected.holding
     contingency = selected.contingency
