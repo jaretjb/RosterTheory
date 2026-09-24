@@ -9,9 +9,9 @@ explicitly degraded panel, renormalizes their weights, and fails closed below
 two. FantasyPros Latest ECR remains an independent market board; Waiver
 acquisition scoring, weekly weighting, and Waiver Wire policy did not transfer.
 
-Today's cached Boeing value-board refresh completed with three actual
+Today's cached League Beta value-board refresh completed with three actual
 contributors, complete selected and market ROS boards, 25 cache hits, zero
-FantasyPros calls, and no Sleeper write. 4th & 20 passed the repaired expert
+FantasyPros calls, and no Sleeper write. League Alpha passed the repaired expert
 selection and then stopped at the separate rostered-player coverage gate for
 inactive player 12508. All 666 tests and Ruff pass. Details:
 `docs/COMPLETED_TRADE_ASSISTANT_TA_1312.md`.
