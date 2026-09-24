@@ -115,16 +115,17 @@ class ExpertInputTests(unittest.TestCase):
                 self.assertTrue(path.is_file(), path)
 
             pool = load_expert_pool(paths.inseason_pool)
-            self.assertEqual([row.expert_id for row in pool], ["1", "2", "3", "4", "5"])
+            self.assertEqual([row.expert_id for row in pool], ["1", "2", "3"])
             self.assertAlmostEqual(sum(row.weight for row in pool), 1.0)
             with paths.inseason_pool.open("r", encoding="utf-8", newline="") as handle:
                 rows = tuple(csv.DictReader(handle))
             self.assertTrue(all(row["accuracy_authority"] == "weekly_inseason" for row in rows))
             self.assertTrue(all(row["current_horizon"] == "ROS" for row in rows))
             audit = json.loads(paths.audit.read_text(encoding="utf-8"))
+            self.assertEqual(audit["status"], "READY")
             self.assertFalse(audit["selection_policy"]["preseason_proxy_permitted"])
             self.assertEqual(
-                [row["status"] for row in audit["selection"]].count("selected"), 5
+                [row["status"] for row in audit["selection"]].count("selected"), 3
             )
             self.assertIn("below_selection_cutoff", {row["status"] for row in audit["selection"]})
 
@@ -181,19 +182,60 @@ class ExpertInputTests(unittest.TestCase):
             self.assertTrue(result["dry_run"])
             self.assertFalse((root / "data").exists())
 
-    def test_partial_current_availability_fails_closed(self):
+    def test_two_current_experts_produce_degraded_usable_pool(self):
         class PartialClient(FakeFantasyPros):
             def ranking_experts(self, season, **params):
                 value = current_experts()
-                value["experts"] = value["experts"][:4]
+                value["experts"] = value["experts"][:2]
                 return value
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config = root / "leagues.json"
             write_config(config)
-            with patch("roster_theory.expert_inputs.time.sleep"), self.assertRaises(
-                CoverageIncomplete
+            with patch("roster_theory.expert_inputs.time.sleep"):
+                result = refresh_expert_inputs(
+                    "league_alpha",
+                    config_path=config,
+                    data_dir=root / "data",
+                    artifact="inseason-pool",
+                    now=NOW,
+                    client=PartialClient(),
+                    fetch_text=lambda _url, _timeout: accuracy_html(),
+                )
+            self.assertEqual(result["status"], "ready")
+            paths = default_expert_input_paths(
+                "league_alpha", 2099, data_dir=root / "data"
+            )
+            pool = load_expert_pool(paths.inseason_pool)
+            self.assertEqual([row.expert_id for row in pool], ["1", "2"])
+            self.assertAlmostEqual(sum(row.weight for row in pool), 1.0)
+            audit = json.loads(paths.audit.read_text(encoding="utf-8"))
+            self.assertEqual(audit["status"], "DEGRADED")
+            self.assertEqual(audit["selection_policy"]["preferred_pool_size"], 3)
+            self.assertEqual(audit["selection_policy"]["minimum_pool_size"], 2)
+
+            inspected = inspect_expert_inputs(
+                "league_alpha",
+                config_path=config,
+                data_dir=root / "data",
+                artifact="inseason-pool",
+            )
+            self.assertEqual(inspected["status"], "ready")
+
+    def test_one_current_expert_still_fails_closed(self):
+        class PartialClient(FakeFantasyPros):
+            def ranking_experts(self, season, **params):
+                value = current_experts()
+                value["experts"] = value["experts"][:1]
+                return value
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "leagues.json"
+            write_config(config)
+            with patch("roster_theory.expert_inputs.time.sleep"), self.assertRaisesRegex(
+                CoverageIncomplete, "at least 2 are required"
             ):
                 refresh_expert_inputs(
                     "league_alpha",
@@ -298,6 +340,8 @@ class ExpertInputTests(unittest.TestCase):
             ]
         )
         self.assertEqual(imported.input, "saved-evidence")
+        self.assertEqual(imported.pool_size, 3)
+        self.assertEqual(imported.minimum_pool_size, 2)
 
 
 if __name__ == "__main__":
