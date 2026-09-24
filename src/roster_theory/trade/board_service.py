@@ -61,6 +61,7 @@ from roster_theory.trade.horizons import (
     load_draft_anchor,
 )
 from roster_theory.trade.experts import CurrentExpert, normalize_current_experts
+from roster_theory.trade.expert_panel import select_trade_ros_panel
 from roster_theory.trade.schedule import load_schedule
 from roster_theory.trade.service import RefreshResult, refresh_trade_snapshot
 from roster_theory.trade.snapshot import retag_trade_snapshot, save_trade_snapshot
@@ -1015,15 +1016,40 @@ def refresh_value_boards(
         for row in dataset.observations
         if (mapped := _canonical_rank(row, identity_map, retain_unmatched_slot=True)) is not None
     )
-    if expert_pool_resolver is None:
-        pool = load_expert_pool(
-            expert_pool_path
-            or default_inseason_expert_pool_path(league_key, snapshot.league.season)
+    if expert_pool_resolver is None and expert_pool_path is None:
+        dynamic_resolution = select_trade_ros_panel(
+            inputs,
+            datetime.now(timezone.utc),
+            league_key=league_key,
+        )
+        pool = tuple(
+            ExpertPoolMember(
+                expert_id=member.expert_id,
+                expert_name=member.expert_name,
+                source_name=member.source_name,
+                weight=member.weight,
+            )
+            for member in dynamic_resolution.members
         )
         pool_resolution = ExpertPoolResolution(
             members=pool,
+            evidence=dict(dynamic_resolution.evidence),
+        )
+    elif expert_pool_resolver is None:
+        pool = load_expert_pool(
+            expert_pool_path
+        )
+        if len(pool) < 2:
+            raise CoverageIncomplete(
+                "Trade selected-expert ROS board requires at least two fresh experts"
+            )
+        pool_resolution = ExpertPoolResolution(
+            members=pool,
             evidence={
+                "status": "READY" if len(pool) >= 3 else "DEGRADED",
                 "selection_method": "configured_expert_pool",
+                "preferred_size": 3,
+                "minimum_size": 2,
                 "members": [asdict(member) for member in pool],
             },
         )
@@ -1509,6 +1535,9 @@ def board_refresh_report(result: BoardRefreshResult) -> dict[str, Any]:
             {"expert_id": member.expert_id, "name": member.expert_name, "weight": member.weight}
             for member in getattr(result, "expert_pool", ())
         ],
+        "expert_pool_status": (
+            getattr(result, "expert_pool_evidence", None) or {}
+        ).get("status"),
         "call_plan": {
             "total": len(result.call_plan.calls),
             "fantasypros_calls": result.call_plan.fantasypros_calls,

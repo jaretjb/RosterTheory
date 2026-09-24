@@ -45,6 +45,8 @@ EVIDENCE_SCHEMA_VERSION = "roster-theory.expert-provider-evidence/v1"
 POOL_AUDIT_SCHEMA_VERSION = "roster-theory.expert-pool/v1"
 ARTIFACTS = ("draft-accuracy", "inseason-pool", "all")
 SKILL_POSITIONS = ("QB", "RB", "WR", "TE")
+PREFERRED_INSEASON_POOL_SIZE = 3
+MINIMUM_INSEASON_POOL_SIZE = 2
 _RECENCY_SHARES = (0.08, 0.15, 0.21, 0.26, 0.30)
 _DRAFT_DETAIL_PATTERN = re.compile(
     r'\{"id":(?P<expert_id>\d+),"rank":(?P<overall>\d+),'
@@ -425,10 +427,16 @@ def build_inseason_pool(
     *,
     now: datetime,
     years: Sequence[int],
-    pool_size: int = 5,
+    pool_size: int = PREFERRED_INSEASON_POOL_SIZE,
+    minimum_pool_size: int = MINIMUM_INSEASON_POOL_SIZE,
     maximum_source_count: int = 2,
     freshness_hours: float = 48.0,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if minimum_pool_size < 2 or pool_size < minimum_pool_size:
+        raise ValueError(
+            "In-season expert pool requires a preferred size at or above a "
+            "minimum of two"
+        )
     _validate_current_identity(current)
     scores = score_experts(accuracy, weights=_weights(years))
     current_by_id = {row.expert_id: row for row in current}
@@ -503,9 +511,10 @@ def build_inseason_pool(
                     "position_updates": dict(active.position_updates),
                 }
             )
-    if len(selected) != pool_size:
+    if len(selected) < minimum_pool_size:
         raise CoverageIncomplete(
-            f"Only {len(selected)} historically eligible, fresh experts satisfy a pool of {pool_size}"
+            f"Only {len(selected)} historically eligible, fresh experts are available; "
+            f"at least {minimum_pool_size} are required (preferred {pool_size})"
         )
     score_total = sum(score.score for score, _ in selected)
     pool_rows = [
@@ -655,7 +664,8 @@ def refresh_expert_inputs(
     dry_run: bool = False,
     minimum_interval: float = 1.0,
     timeout_seconds: float = 20.0,
-    pool_size: int = 5,
+    pool_size: int = PREFERRED_INSEASON_POOL_SIZE,
+    minimum_pool_size: int = MINIMUM_INSEASON_POOL_SIZE,
     maximum_source_count: int = 2,
     freshness_hours: float = 48.0,
     reuse_historical: bool = False,
@@ -667,7 +677,12 @@ def refresh_expert_inputs(
         raise ValueError(f"Unsupported expert artifact: {artifact}")
     if minimum_interval < 1.0:
         raise ValueError("FantasyPros minimum request interval cannot be below one second")
-    if pool_size < 1 or maximum_source_count < 1 or freshness_hours <= 0:
+    if (
+        minimum_pool_size < 2
+        or pool_size < minimum_pool_size
+        or maximum_source_count < 1
+        or freshness_hours <= 0
+    ):
         raise ValueError("Expert pool limits and freshness must be positive")
     resolved_season = _resolve_season(league, config_path, season)
     years = tuple(range(resolved_season - 5, resolved_season))
@@ -915,6 +930,7 @@ def refresh_expert_inputs(
             now=captured,
             years=years,
             pool_size=pool_size,
+            minimum_pool_size=minimum_pool_size,
             maximum_source_count=maximum_source_count,
             freshness_hours=freshness_hours,
         )
@@ -927,9 +943,11 @@ def refresh_expert_inputs(
             "accuracy_authority": "weekly_inseason",
             "historical_years": list(years),
             "captured_at": captured_at,
+            "status": "READY" if len(pool_rows) == pool_size else "DEGRADED",
             "selection_policy": {
                 "recency_weights": _weights(years),
-                "pool_size": pool_size,
+                "preferred_pool_size": pool_size,
+                "minimum_pool_size": minimum_pool_size,
                 "minimum_seasons": 2,
                 "coverage_floor": 0.8,
                 "maximum_source_count": maximum_source_count,
@@ -960,6 +978,7 @@ def refresh_expert_inputs(
             league=league,
             season=resolved_season,
             pool_size=pool_size,
+            minimum_pool_size=minimum_pool_size,
         )
         for artifact_id, path, authority, scope in (
             ("accuracy.inseason", paths.inseason_accuracy, "provider_fact", "shared"),
@@ -1026,17 +1045,37 @@ def validate_inseason_pool(
     years: Sequence[int],
     league: str,
     season: int,
-    pool_size: int = 5,
+    pool_size: int | None = None,
+    minimum_pool_size: int | None = None,
 ) -> None:
     from roster_theory.trade.experts import load_inseason_accuracy
 
     accuracy = load_inseason_accuracy(accuracy_path)
     if {row.year for row in accuracy} != set(years):
         raise CoverageIncomplete("In-season accuracy does not cover every required season")
+    audit = json.loads(Path(audit_path).read_text(encoding="utf-8"))
+    policy = audit.get("selection_policy") or {}
+    preferred_size = int(
+        pool_size
+        or policy.get("preferred_pool_size")
+        or policy.get("pool_size")
+        or PREFERRED_INSEASON_POOL_SIZE
+    )
+    minimum_size = int(
+        minimum_pool_size
+        or policy.get("minimum_pool_size")
+        or MINIMUM_INSEASON_POOL_SIZE
+    )
+    if minimum_size < 2 or preferred_size < minimum_size:
+        raise CoverageIncomplete("In-season expert-pool size policy is invalid")
     pool = load_expert_pool(pool_path)
-    if len(pool) != pool_size or len({row.expert_id for row in pool}) != len(pool):
+    if (
+        not minimum_size <= len(pool) <= preferred_size
+        or len({row.expert_id for row in pool}) != len(pool)
+    ):
         raise CoverageIncomplete(
-            f"In-season expert pool must contain {pool_size} unique experts"
+            "In-season expert pool must contain between "
+            f"{minimum_size} and {preferred_size} unique experts"
         )
     with Path(pool_path).open("r", encoding="utf-8-sig", newline="") as handle:
         rows = tuple(csv.DictReader(handle))
@@ -1060,7 +1099,6 @@ def validate_inseason_pool(
         raise CoverageIncomplete("In-season pool uses an undeclared or preseason authority")
     if any(row["current_horizon"] != "ROS" for row in rows):
         raise CoverageIncomplete("In-season pool does not declare the ROS horizon")
-    audit = json.loads(Path(audit_path).read_text(encoding="utf-8"))
     if audit.get("schema_version") != POOL_AUDIT_SCHEMA_VERSION:
         raise ValueError("Unsupported in-season expert-pool audit schema")
     if audit.get("league") != league or int(audit.get("season") or 0) != season:
@@ -1069,6 +1107,11 @@ def validate_inseason_pool(
         raise CoverageIncomplete("In-season expert-pool audit uses the wrong authority")
     if bool((audit.get("selection_policy") or {}).get("preseason_proxy_permitted")):
         raise CoverageIncomplete("In-season pool unexpectedly permits a preseason proxy")
+    expected_status = "READY" if len(pool) == preferred_size else "DEGRADED"
+    if audit.get("status", expected_status) != expected_status:
+        raise CoverageIncomplete(
+            f"In-season expert-pool audit status must be {expected_status}"
+        )
 
 
 def inspect_expert_inputs(

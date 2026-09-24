@@ -384,11 +384,17 @@ def select_current_experts(
     current: Sequence[CurrentExpert],
     *,
     now: datetime,
-    pool_size: int = 5,
+    pool_size: int = 3,
+    minimum_pool_size: int = 2,
     maximum_source_count: int = 2,
     freshness_hours: float = 48.0,
     required_positions: Sequence[str] = SKILL_POSITIONS,
 ) -> tuple[SelectedExpert, ...]:
+    if minimum_pool_size < 2 or pool_size < minimum_pool_size:
+        raise ValueError(
+            "Current expert selection requires a preferred size at or above a "
+            "minimum of two"
+        )
     current_by_id = {item.expert_id: item for item in current}
     selected: list[tuple[ExpertScore, CurrentExpert]] = []
     sources: dict[str, int] = {}
@@ -413,9 +419,10 @@ def select_current_experts(
         sources[source] = sources.get(source, 0) + 1
         if len(selected) == pool_size:
             break
-    if len(selected) < pool_size:
+    if len(selected) < minimum_pool_size:
         raise ValueError(
-            f"Only {len(selected)} historically eligible, fresh experts satisfy a pool of {pool_size}"
+            f"Only {len(selected)} historically eligible, fresh experts are available; "
+            f"at least {minimum_pool_size} are required (preferred {pool_size})"
         )
     score_total = sum(item.score for item, _ in selected)
     return tuple(

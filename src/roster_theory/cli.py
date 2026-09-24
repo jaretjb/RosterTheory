@@ -1032,6 +1032,7 @@ def command_inputs_experts_refresh(args: argparse.Namespace) -> None:
         "dry_run": args.dry_run,
         "minimum_interval": args.minimum_interval,
         "pool_size": args.pool_size,
+        "minimum_pool_size": args.minimum_pool_size,
         "maximum_source_count": args.maximum_source_count,
         "freshness_hours": args.freshness_hours,
     }
@@ -1054,6 +1055,7 @@ def command_inputs_experts_import(args: argparse.Namespace) -> None:
         "dry_run": args.dry_run,
         "minimum_interval": 1.0,
         "pool_size": args.pool_size,
+        "minimum_pool_size": args.minimum_pool_size,
         "maximum_source_count": args.maximum_source_count,
         "freshness_hours": args.freshness_hours,
     }
@@ -2142,7 +2144,18 @@ def build_parser() -> argparse.ArgumentParser:
         )
         command.add_argument("--dry-run", action="store_true")
         command.add_argument("--minimum-interval", type=float, default=1.0)
-        command.add_argument("--pool-size", type=int, default=5)
+        command.add_argument(
+            "--pool-size",
+            type=int,
+            default=3,
+            help="Preferred number of fresh ROS experts (default: 3)",
+        )
+        command.add_argument(
+            "--minimum-pool-size",
+            type=int,
+            default=2,
+            help="Minimum usable fresh ROS experts (default: 2)",
+        )
         command.add_argument("--maximum-source-count", type=int, default=2)
         command.add_argument("--freshness-hours", type=float, default=48.0)
 
@@ -2162,7 +2175,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--input", required=True, help="Directory containing provider-evidence JSON"
     )
     expert_import.add_argument("--dry-run", action="store_true")
-    expert_import.add_argument("--pool-size", type=int, default=5)
+    expert_import.add_argument("--pool-size", type=int, default=3)
+    expert_import.add_argument("--minimum-pool-size", type=int, default=2)
     expert_import.add_argument("--maximum-source-count", type=int, default=2)
     expert_import.add_argument("--freshness-hours", type=float, default=48.0)
     expert_import.set_defaults(func=command_inputs_experts_import)

@@ -2,6 +2,20 @@
 
 No product milestone is active.
 
+Trade TA-1312 — ROS expert-panel resilience completed September 23, 2026
+(America/Los_Angeles). Trade now prefers three accurate, fresh experts who
+actually contribute to all current ROS position feeds, accepts two as an
+explicitly degraded panel, renormalizes their weights, and fails closed below
+two. FantasyPros Latest ECR remains an independent market board; Waiver
+acquisition scoring, weekly weighting, and Waiver Wire policy did not transfer.
+
+Today's cached League Beta value-board refresh completed with three actual
+contributors, complete selected and market ROS boards, 25 cache hits, zero
+FantasyPros calls, and no Sleeper write. League Alpha passed the repaired expert
+selection and then stopped at the separate rostered-player coverage gate for
+inactive player 12508. All 666 tests and Ruff pass. Details:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1312.md`.
+
 WA-025 — Retention-safe Waiver Value and ordered claim portfolio completed
 September 22, 2026 (America/Los_Angeles). Waiver Wire rank now affects only
 acquisition; roster retention excludes below-replacement weekly ranks and
