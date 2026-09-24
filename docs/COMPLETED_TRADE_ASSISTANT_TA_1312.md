@@ -25,9 +25,9 @@ weighting were not copied into Trade.
   weights.
 - Today's saved FantasyPros evidence reproduced the former two-of-five case for
   both configured leagues without a provider call.
-- Boeing's actual Trade value-board refresh completed with three current
+- League Beta's actual Trade value-board refresh completed with three current
   contributors, both ROS boards complete, 25 cache hits, zero provider calls,
   and no Sleeper write.
-- 4th & 20 passed expert selection, then correctly stopped at an unrelated
+- League Alpha passed expert selection, then correctly stopped at an unrelated
   active-board coverage failure for rostered inactive player `12508`.
 - All 666 tests and Ruff pass.
