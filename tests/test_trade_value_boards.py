@@ -158,6 +158,30 @@ class InSeasonExpertTests(unittest.TestCase):
         self.assertEqual([item.expert_id for item in selected], ["1", "2", "4"])
         self.assertAlmostEqual(sum(item.weight for item in selected), 1.0)
 
+    def test_selection_accepts_two_but_still_rejects_one(self) -> None:
+        rows = [
+            accuracy(year, expert, int(expert))
+            for year in (2024, 2025)
+            for expert in ("1", "2")
+        ]
+        scores = score_experts(rows, weights={2024: 1, 2025: 1})
+        selected = select_current_experts(
+            scores,
+            [current("1"), current("2")],
+            now=datetime(2026, 9, 5, 1, tzinfo=timezone.utc),
+            freshness_hours=2,
+        )
+        self.assertEqual([item.expert_id for item in selected], ["1", "2"])
+        self.assertAlmostEqual(sum(item.weight for item in selected), 1.0)
+
+        with self.assertRaisesRegex(ValueError, "at least 2 are required"):
+            select_current_experts(
+                scores,
+                [current("1")],
+                now=datetime(2026, 9, 5, 1, tzinfo=timezone.utc),
+                freshness_hours=2,
+            )
+
 
 class TradeBoardTests(unittest.TestCase):
     def test_provider_only_projection_keeps_its_rank_slot_without_entering_board_universe(self) -> None:
