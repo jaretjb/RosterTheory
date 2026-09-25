@@ -389,6 +389,7 @@ class DropCandidateEvaluation:
     current_week_drop_points: float | None
     dst_streaming: DstStreamingEvidence
     waiver_value: WaiverValueComparison
+    projection_inputs_complete: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -1228,6 +1229,7 @@ def evaluate_waiver(
     values: Sequence[PlayerValueInput],
     drop_legality: Mapping[str, bool | None],
     drop: str | None = None,
+    drop_player_id: str | None = None,
     news_fresh: Mapping[str, bool] | None = None,
     contingencies: Sequence[ContingencyScenarioInput] = (),
     waiver_wire_evidence: WaiverWireEvidence | None = None,
@@ -1252,6 +1254,8 @@ def evaluate_waiver(
     evaluation_time = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     if (add is None) == (add_player_id is None):
         raise ValueError("Provide exactly one of add or add_player_id")
+    if drop is not None and drop_player_id is not None:
+        raise ValueError("Provide at most one of drop or drop_player_id")
     if waiver_wire_evidence is not None:
         if waiver_wire_evidence.league_key != snapshot.league_key:
             raise CoverageIncomplete(
@@ -1346,17 +1350,25 @@ def evaluate_waiver(
         for player_id in active_supported_roster
         if player_id in roster_evidence_exclusion_map
     }
-    active_supported_roster -= roster_evidence_excluded
-    add_drop_category = (
-        frozenset({add_position})
-        if add_position in SPECIAL_TEAM_POSITIONS
-        else SKILL_POSITIONS
-    )
-    supported_roster = {
-        player_id
-        for player_id in active_supported_roster
-        if _normalized_positions(player_by_id[player_id]).intersection(add_drop_category)
+    # Incomplete unrelated positions must not veto an otherwise independent
+    # move. They remain visible exclusions, never zero-valued drop options.
+    projection_rows = {
+        (row.player_id, row.week): row for row in projections
+        if row.horizon == "WEEKLY"
     }
+    for player_id in active_supported_roster:
+        if any(
+            (player_id, week.week) not in projection_rows
+            or not projection_is_complete(
+                projection_rows[(player_id, week.week)],
+                current_week=snapshot.manifest.current_week,
+            )
+            for week in weeks
+        ):
+            roster_evidence_exclusion_map[player_id] = "INCOMPLETE_PROJECTION_EVIDENCE"
+            roster_evidence_excluded.add(player_id)
+    active_supported_roster -= roster_evidence_excluded
+    supported_roster = set(active_supported_roster)
     droppable_roster = set(supported_roster)
     exclusions: list[DropExclusion] = [
         DropExclusion(player_id, "RESERVE")
@@ -1372,7 +1384,7 @@ def evaluate_waiver(
         for player_id in sorted(roster_evidence_excluded)
     )
     drop_evidence_exclusion_map = dict(drop_evidence_exclusions or {})
-    if drop is None:
+    if drop is None and drop_player_id is None:
         supplied_values = {row.player_id: row for row in values}
         for player_id in droppable_roster:
             value = supplied_values.get(player_id)
@@ -1390,16 +1402,16 @@ def evaluate_waiver(
     )
 
     requested_drop_id: str | None = None
-    if drop is not None:
-        drop_player = _resolve_player(snapshot, drop)
-        requested_drop_id = drop_player.player_id
+    if drop is not None or drop_player_id is not None:
+        requested_drop_id = (
+            _resolve_player(snapshot, drop).player_id if drop is not None else drop_player_id
+        )
         if requested_drop_id not in droppable_roster:
-            category = add_position if add_position in SPECIAL_TEAM_POSITIONS else "skill-player"
-            raise RosterIllegal(f"{drop} is not an active droppable {category} replacement")
+            raise RosterIllegal(f"{drop or drop_player_id} is not an active droppable supported replacement")
         legality = drop_legality.get(requested_drop_id)
         if legality is not True:
             status = "locked" if legality is False else "unknown"
-            raise RosterIllegal(f"{drop} drop legality is {status}")
+            raise RosterIllegal(f"{drop or drop_player_id} drop legality is {status}")
 
     drop_ids: tuple[str | None, ...]
     if requested_drop_id is not None:
@@ -1419,7 +1431,7 @@ def evaluate_waiver(
             sorted(player_id for player_id in droppable_roster if drop_legality.get(player_id) is True)
         )
         if not legal:
-            raise RosterIllegal("No proved-legal same-category replacement is droppable")
+            raise RosterIllegal("No proved-legal replacement is droppable")
         drop_ids = legal
 
     inputs_marker = (id(snapshot), id(weeks), id(projections), id(values), options)
@@ -1451,7 +1463,7 @@ def evaluate_waiver(
             "Weekly projections miss evaluated player-weeks: "
             + ", ".join(f"{player_id}/W{week}" for player_id, week in missing_projection_weeks)
         )
-    projection_inputs_complete = not roster_evidence_excluded and not missing_projection_weeks and all(
+    projection_inputs_complete = not missing_projection_weeks and all(
         projection_is_complete(
             projection_by_key[(player_id, week.week)], current_week=context.current_week
         )
@@ -1488,6 +1500,16 @@ def evaluate_waiver(
 
     candidates: list[DropCandidateEvaluation] = []
     for drop_id in drop_ids:
+        # Skill positions share FLEX/depth dependencies; K and DST are separate.
+        touched = {add_position}
+        if drop_id is not None:
+            touched.add(_waiver_position(player_by_id[drop_id]))
+        if touched.intersection(SKILL_POSITIONS):
+            touched.update(SKILL_POSITIONS)
+        pair_projection_complete = not any(
+            _normalized_positions(player_by_id[player_id]).intersection(touched)
+            for player_id in roster_evidence_excluded
+        )
         after = (supported_roster - ({drop_id} if drop_id else set())) | {add_player.player_id}
         lineup_impact = team_impact(
             context,
@@ -1674,6 +1696,7 @@ def evaluate_waiver(
         )
         candidates.append(
             DropCandidateEvaluation(
+                projection_inputs_complete=pair_projection_complete,
                 drop_player_id=drop_id,
                 drop_position=(
                     _waiver_position(player_by_id[drop_id])
@@ -1909,7 +1932,7 @@ def evaluate_waiver(
     warnings.append("No Waiver decision policy was applied; no final label is available")
     user_settings = dict(snapshot.league.platform_settings)
     base = WaiverEvaluation(
-        schema_version=15,
+        schema_version=16,
         product="WAIVER ASSISTANT",
         operation="ENTERED ADD/DROP EVALUATION",
         league_key=snapshot.league_key,

@@ -1103,11 +1103,12 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         self.assertEqual(result.decision_label, "WATCH")
         self.assertFalse(result.decision.gates[0].passed)
 
-    def test_special_team_drop_must_match_the_added_position(self):
-        with self.assertRaisesRegex(RosterIllegal, "active droppable K replacement"):
-            self.special_team_evaluation(
-                "K", current_delta=2.0, drop_name="Roster Receiver"
-            )
+    def test_special_team_cross_position_drop_is_evaluated_with_roster_safety(self):
+        result = self.special_team_evaluation("K", current_delta=2.0, drop_name="Roster Receiver")
+        self.assertEqual(result.selected_drop_player_id, "wr")
+        self.assertFalse(result.candidates[0].same_position)
+        self.assertNotEqual(result.decision_label, "ADD NOW")
+        self.assertIn("cross_position_roster_safety", {gate.name for gate in result.decision.gates})
 
 
 if __name__ == "__main__":

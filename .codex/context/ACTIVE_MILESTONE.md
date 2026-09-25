@@ -1,15 +1,17 @@
 # Active milestone
 
-AC-002 — Candidate-scoped safety and transaction legality (issue #8) is implemented
-and at tested PR handoff. Only review/validation corrections for AC-002 remain
-authorized; do not start another product milestone without user authorization.
-Read only AC-002 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`
-and `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_002.md` when continuing its review.
-722 tests and Ruff pass. No live recommendation run or Sleeper write occurred.
+AC-003 — Joint cross-position optimization and claim plans (issue #9) is implemented,
+PR #17 awaits review/merge. Authorized by the request to merge PR #16 and work #9.
+Load only AC-003 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
+Implement joint add/drop ranking, truthful bounded-search coverage, consistent
+recommendation/report identity and ordering, and safe claim branches. Preserve
+AC-002 safety gates; no calibration changes or Trade strategy work are authorized.
+Verification: 737 tests and Ruff pass. Stop at the tested PR handoff.
 
 AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
 all CI checks. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
-AC-003–AC-008 remain planned; the overall audit is not closed.
+AC-002/#8 merged in PR #16 with all CI checks passing. AC-004–AC-008 remain
+planned; the overall audit is not closed. All league actions remain read-only.
 
 WA-027 — League-scored specialist performance weighting completed September
 25, 2026 (America/Los_Angeles). K and DST exact evidence now preserves actual
