@@ -14,8 +14,8 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 | --- | --- | --- |
 | AC-001 | [#7](https://github.com/jaretjb/RosterTheory/issues/7) | Merged in [PR #15](https://github.com/jaretjb/RosterTheory/pull/15) |
 | AC-002 | [#8](https://github.com/jaretjb/RosterTheory/issues/8) | Merged in [PR #16](https://github.com/jaretjb/RosterTheory/pull/16) |
-| AC-003 | [#9](https://github.com/jaretjb/RosterTheory/issues/9) | Implemented; [PR #17](https://github.com/jaretjb/RosterTheory/pull/17) awaiting review/merge |
-| AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Planned |
+| AC-003 | [#9](https://github.com/jaretjb/RosterTheory/issues/9) | Merged in [PR #17](https://github.com/jaretjb/RosterTheory/pull/17) |
+| AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Implemented; PR handoff pending |
 | AC-005 | [#11](https://github.com/jaretjb/RosterTheory/issues/11) | Planned |
 | AC-006 | [#12](https://github.com/jaretjb/RosterTheory/issues/12) | Planned |
 | AC-007 | [#13](https://github.com/jaretjb/RosterTheory/issues/13) | Planned |
@@ -59,8 +59,8 @@ Add partial-search exclusions and explicit coverage counts, not invented values.
 
 ## AC-003 — Joint cross-position optimization and claim plans
 
-Status: IMPLEMENTED, [PR #17](https://github.com/jaretjb/RosterTheory/pull/17)
-awaiting review/merge. Findings: W1, W2, W4, W7.
+Status: MERGED in [PR #17](https://github.com/jaretjb/RosterTheory/pull/17).
+Findings: W1, W2, W4, W7.
 Depends on AC-002 (merged). Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_003.md`.
 Verification: 737 tests and Ruff pass; no live league/provider writes.
 
@@ -76,7 +76,9 @@ multiple claims whose independent gains cannot safely be combined.
 
 ## AC-004 — Consistent Trade decisions and secondary moves
 
-Status: PLANNED. Findings: T4, T5. Depends on AC-002.
+Status: IMPLEMENTED; PR handoff pending. Findings: T4, T5. Depends on AC-002 (merged).
+Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_004.md`.
+Verification: 746 tests, Ruff and diff checks pass. No live report/provider refresh.
 
 Define common intrinsic, market, partner, legality, and confidence axes used by
 entered evaluation and target search. Do not reinterpret the same exact package

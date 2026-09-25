@@ -18,6 +18,7 @@ from roster_theory.trade.boards import ValueBoard
 from roster_theory.trade.coverage import RosterCoverageExclusion, roster_projection_exclusions
 from roster_theory.trade.consolidation import ConsolidationEvidence, analyze_consolidation
 from roster_theory.trade.evaluation import (
+    DecisionAssessment,
     EvaluationOptions,
     PlayerAsset,
     RosterDiagnosis,
@@ -213,6 +214,9 @@ class EvaluatedPackageDecision:
     partner_selected_delta: float | None
     partner_depth_delta: float
     evaluation_hash: str
+    package_verdict: str | None = None
+    decision_axes: DecisionAssessment | None = None
+    recommendation_status: str = "NOT_RECOMMENDED"
 
 
 @dataclass(frozen=True, slots=True)
@@ -738,25 +742,9 @@ def _exact_decision(
     downside_passed = (
         evaluation.risk_impacts[0].offense_downside_loss_delta <= options.max_downside_increase
     )
-    user_value_passed = user_selected is not None and user_selected >= options.user_selected_floor
-    if (
-        complete
-        and user_depth_passed
-        and downside_passed
-        and user_value_passed
-        and user_team.weighted_delta >= config.minimum_user_lineup_gain
-    ):
-        intrinsic = "WIN"
-    elif (
-        complete
-        and user_depth_passed
-        and downside_passed
-        and user_value_passed
-        and user_team.weighted_delta >= 0.0
-    ):
-        intrinsic = "NEUTRAL"
-    else:
-        intrinsic = "LOSS"
+    # Preserve the exact evaluator's intrinsic and package verdict. Search-only
+    # strategy/market screens may exclude it, never reinterpret its core gates.
+    intrinsic = evaluation.decision.intrinsic_outcome if evaluation.decision else "LOSS"
     partner_needs, _ = _diagnosis_sets(diagnoses[candidate.opponent_roster_id])
     partner_need_hit = any(
         _positions(player_by_id[player_id]) & partner_needs
@@ -781,6 +769,10 @@ def _exact_decision(
         reason = "USER_DOWNSIDE_GATE"
     elif intrinsic != "WIN":
         reason = f"INTRINSIC_{intrinsic}"
+    elif evaluation.decision_label != "ACCEPTABLE":
+        reason = f"ENTERED_{evaluation.decision_label or 'UNAVAILABLE'}"
+    elif user_team.weighted_delta < config.minimum_user_lineup_gain:
+        reason = "SEARCH_MINIMUM_LINEUP_GAIN"
     elif fairness.mode == "PRIOR_WEEK_MARKET":
         reason = "STALE_MARKET_INDICATIVE_ONLY"
     elif not fairness.within_band:
@@ -829,6 +821,11 @@ def _exact_decision(
         partner_selected_delta=partner_selected,
         partner_depth_delta=partner_team.depth_delta,
         evaluation_hash=evaluation.evidence_hash,
+        package_verdict=evaluation.decision_label,
+        decision_axes=evaluation.decision,
+        recommendation_status=(
+            "PROVISIONAL_MARKET" if fairness.mode == "ECR-PROXY" else "SCREENED_OPPORTUNITY"
+        ) if accepted else "NOT_RECOMMENDED",
     )
 
 
@@ -1415,11 +1412,13 @@ def optimize_target_packages(
                 "Passing offers are modeled partner-credible constructions, not acceptance "
                 "predictions",
                 "No target or package is called obtainable and no transaction is submitted",
+                "Exact package verdicts use the shared evaluator; target strategy and market screens are additional filters",
+                "Candidate pools and exact budgets limit coverage; unevaluated packages may be better",
             )
         )
     )
     base = TargetPackageSearchResult(
-        schema_version=1,
+        schema_version=2,
         manifest_id=snapshot.manifest.analysis_id,
         league_key=snapshot.league_key,
         horizon=snapshot.ranking_horizon,

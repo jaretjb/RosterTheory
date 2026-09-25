@@ -2,20 +2,21 @@
 
 Updated: September 25, 2026 (America/Los_Angeles)
 
-AC-001/#7 and prerequisite PR #6 are merged. AC-002/#8 is implemented, pending
-PR review/merge. PR link: `docs/ASSISTANT_RELIABILITY_TASKS.md`.
-Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_002.md`.
-Missing directory/team, rank, projection, rank-slot, or replacement evidence is
-scoped to affected players/rosters. Unaffected targets and packages continue;
-uncertain user-roster decisions produce exclusions, not unsafe offers. Boards
-never invent missing values. Exact trades reject relevant unresolved identity;
-automatic secondary drops require value evidence. Reports expose partial coverage.
-Verification: 722 tests and Ruff pass; no live report or Sleeper write occurred.
+AC-001/#7, AC-002/#8 and AC-003/#9 are merged (PRs #15–#17).
+AC-004/#10 is implemented; PR handoff/review is pending.
+Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_004.md`.
+Entered and target-search packages share verdicts and intrinsic/partner/legality/
+confidence axes. Search-only strategy/market filters are explicit and cannot
+bypass entered gates. Required secondary moves prioritize feasible whole-package
+outcomes, protect injured positive ownership value, and retain value on lineup
+ties. Received-asset drops are unsafe. Missing evidence stays locally disclosed;
+bounded secondary combinations are not claimed exhaustive. ECR-only pricing is
+visibly provisional. Verification: 746 tests, Ruff and diff checks pass.
+No live report, provider refresh or Sleeper write occurred.
 
-The audit remains open. AC-003–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
-track scoped missing-player recovery, mandatory safety, Trade verdict/secondary-move
-consistency, formats, freshness, provenance, integration, and performance.
-No further implementation milestone is authorized.
+The audit remains open. AC-005–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
+track ranking/scoring, formats, freshness, provenance, integration and performance.
+Stop at the tested AC-004 PR handoff; no next milestone is authorized.
 
 Prior work:
 

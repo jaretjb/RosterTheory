@@ -734,8 +734,9 @@ class LeagueSearchTests(unittest.TestCase):
                 target_material_gap_floor=-1_000.0,
             )
         )
-        rejections = dict(result.rejection_counts)
-        self.assertGreater(rejections["received_asset_immediately_dropped"], 0)
+        # The common evaluator now prevents/rejects this earlier; a downstream
+        # search-only rejection count is no longer required.
+        self.assertTrue(result.opportunities)
         for opportunity in result.opportunities:
             incoming = {
                 opportunity.evaluation.package.roster_a_id: {

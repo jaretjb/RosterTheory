@@ -30,7 +30,6 @@ from roster_theory.inseason.evaluation import (
     build_weekly_projection_matrix as build_inseason_projection_matrix,
     depth_above_waiver as inseason_depth_above_waiver,
     lineup as inseason_lineup,
-    plausible_unowned_players,
     risk_impact as inseason_risk_impact,
     risk_profile as inseason_risk_profile,
     team_impact as inseason_team_impact,
@@ -68,6 +67,12 @@ class TradePackage:
 class SecondaryCandidate:
     player_ids: tuple[str, ...]
     weighted_lineup_points: float
+    gate_failures: tuple[str, ...] = ()
+    selected_value_delta: float | None = None
+    market_value_delta: float = 0.0
+    depth_delta: float = 0.0
+    downside_delta: float = 0.0
+    protected_drop_ids: tuple[str, ...] = ()
 
     @property
     def player_id(self) -> str | None:
@@ -86,6 +91,7 @@ class SecondaryMove:
     combinations_considered: int = 0
     search_truncated: bool = False
     manual_legality: bool = False
+    exclusions: tuple[tuple[str, str], ...] = ()
 
     @property
     def chosen_player_id(self) -> str | None:
@@ -136,6 +142,12 @@ class DecisionAssessment:
     posture: str
     policy_version: str
     gates: tuple[DecisionGate, ...]
+    intrinsic_outcome: str = "UNAVAILABLE"
+    market_status: str = "ECR_OWNERSHIP_ONLY_NOT_CHART_PRICED"
+    partner_status: str = "UNAVAILABLE"
+    legality_status: str = "UNAVAILABLE"
+    confidence: str = "PROVISIONAL_MARKET"
+    engine_version: str = "ac-004-common-axes-v1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -386,21 +398,6 @@ def _weighted_lineup_score(
     )
 
 
-def _plausible_free_agents(
-    snapshot: TradeSnapshot,
-    matrix: WeeklyProjectionMatrix,
-    *,
-    per_position_week: int = 5,
-    allowed_player_ids: set[str] | None = None,
-) -> tuple[str, ...]:
-    return plausible_unowned_players(
-        _inseason_context(snapshot),
-        matrix,
-        per_position_week=per_position_week,
-        allowed_player_ids=allowed_player_ids,
-    )
-
-
 def _requested_secondary_overrides(
     options: EvaluationOptions,
     *,
@@ -427,6 +424,12 @@ def _secondary_move(
     unavailable_free_agents: set[str],
     valued_player_ids: set[str],
     lineup_available: bool,
+    *,
+    before_roster: set[str],
+    sent: Sequence[str],
+    received: Sequence[str],
+    selected_board: ValueBoard | None,
+    market_board: ValueBoard,
 ) -> tuple[set[str], SecondaryMove]:
     delta = len(roster) - target_count
     required = abs(delta)
@@ -446,24 +449,83 @@ def _secondary_move(
             f"{len(overrides)} overrides were supplied"
         )
 
+    selected_values = _board_map(selected_board)
+    market_values = _board_map(market_board)
+    player_by_id = {row.player_id: row for row in snapshot.players}
+    evidenced_ids = valued_player_ids & (set(selected_values) if selected_board is not None else valued_player_ids)
+    exclusions: dict[str, str] = {}
     if dropping:
-        eligible = tuple(sorted(roster & valued_player_ids))
+        exclusions.update((pid, "VALUE_EVIDENCE_UNAVAILABLE") for pid in roster - evidenced_ids)
+        eligible = tuple(sorted(roster & evidenced_ids))
         automatic_candidates = eligible
     else:
         eligible = tuple(
             sorted(
                 player_id
                 for player_id in snapshot.free_agent_ids
-                if player_id in valued_player_ids
+                if player_id in evidenced_ids
                 and player_id not in unavailable_free_agents
                 and player_id not in roster
             )
         )
-        automatic_candidates = _plausible_free_agents(
-            snapshot,
-            matrix,
-            allowed_player_ids=set(eligible),
+        exclusions.update((pid, "VALUE_EVIDENCE_UNAVAILABLE")
+                          for pid in set(snapshot.free_agent_ids) - evidenced_ids)
+        automatic_candidates = eligible
+
+    candidate_cache: dict[tuple[str, ...], SecondaryCandidate] = {}
+
+    def score_candidate(player_ids: tuple[str, ...]) -> SecondaryCandidate:
+        if player_ids in candidate_cache:
+            return candidate_cache[player_ids]
+        candidate_roster = (roster - set(player_ids)) if dropping else (roster | set(player_ids))
+        move = SecondaryMove(roster_id, kind, player_ids, (), ())
+        ownership = _ownership_impact(roster_id, sent, received, move, selected_board, market_board)
+        selected_delta = (
+            ownership.selected_package_delta + ownership.selected_secondary_delta
+            if ownership.selected_package_delta is not None and ownership.selected_secondary_delta is not None
+            else None
         )
+        market_delta = ownership.market_package_delta + ownership.market_secondary_delta
+        failures = []
+        protected = tuple(pid for pid in player_ids if dropping and pid in before_roster
+                          and str(player_by_id[pid].injury_status or "").upper() in {
+                              "Q", "QUESTIONABLE", "D", "DOUBTFUL", "OUT", "IR", "PUP", "SUSP", "SUSPENDED"}
+                          and max(market_values[pid].reconciled_vorp,
+                                  selected_values[pid].reconciled_vorp if pid in selected_values else 0.0) > 0.0)
+        if protected:
+            failures.append("INJURED_POSITIVE_OWNERSHIP_RETENTION")
+        if dropping and set(player_ids).intersection(received):
+            failures.append("RECEIVED_ASSET_DROPPED")
+        user = roster_id == snapshot.user_roster_id
+        if user and (selected_delta is None or selected_delta < options.user_selected_floor):
+            failures.append("USER_SELECTED_VALUE")
+        if not user and market_delta < options.partner_market_floor:
+            failures.append("PARTNER_MARKET_VALUE")
+        impact = _team_impact(snapshot, matrix, roster_id, before_roster, candidate_roster, options) if lineup_available else None
+        risk = _risk_impact(snapshot, matrix, roster_id, before_roster, candidate_roster, options) if lineup_available else None
+        if user and impact is not None:
+            if impact.weighted_delta < 0.0:
+                failures.append("USER_LINEUP_LOSS")
+            if impact.depth_delta < -options.max_depth_loss:
+                failures.append("USER_DEPTH_LOSS")
+            if risk is not None and risk.offense_downside_loss_delta > options.max_downside_increase:
+                failures.append("USER_DOWNSIDE_INCREASE")
+        result = SecondaryCandidate(
+            player_ids, impact.after_weighted_points if impact else 0.0,
+            tuple(failures), selected_delta, market_delta,
+            impact.depth_delta if impact else 0.0,
+            risk.offense_downside_loss_delta if risk else 0.0, protected,
+        )
+        candidate_cache[player_ids] = result
+        return result
+
+    def candidate_key(row: SecondaryCandidate) -> tuple[object, ...]:
+        # Feasible whole-transaction outcomes beat superficially better lineups.
+        # On lineup ties retain ownership value before falling back to stable IDs.
+        return (bool(row.gate_failures), bool(row.protected_drop_ids or "RECEIVED_ASSET_DROPPED" in row.gate_failures), len(row.gate_failures),
+                -row.weighted_lineup_points,
+                -(row.selected_value_delta if row.selected_value_delta is not None else row.market_value_delta),
+                -row.market_value_delta, -row.depth_delta, row.downside_delta, row.player_ids)
 
     ineligible_overrides = tuple(player_id for player_id in overrides if player_id not in eligible)
     if ineligible_overrides:
@@ -487,25 +549,15 @@ def _secondary_move(
                 f"No eligible player combination exists for {required} required "
                 f"{kind.lower()} moves"
             )
-        individually_scored: list[tuple[float, str]] = []
+        individually_scored: list[SecondaryCandidate] = []
         for player_id in automatic_candidates:
-            candidate_roster = set(roster)
-            if dropping:
-                candidate_roster.remove(player_id)
-            else:
-                candidate_roster.add(player_id)
-            individually_scored.append(
-                (
-                    _weighted_lineup_score(snapshot, matrix, candidate_roster, options),
-                    player_id,
-                )
-            )
+            if not dropping and any((cell := matrix.cell(player_id, week.week)) is None or cell.points is None
+                                    for week in snapshot.weeks):
+                exclusions[player_id] = "PROJECTION_EVIDENCE_UNAVAILABLE"
+                continue
+            individually_scored.append(score_candidate((player_id,)))
         ranked_players = tuple(
-            player_id
-            for _, player_id in sorted(
-                individually_scored,
-                key=lambda row: (-row[0], row[1]),
-            )
+            row.player_ids[0] for row in sorted(individually_scored, key=candidate_key)
         )
         bounded_pool = tuple(
             dict.fromkeys((*overrides, *ranked_players[:MAX_SECONDARY_PLAYER_POOL]))
@@ -523,29 +575,14 @@ def _secondary_move(
             candidate_sets_list.append(tuple(sorted((*overrides, *extra))))
         candidate_sets = tuple(candidate_sets_list)
         pool_size = len(bounded_pool)
-        eligible_count = len(automatic_candidates)
+        eligible_count = len(eligible)
         search_truncated = (
-            len(ranked_players) > MAX_SECONDARY_PLAYER_POOL or combination_truncated
+            choose_count > 0 and (len(ranked_players) > MAX_SECONDARY_PLAYER_POOL or combination_truncated)
         )
 
     if not candidate_sets:
         raise RosterIllegal("No eligible player combination exists for the required secondary moves")
-    scored: list[SecondaryCandidate] = []
-    for player_ids in candidate_sets:
-        candidate_roster = set(roster)
-        if dropping:
-            candidate_roster.difference_update(player_ids)
-        else:
-            candidate_roster.update(player_ids)
-        score = (
-            _weighted_lineup_score(snapshot, matrix, candidate_roster, options)
-            if lineup_available
-            else 0.0
-        )
-        scored.append(SecondaryCandidate(player_ids, score))
-    ordered = tuple(
-        sorted(scored, key=lambda row: (-row.weighted_lineup_points, row.player_ids))
-    )
+    ordered = tuple(sorted((score_candidate(ids) for ids in candidate_sets), key=candidate_key))
     chosen = ordered[0].player_ids
     final_roster = set(roster)
     if dropping:
@@ -562,6 +599,7 @@ def _secondary_move(
         eligible_player_count=eligible_count,
         combinations_considered=len(ordered),
         search_truncated=search_truncated,
+        exclusions=tuple(sorted(exclusions.items())),
     )
 
 
@@ -930,6 +968,7 @@ def _decision_assessment(
     ownership: Sequence[OwnershipImpact],
     modes: Sequence[str],
     options: EvaluationOptions,
+    moves: Sequence[SecondaryMove] = (),
 ) -> DecisionAssessment | None:
     if not impacts or not risk_impacts or len(ownership) != 2:
         return None
@@ -947,6 +986,13 @@ def _decision_assessment(
     )
     blocking_modes = {"RANK-ONLY", "SCHEDULE-PARTIAL", "MANUAL-LEGALITY"}
     complete = not bool(blocking_modes.intersection(modes)) and user_selected_total is not None
+    # Value/lineup/depth/downside failures are already represented by their
+    # individual axes below. Do not turn a partner-value failure into user loss.
+    retention_or_asset_failures = {"INJURED_POSITIVE_OWNERSHIP_RETENTION", "RECEIVED_ASSET_DROPPED"}
+    secondary_safe = all(
+        not move.candidates or not retention_or_asset_failures.intersection(move.candidates[0].gate_failures)
+        for move in moves
+    )
     gates = (
         DecisionGate(
             "complete_evidence",
@@ -997,10 +1043,14 @@ def _decision_assessment(
             partner_market_total >= options.partner_market_floor,
             "The partner must be near-neutral by market value before preference is inferred",
         ),
+        DecisionGate(
+            "secondary_moves_safe", secondary_safe, "==", True, secondary_safe,
+            "Required roster moves must satisfy evidence, retention and roster-impact gates",
+        ),
     )
     if all(gate.passed for gate in gates):
         label = "ACCEPTABLE"
-    elif not complete:
+    elif not complete or not secondary_safe:
         label = "DECLINE"
     elif (
         user_impact.weighted_delta < 0.0
@@ -1017,6 +1067,14 @@ def _decision_assessment(
         posture=options.risk_posture.upper(),
         policy_version=options.risk_policy_version,
         gates=gates,
+        intrinsic_outcome=(
+            "WIN" if user_impact.weighted_delta > 0.0 else "NEUTRAL"
+        ) if all(gate.passed for gate in gates if gate.name != "partner_market_delta") else "LOSS",
+        partner_status="PASS" if partner_market_total >= options.partner_market_floor else "FAIL",
+        legality_status="MANUAL_CHECK_REQUIRED" if "MANUAL-LEGALITY" in modes else "MODEL_VALIDATED",
+        confidence="INCOMPLETE" if not complete else (
+            "BUDGET_LIMITED_PROVISIONAL_MARKET" if "BOUNDED-SECONDARY-SEARCH" in modes else "PROVISIONAL_MARKET"
+        ),
     )
 
 
@@ -1224,6 +1282,8 @@ def evaluate_trade(
         unavailable,
         valued_player_ids,
         bool(projections),
+        before_roster=before_a, sent=sent_a, received=sent_b,
+        selected_board=selected_board, market_board=market_board,
     )
     unavailable.update(final_a)
     final_b, move_b = _secondary_move(
@@ -1236,6 +1296,8 @@ def evaluate_trade(
         unavailable,
         valued_player_ids,
         bool(projections),
+        before_roster=before_b, sent=sent_b, received=sent_a,
+        selected_board=selected_board, market_board=market_board,
     )
     moves = (move_a, move_b)
     if reserve_assets:
@@ -1243,7 +1305,7 @@ def evaluate_trade(
     if any(move.search_truncated for move in moves):
         modes.append("BOUNDED-SECONDARY-SEARCH")
         warnings.append(
-            "Secondary add/drop search used the documented deterministic candidate bound"
+            "Secondary add/drop search is budget-limited; unexamined combinations may be better"
         )
 
     if projections:
@@ -1306,7 +1368,7 @@ def evaluate_trade(
             market_board,
         ),
     )
-    decision = _decision_assessment(impacts, risk_impacts, ownership, modes, options)
+    decision = _decision_assessment(impacts, risk_impacts, ownership, modes, options, moves)
     if impacts:
         summary = (
             f"Roster {package.roster_a_id} changes projected starter points by "
@@ -1342,7 +1404,7 @@ def evaluate_trade(
         ),
     }
     base = TradeEvaluation(
-        schema_version=4,
+        schema_version=5,
         product="TRADE ASSISTANT",
         operation="ENTERED PACKAGE EVALUATION",
         manifest_id=snapshot.manifest.analysis_id,
