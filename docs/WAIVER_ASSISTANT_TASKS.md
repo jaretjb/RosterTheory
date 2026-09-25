@@ -933,3 +933,114 @@ was DST7/season7/ROS6, New England DST11/season1/ROS7, and Carolina
 DST9/season6, while Cincinnati was DST17/season3/ROS19. The engine therefore
 returned Minnesota, New England, and Carolina and did not hard-code the older
 Carolina/Cincinnati/Minnesota order. Ruff and all 661 tests pass.
+
+## WA-026 — Universal retention safety and pruning equivalence
+
+Status: completed, including coverage-isolation amendment, September 24, 2026
+
+Depends on: WA-020, WA-024, and WA-025
+
+Goal: make retention-safe Waiver Value the generic default for every configured
+Sleeper league while keeping only empirically calibrated weights league-local,
+and prevent bounded search from hiding a move that exact named evaluation would
+recommend.
+
+Context: load Waiver requirements sections 3.1–3.3 and 4–6 and Waiver design
+sections Architecture, Data flow, and Fail-closed boundaries.
+
+Acceptance:
+
+- Enable the generic weekly/Waiver/ROS acquisition-versus-retention model for
+  every valid Waiver policy. Default weights remain generic; a league may
+  override weights only in its own policy. Below-replacement weekly ranks and
+  injury-uncertain, above-replacement ROS holds are universal safety behavior.
+- Migrate legacy same-league policies without transferring another league's
+  calibrated weights or thresholds.
+- Make pruning preserve candidates that strictly dominate a same-position legal
+  drop in fresh weekly rank, ROS rank, and remaining projection, regardless of
+  the long-term value horizon. Exact evaluation still owns the decision. A
+  notable candidate must never be labeled below-threshold merely because it
+  fell behind the exact-evaluation budget.
+- Add player-agnostic regressions for an injury-depressed rostered player, a
+  Dobbins-style add that is affirmative only against the best legal drop, and
+  search/evaluate decision equivalence. Preserve current K/DST behavior and
+  read-only Sleeper boundaries.
+- Run focused tests, Ruff, the full repository suite, and fresh read-only
+  searches for both configured leagues before completion.
+
+Completed September 24, 2026. Retention-safe Waiver Value is now enabled by
+the application for every valid league policy; a league may override the
+generic 50/30/20 weights, but omitting `waiver_priority` no longer disables
+the safety model. New policy scaffolds expose the same generic defaults without
+copying another league's calibrated settings. Search budget pruning now yields
+to same-position weekly/ROS/projection dominance, and budget-only omissions are
+reported as not exactly evaluated rather than below threshold. A controlled
+bounded-versus-exhaustive regression proves the same affirmative decision and
+drop selection.
+
+The fresh League Beta read-only search selected J.K. Dobbins for Rachaad White
+and performed no Sleeper write. Exact follow-up found Kyle Pitts improves the
+modeled lineup over Oronde Gadsden but fails the retention-safe value gate
+(60.1 versus 68.4), so the swap is a PASS.
+
+Amendment: the League Alpha result exposed an over-broad coverage boundary.
+Missing value or projection evidence for one rostered player must quarantine
+only alternatives involving that player, remain explicit in input and search
+evidence, and allow independent Waiver alternatives to complete. Trade's
+league-wide value-board completeness behavior is out of scope and remains
+strict.
+
+Completed September 24, 2026. Waiver now opts into partial value-board coverage
+without changing Trade's strict default. A rostered player missing value
+evidence is recorded as `ROSTER_VALUE_UNAVAILABLE` and excluded only from the
+drop pool; complete projections still preserve that player in lineup context.
+Missing roster projections return a visible partial, non-affirmative analysis
+instead of terminating the run. The fresh League Alpha search completed as
+DEGRADED, recorded player `12508` and two coverage warnings, retained unrelated
+alternatives, and returned an ACQUIRE result with a different legal drop. All
+673 tests and Ruff pass. No Sleeper write occurred.
+
+## WA-027 — League-scored specialist performance weighting
+
+Status: completed September 25, 2026
+
+Depends on: WA-023 and WA-025
+
+Goal: make K and DST fallback decisions respect actual points already scored
+under the league's scoring, with a substantially larger season-points weight
+for K than DST.
+
+Context: load Waiver requirements sections 3.1–3.3 and 4–6 and Waiver design
+sections Architecture, Data flow, and Fail-closed boundaries.
+
+Acceptance:
+
+- Preserve add and drop season-point totals in exact specialist evidence; never
+  substitute ranks for missing league-scored totals or invent performance.
+- When projections do not independently clear the specialist streaming gate,
+  require the weekly/season/recent/ROS fallback evidence to clear one explicit
+  score. A favorable rank in isolation must not bypass a negative overall
+  specialist case.
+- Add configurable K and DST season-point weights, with K materially higher.
+  Calibrate only the current league policy from its report; do not transfer
+  those numeric settings to another league without separate evidence.
+- Regress the productive-incumbent shapes represented by Evan McPherson and
+  Cincinnati versus Detroit using player-agnostic controlled fixtures.
+- Preserve WA-023 rolling DST projection behavior, existing skill-player
+  behavior, deterministic evidence, and read-only Sleeper boundaries.
+- Run focused tests, Ruff, the full suite, and a fresh 4th & 20 read-only search
+  before completion.
+
+Completion proof: exact specialist evidence now carries add/drop season points
+and recent points per game. A rank-supported fallback must clear one combined
+score; configured season-point evidence cannot be missing. The current league
+uses a `2.0` K season-point weight and a smaller `0.5` DST weight. Other league
+policies retain neutral defaults unless separately calibrated.
+
+The fresh read-only search changed both disputed results. Tyler Loop (17 season
+points) and Eddy Pineiro (15) are WATCH alternatives behind Evan McPherson
+(31), not claims. Detroit (6) is WATCH behind Cincinnati (21), with a negative
+four-week streaming edge, and is absent from the claim plan. San Francisco and
+New England remain the two affirmative DST alternatives. The operational
+league policy matches the validated override, all 676 tests and Ruff pass, and
+no Sleeper write occurred.

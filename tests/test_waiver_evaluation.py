@@ -619,6 +619,17 @@ class WaiverEvaluationInputAndCliTests(unittest.TestCase):
                 )
 
     def _input_payload(self):
+        rank_by_id = {
+            "add": 1,
+            "qb": 2,
+            "rb": 2,
+            "wr": 2,
+            "bench": 3,
+            "ir": 4,
+            "other": 5,
+            "fa_rb": 10,
+            "fa_wr": 10,
+        }
         payload = {
             "schema_version": 1,
             "product": "WAIVER ASSISTANT",
@@ -648,6 +659,11 @@ class WaiverEvaluationInputAndCliTests(unittest.TestCase):
                     "selected_value": row.selected_value,
                     "market_value": row.market_value,
                     "raw_projection": row.raw_projection,
+                    "current_week_position_rank": rank_by_id[row.player_id],
+                    "selected_rest_of_season_position_rank": rank_by_id[
+                        row.player_id
+                    ],
+                    "rest_of_season_position_rank": rank_by_id[row.player_id],
                     "waiver_wire_rank": 2 if row.player_id == "add" else None,
                 }
                 for row in values()

@@ -7,6 +7,8 @@
   "allow_watch_on_missing_news": true,
   "special_teams": {
     "current_week_weight": 4.0,
+    "kicker_season_points_weight": 2.0,
+    "dst_season_points_weight": 0.5,
     "kicker_current_week_gain_floor": 1.0,
     "dst_current_week_gain_floor": 1.0,
     "watch_current_week_gain_floor": 0.0,
