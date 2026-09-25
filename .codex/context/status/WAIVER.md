@@ -3,7 +3,7 @@
 Updated: September 25, 2026 (America/Los_Angeles)
 
 AC-001/#7 and prerequisite PR #6 are merged. AC-002/#8 merged in PR #16.
-AC-003/#9 is implemented; PR #17 awaits review/merge.
+AC-003/#9 is merged in PR #17; all 20 CI checks passed.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_003.md`.
 All supported legal cross-position drops compete without same-position preference.
 Default search is exhaustive over eligible adds; an explicit budget reports

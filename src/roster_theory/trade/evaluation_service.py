@@ -247,6 +247,14 @@ def format_trade_evaluation(evaluation: TradeEvaluation) -> str:
         evaluation.summary,
         "Data: " + source_summary,
     ]
+    if evaluation.decision is not None:
+        axes = evaluation.decision
+        lines.extend((
+            f"Shared package axes: intrinsic {axes.intrinsic_outcome}; partner {axes.partner_status}; "
+            f"legality {axes.legality_status}; confidence {axes.confidence}.",
+            "Pricing: ECR ownership values only; direct trade-chart fairness is not evaluated here. "
+            "An acceptable package is not a confirmed market-priced offer.",
+        ))
     for impact in evaluation.team_impacts:
         lines.append(
             f"Roster {impact.roster_id}: starter {impact.weighted_delta:+.2f}, "
@@ -298,8 +306,13 @@ def format_trade_evaluation(evaluation: TradeEvaluation) -> str:
                 f"Roster {move.roster_id} {move.kind.lower()} set: {chosen}; "
                 f"next {next_best}; {move.combinations_considered} combinations from "
                 f"{move.candidate_pool_size} of {move.eligible_player_count} candidates"
-                + (" (bounded search)" if move.search_truncated else "")
+                + (" (budget-limited; unexamined combinations may be better)" if move.search_truncated else "")
             )
+            if move.candidates and move.candidates[0].gate_failures:
+                lines.append("  Required move is unsafe: " + ", ".join(move.candidates[0].gate_failures))
+            if move.exclusions:
+                lines.append("  Excluded secondary candidates: " + "; ".join(
+                    f"{names.get(pid, pid)}: {reason}" for pid, reason in move.exclusions))
     for value in evaluation.ownership_impacts:
         selected = (
             f"sent {value.selected_sent:.2f}, received {value.selected_received:.2f}, "
