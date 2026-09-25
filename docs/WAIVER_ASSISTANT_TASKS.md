@@ -936,7 +936,7 @@ Carolina/Cincinnati/Minnesota order. Ruff and all 661 tests pass.
 
 ## WA-026 — Universal retention safety and pruning equivalence
 
-Status: completed September 24, 2026
+Status: completed, including coverage-isolation amendment, September 24, 2026
 
 Depends on: WA-020, WA-024, and WA-025
 
@@ -978,10 +978,24 @@ reported as not exactly evaluated rather than below threshold. A controlled
 bounded-versus-exhaustive regression proves the same affirmative decision and
 drop selection.
 
-The fresh League Beta read-only search selected J.K. Dobbins for Rachaad White and
-performed no Sleeper write. Exact follow-up found Kyle Pitts improves the
+The fresh League Beta read-only search selected J.K. Dobbins for Rachaad White
+and performed no Sleeper write. Exact follow-up found Kyle Pitts improves the
 modeled lineup over Oronde Gadsden but fails the retention-safe value gate
-(60.1 versus 68.4), so the swap is a PASS. The fresh League Alpha search was
-attempted and failed closed before recommendation because current input
-coverage omits rostered skill player `12508`; that unrelated external-state
-blocker was not bypassed. Ruff and all 668 tests pass.
+(60.1 versus 68.4), so the swap is a PASS.
+
+Amendment: the League Alpha result exposed an over-broad coverage boundary.
+Missing value or projection evidence for one rostered player must quarantine
+only alternatives involving that player, remain explicit in input and search
+evidence, and allow independent Waiver alternatives to complete. Trade's
+league-wide value-board completeness behavior is out of scope and remains
+strict.
+
+Completed September 24, 2026. Waiver now opts into partial value-board coverage
+without changing Trade's strict default. A rostered player missing value
+evidence is recorded as `ROSTER_VALUE_UNAVAILABLE` and excluded only from the
+drop pool; complete projections still preserve that player in lineup context.
+Missing roster projections return a visible partial, non-affirmative analysis
+instead of terminating the run. The fresh League Alpha search completed as
+DEGRADED, recorded player `12508` and two coverage warnings, retained unrelated
+alternatives, and returned an ACQUIRE result with a different legal drop. All
+673 tests and Ruff pass. No Sleeper write occurred.

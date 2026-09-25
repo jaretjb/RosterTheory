@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,7 +13,9 @@ from roster_theory.core.errors import CoverageIncomplete, IdentityIncomplete, Un
 from roster_theory.core.isotonic import fit_nonincreasing_curve
 from roster_theory.core.models import Projection, RankObservation
 from roster_theory.core.models import Player
+from roster_theory.core.provenance import DataStamp
 from roster_theory.providers.fantasypros import FantasyProsIdentity, normalize_rankings
+from roster_theory.providers.fantasypros import ProjectionDataset
 from roster_theory.providers.cache import DailyRequestBudget, cache_key
 from roster_theory.trade.boards import (
     aggregate_selected_ranks,
@@ -31,8 +34,10 @@ from roster_theory.trade.experts import (
 )
 from roster_theory.trade.board_service import (
     _build_provider_projection_curves,
+    _canonical_projections,
     _input_calls,
     _identity_map,
+    _required_market_universe,
     board_refresh_report,
     classify_trade_scoring,
     refresh_value_boards,
@@ -184,6 +189,98 @@ class InSeasonExpertTests(unittest.TestCase):
 
 
 class TradeBoardTests(unittest.TestCase):
+    def test_trade_keeps_strict_rostered_coverage_while_waiver_can_report_it(self) -> None:
+        rows = []
+        players = []
+        overall_rank = 0
+        for position, count in (("QB", 25), ("RB", 60), ("WR", 60), ("TE", 20)):
+            for position_rank in range(1, count + 1):
+                overall_rank += 1
+                player_id = f"{position.lower()}-{position_rank}"
+                players.append(SimpleNamespace(player_id=player_id))
+                rows.append(
+                    RankObservation(
+                        player_id=player_id,
+                        horizon="ROS",
+                        board_source="market",
+                        expert_id=None,
+                        position=position,
+                        position_rank=float(position_rank),
+                        overall_rank=float(overall_rank),
+                        tier=1,
+                        scoring="HALF",
+                        updated_at="2026-09-24T00:00:00+00:00",
+                    )
+                )
+        players.append(SimpleNamespace(player_id="missing-rostered"))
+        refresh = SimpleNamespace(
+            snapshot=SimpleNamespace(
+                players=tuple(players),
+                owner_by_player=(("missing-rostered", "1"),),
+                tradeable_player_ids=("missing-rostered",),
+            )
+        )
+
+        with self.assertRaisesRegex(CoverageIncomplete, "missing-rostered"):
+            _required_market_universe(refresh, tuple(rows))
+
+        _, _, _, _, missing = _required_market_universe(
+            refresh,
+            tuple(rows),
+            require_all_rostered=False,
+        )
+        self.assertEqual(missing, ("missing-rostered",))
+
+    def test_explicitly_inactive_unranked_player_gets_audited_zero_projections(self) -> None:
+        stamp = DataStamp(
+            source="fixture",
+            endpoint="fixture",
+            captured_at=datetime(2026, 9, 24, tzinfo=timezone.utc),
+        )
+        datasets = tuple(
+            ProjectionDataset(
+                horizon="WEEKLY",
+                scoring="HALF",
+                week=week,
+                contributor_ids=(),
+                identities=(),
+                projections=(),
+                stamp=stamp,
+            )
+            for week in (4, 5)
+        )
+        inactive = Player(
+            "missing-rostered",
+            "Inactive Player",
+            ("RB",),
+            nfl_team=None,
+            active=False,
+        )
+
+        projections, positions, warnings = _canonical_projections(
+            datasets,
+            {},
+            {inactive.player_id: "RB"},
+            {},
+            {inactive.player_id: inactive},
+        )
+
+        self.assertEqual(positions, {inactive.player_id: "RB"})
+        self.assertEqual(
+            {(row.week, row.league_points, row.coverage_status) for row in projections},
+            {(4, 0.0, "known_inactive_zero"), (5, 0.0, "known_inactive_zero")},
+        )
+        self.assertIn("inactive status", warnings[inactive.player_id][0])
+
+        with self.assertRaisesRegex(CoverageIncomplete, "missing-rostered"):
+            _canonical_projections(
+                datasets,
+                {},
+                {inactive.player_id: "RB"},
+                {},
+                {inactive.player_id: replace(inactive, active=None)},
+            )
+
     def test_provider_only_projection_keeps_its_rank_slot_without_entering_board_universe(self) -> None:
         projections = tuple(
             Projection(
