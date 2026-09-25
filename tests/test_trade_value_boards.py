@@ -231,7 +231,7 @@ class TradeBoardTests(unittest.TestCase):
         )
         self.assertEqual(missing, ("missing-rostered",))
 
-    def test_explicitly_inactive_unranked_player_gets_audited_zero_projections(self) -> None:
+    def test_inactive_omission_only_establishes_current_week_zero(self) -> None:
         stamp = DataStamp(
             source="fixture",
             endpoint="fixture",
@@ -268,9 +268,16 @@ class TradeBoardTests(unittest.TestCase):
         self.assertEqual(positions, {inactive.player_id: "RB"})
         self.assertEqual(
             {(row.week, row.league_points, row.coverage_status) for row in projections},
-            {(4, 0.0, "known_inactive_zero"), (5, 0.0, "known_inactive_zero")},
+            {(4, 0.0, "known_inactive_zero"), (5, 0.0, "source_omission_zero")},
         )
         self.assertIn("inactive status", warnings[inactive.player_id][0])
+        self.assertTrue(any("Week 5" in warning for warning in warnings[inactive.player_id]))
+
+        future, _, _ = _canonical_projections(
+            datasets, {}, {inactive.player_id: "RB"}, {},
+            {inactive.player_id: inactive}, current_week=3,
+        )
+        self.assertTrue(all(row.coverage_status == "source_omission_zero" for row in future))
 
         with self.assertRaisesRegex(CoverageIncomplete, "missing-rostered"):
             _canonical_projections(

@@ -8,11 +8,15 @@ from typing import Any, Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, IdentityIncomplete, RosterIllegal
 from roster_theory.core.models import Player, Projection
+from roster_theory.core.projections import (
+    KNOWN_INACTIVE,
+    projection_is_complete,
+    reconcile_current_inactive_omissions,
+)
 from roster_theory.core.provenance import stable_hash
 from roster_theory.inseason.evaluation import (
     InSeasonContext,
     InSeasonWeek,
-    KNOWN_INACTIVE,
     RiskImpact,
     TeamImpact,
     WeeklyProjectionMatrix,
@@ -53,9 +57,6 @@ from roster_theory.waiver.ww_evidence import (
 )
 
 
-COMPLETE_PROJECTION_COVERAGE = frozenset(
-    {"complete", "verified_bye_zero", "known_inactive_zero"}
-)
 SKILL_POSITIONS = frozenset({"QB", "RB", "WR", "TE"})
 SPECIAL_TEAM_POSITIONS = frozenset({"K", "DST"})
 WAIVER_POSITIONS = ("QB", "RB", "WR", "TE", "K", "DST")
@@ -73,35 +74,13 @@ def _waiver_position(player: Player) -> str:
     return matches[0]
 
 
-def projection_coverage_is_complete(status: str) -> bool:
-    return status.casefold() in COMPLETE_PROJECTION_COVERAGE
-
-
 def reconcile_current_week_inactive_omissions(
     snapshot: WaiverSnapshot, projections: Sequence[Projection]
 ) -> tuple[Projection, ...]:
     """Use fresh league-local Sleeper status only for this week's omitted zero."""
-    players = {player.player_id: player for player in snapshot.players}
-    current_week = snapshot.manifest.current_week
-    reconciled: list[Projection] = []
-    for row in projections:
-        player = players.get(row.player_id)
-        injury_status = str(player.injury_status or "").upper() if player else ""
-        if (
-            row.horizon == "WEEKLY"
-            and row.week == current_week
-            and row.coverage_status.casefold() == "source_omission_zero"
-            and row.league_points == 0.0
-            and not row.raw_stats
-            and injury_status in KNOWN_INACTIVE
-        ):
-            row = replace(
-                row,
-                source=f"Sleeper {injury_status} status; FantasyPros current-week omission",
-                coverage_status="known_inactive_zero",
-            )
-        reconciled.append(row)
-    return tuple(reconciled)
+    return reconcile_current_inactive_omissions(
+        snapshot.players, snapshot.manifest.current_week, projections
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -604,6 +583,7 @@ def _validate_inputs(
         ),
         evaluation_positions=WAIVER_POSITIONS,
         current_status_week_only=True,
+        current_week=snapshot.manifest.current_week,
     )
     return value_map, context
 
@@ -832,7 +812,7 @@ def _player_contingency_evidence(
         len(projection_by_week) == len(scenario.projections) == len(required_weeks)
         and tuple(sorted(projection_by_week)) == required_weeks
         and all(
-            projection_coverage_is_complete(row.coverage_status)
+            projection_is_complete(row, current_week=context.current_week)
             and bool(row.source.strip())
             and row.league_points >= 0
             for row in projection_by_week.values()
@@ -862,9 +842,11 @@ def _player_contingency_evidence(
                 raw_stats=(),
                 league_points=0.0,
                 source=f"{scenario.evidence_source}; teammate unavailable",
-                coverage_status="known_inactive_zero",
+                coverage_status="scenario_inactive_zero",
             )
-    scenario_matrix = build_weekly_projection_matrix(context, tuple(overrides.values()))
+    scenario_matrix = build_weekly_projection_matrix(
+        replace(context, allow_scenario_projections=True), tuple(overrides.values())
+    )
     weekly: list[WeeklyContingencyImpact] = []
     role_expansion = 0.0
     standalone_total = 0.0
@@ -1089,8 +1071,8 @@ def _quarterback_holding_evidence(
             cell = matrix.cell(player_id, week.week)
             complete = complete and projection is not None and cell is not None and cell.points is not None
             if projection is not None:
-                complete = complete and projection_coverage_is_complete(
-                    projection.coverage_status
+                complete = complete and projection_is_complete(
+                    projection, current_week=context.current_week
                 )
         (streamer_ids if complete else omission_ids).append(player_id)
 
@@ -1473,8 +1455,8 @@ def evaluate_waiver(
             + ", ".join(f"{player_id}/W{week}" for player_id, week in missing_projection_weeks)
         )
     projection_inputs_complete = not roster_evidence_excluded and not missing_projection_weeks and all(
-        projection_coverage_is_complete(
-            projection_by_key[(player_id, week.week)].coverage_status
+        projection_is_complete(
+            projection_by_key[(player_id, week.week)], current_week=context.current_week
         )
         for player_id in evaluated_ids
         for week in context.weeks
