@@ -2,6 +2,20 @@
 
 No product milestone is active.
 
+WA-026 — Universal retention safety and pruning equivalence completed
+September 24, 2026 (America/Los_Angeles). Retention-safe Waiver Value is now
+application-default behavior for every league policy, while calibrated weight
+overrides remain league-local. Exact-budget pruning yields to fresh
+same-position weekly/ROS/projection dominance, with bounded-versus-exhaustive
+decision and drop equivalence covered by regression tests.
+
+The fresh League Beta read-only proof selected J.K. Dobbins for Rachaad White. Kyle
+Pitts improved projected lineup output over Oronde Gadsden but failed the
+retention-safe value gate, 60.1 to 68.4. The fresh League Alpha attempt failed
+closed on unrelated missing coverage for rostered skill player `12508`; it was
+not bypassed. Ruff and all 668 tests pass. No Sleeper write occurred. Full
+acceptance evidence is in the WA-026 row of `docs/WAIVER_ASSISTANT_TASKS.md`.
+
 Trade TA-1312 — ROS expert-panel resilience completed September 23, 2026
 (America/Los_Angeles). Trade now prefers three accurate, fresh experts who
 actually contribute to all current ROS position feeds, accepts two as an

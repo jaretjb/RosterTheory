@@ -48,7 +48,7 @@ from roster_theory.waiver.snapshot import (
 
 SUPPORTED_POSITIONS = frozenset({"QB", "RB", "WR", "TE", "K", "DST", "DEF"})
 AFFIRMATIVE_LABELS = frozenset({"ADD NOW", "CLAIM", "ACQUIRE"})
-PRUNING_VERSION = "wa-025-retention-safe-priority-v10"
+PRUNING_VERSION = "wa-026-universal-retention-pruning-v11"
 LABEL_TIER = {"ADD NOW": 0, "CLAIM": 0, "ACQUIRE": 0, "WATCH": 1, "PASS": 2}
 
 
@@ -175,6 +175,44 @@ def _evaluation_sort_key(evaluation: WaiverEvaluation) -> tuple[object, ...]:
         -selected.lineup.depth_delta,
         evaluation.add_player_id,
         selected.drop_player_id or "",
+    )
+
+
+def _rank_projection_dominates(
+    add: PlayerValueInput,
+    drop: PlayerValueInput,
+    *,
+    same_position: bool,
+) -> bool:
+    """Protect a potential exact upgrade without bypassing decision gates."""
+    if not same_position:
+        return False
+    add_ros = (
+        add.selected_rest_of_season_position_rank
+        if add.selected_rest_of_season_position_rank is not None
+        else add.rest_of_season_position_rank
+    )
+    drop_ros = (
+        drop.selected_rest_of_season_position_rank
+        if drop.selected_rest_of_season_position_rank is not None
+        else drop.rest_of_season_position_rank
+    )
+    ranks = (
+        add.current_week_position_rank,
+        drop.current_week_position_rank,
+        add_ros,
+        drop_ros,
+    )
+    if any(rank is None for rank in ranks):
+        return False
+    assert add.current_week_position_rank is not None
+    assert drop.current_week_position_rank is not None
+    assert add_ros is not None
+    assert drop_ros is not None
+    return bool(
+        add.current_week_position_rank < drop.current_week_position_rank
+        and add_ros < drop_ros
+        and add.raw_projection >= drop.raw_projection
     )
 
 
@@ -704,13 +742,20 @@ def _notable_candidates(
         omission = omission_by_id.get(player_id)
         pruning = pruning_by_id.get(player_id)
         if pruning is not None:
-            category = "BELOW_THRESHOLD"
+            if pruning.reason.startswith("WAIVER_VALUE_BELOW_EXACT_CUTOFF"):
+                category = "NOT_EXACTLY_EVALUATED"
+                reason = (
+                    "ranked outside the bounded exact-evaluation portfolio; "
+                    "no move-level conclusion was made"
+                )
+            else:
+                category = "BELOW_THRESHOLD"
             if pruning.reason.startswith("OWNERSHIP_UPPER_BOUND_BELOW_WATCH_FLOORS"):
                 reason = (
                     "considered, but no legal drop cleared both trusted-expert "
                     "and market ownership-value floors"
                 )
-            else:
+            elif not pruning.reason.startswith("WAIVER_VALUE_BELOW_EXACT_CUTOFF"):
                 reason = "considered, but safely bounded below the stronger exact option"
         elif omission is not None and omission.reason.startswith("ACQUISITION_"):
             category = "NOT_AVAILABLE"
@@ -1014,6 +1059,37 @@ def search_waiver_candidates(
             for drop_id in possible_skill_drops
         )
     }
+    rank_projection_dominance_candidates = {
+        player_id
+        for player_id in eligible_ids
+        if player_id not in special_team_candidates
+        and any(
+            drop_id is not None
+            and _rank_projection_dominates(
+                value_map[player_id],
+                value_map[drop_id],
+                same_position=bool(
+                    {
+                        position.upper()
+                        for position in player_by_id[player_id].positions
+                    }
+                    & {
+                        position.upper()
+                        for position in player_by_id[drop_id].positions
+                    }
+                    & {"QB", "RB", "WR", "TE"}
+                ),
+            )
+            and priority_by_id.get(player_id) is not None
+            and priority_by_id[player_id].composite_score is not None
+            and priority_by_id.get(drop_id) is not None
+            and priority_by_id[drop_id].composite_score is not None
+            and float(priority_by_id[player_id].composite_score or 0.0)
+            - float(priority_by_id[drop_id].composite_score or 0.0)
+            >= policy.priority_minimum_value_gain
+            for drop_id in possible_skill_drops
+        )
+    }
     ownership_policy_prunable_candidates = (
         {
             player_id
@@ -1042,10 +1118,21 @@ def search_waiver_candidates(
     ownership_policy_prunable_candidates -= emerging_candidate_ids
     ownership_policy_prunable_candidates -= rank_dominance_candidates
     ownership_policy_prunable_candidates -= set(scored_priority_candidates)
-    must_exact_candidates = set(special_team_candidates) | rank_dominance_candidates | priority_exact_candidates | (
-        (set(qb_hold_candidates) | contingency_add_candidates | emerging_candidate_ids)
-        & ownership_watch_possible_candidates
-    ) | emerging_candidate_ids
+    must_exact_candidates = (
+        set(special_team_candidates)
+        | rank_dominance_candidates
+        | rank_projection_dominance_candidates
+        | priority_exact_candidates
+        | (
+            (set(qb_hold_candidates) | contingency_add_candidates | emerging_candidate_ids)
+            & ownership_watch_possible_candidates
+        )
+        | emerging_candidate_ids
+    )
+    # Must-exact safety proofs take precedence over the bounded acquisition
+    # score budget. Otherwise a same-position exact upgrade can be hidden by a
+    # crowded higher-scoring acquisition pool.
+    priority_prunable_candidates -= must_exact_candidates
     effective_pruning = enable_pruning
     raw_bounds = _candidate_upper_bounds(
         snapshot,

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from roster_theory.sleeper import find_league_config, resolve_league_config_path
+from roster_theory.waiver.policy import DEFAULT_WAIVER_PRIORITY_CONFIG
 
 
 RESULT_SCHEMA = "roster-theory.setup/v1"
@@ -395,6 +396,7 @@ def _uncalibrated_policy(artifact: str, league_key: str, season: int) -> dict[st
             "version": "UNSET",
             "calibration_mode": "UNSET",
             "allow_watch_on_missing_news": None,
+            "waiver_priority": {**DEFAULT_WAIVER_PRIORITY_CONFIG},
             "special_teams": {
                 name: None for name in (
                     "current_week_weight", "kicker_current_week_gain_floor",
