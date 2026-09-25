@@ -48,6 +48,7 @@ from roster_theory.waiver.priority import (
     WaiverPriorityEvidence,
     WaiverValueComparison,
     compare_waiver_values,
+    weekly_rank_eligible,
 )
 from roster_theory.waiver.ww_evidence import (
     WaiverWireEvidence,
@@ -117,6 +118,9 @@ class PlayerValueInput:
     recent_yards_rank: int | None = None
     recent_completed_weeks: tuple[int, ...] = ()
     performance_source: str | None = None
+    season_sample_size: int | None = None
+    recent_sample_size: int | None = None
+    performance_as_of: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,6 +186,10 @@ class OwnershipDelta:
     long_term_value_horizon_add: str
     long_term_value_horizon_drop: str | None
     fresh_rank_dominance: bool
+    season_add_sample_size: int | None = None
+    season_drop_sample_size: int | None = None
+    performance_add_as_of: datetime | None = None
+    performance_drop_as_of: datetime | None = None
 
 
 def fresh_rank_dominates(
@@ -189,6 +197,7 @@ def fresh_rank_dominates(
     drop: PlayerValueInput | None,
     *,
     same_position: bool,
+    position: str = "RB",
 ) -> bool:
     """Prove a narrow fresh-evidence override for a stale common value horizon."""
     if drop is None or not same_position:
@@ -205,6 +214,8 @@ def fresh_rank_dominates(
         drop.rest_of_season_position_rank,
     )
     if any(rank is None for rank in ranks):
+        return False
+    if not all(weekly_rank_eligible(rank, position) for rank in ranks[:2]):
         return False
     return bool(
         add.current_week_position_rank < drop.current_week_position_rank
@@ -234,6 +245,7 @@ class WaiverDecisionAssessment:
     elite_dst_exception: bool
     gates: tuple[WaiverDecisionGate, ...]
     reversal_conditions: tuple[str, ...]
+    specialist_evidence: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -453,6 +465,7 @@ def _ownership_delta(
     waiver_wire: Mapping[str, WaiverWirePlayerEvidence],
     *,
     same_position: bool,
+    position: str,
 ) -> OwnershipDelta:
     required = {add_id}
     if drop_id is not None:
@@ -509,6 +522,10 @@ def _ownership_delta(
         season_drop_rank=drop.season_position_rank if drop else None,
         season_add_points=add.season_points,
         season_drop_points=drop.season_points if drop else None,
+        season_add_sample_size=add.season_sample_size,
+        season_drop_sample_size=drop.season_sample_size if drop else None,
+        performance_add_as_of=add.performance_as_of,
+        performance_drop_as_of=drop.performance_as_of if drop else None,
         recent_add_rank=add.recent_position_rank,
         recent_drop_rank=drop.recent_position_rank if drop else None,
         recent_add_points_per_game=add.recent_points_per_game,
@@ -519,6 +536,7 @@ def _ownership_delta(
             add,
             drop,
             same_position=same_position,
+            position=position,
         ),
     )
 
@@ -1640,6 +1658,7 @@ def evaluate_waiver(
             drop_id,
             value_map,
             waiver_wire_by_id,
+            position=add_position,
             same_position=(
                 drop_id is not None
                 and add_position == _waiver_position(player_by_id[drop_id])
@@ -1932,7 +1951,7 @@ def evaluate_waiver(
     warnings.append("No Waiver decision policy was applied; no final label is available")
     user_settings = dict(snapshot.league.platform_settings)
     base = WaiverEvaluation(
-        schema_version=16,
+        schema_version=17,
         product="WAIVER ASSISTANT",
         operation="ENTERED ADD/DROP EVALUATION",
         league_key=snapshot.league_key,
@@ -2020,7 +2039,7 @@ def save_waiver_evaluation_inputs(
     if not availability_source.strip():
         raise ValueError("Waiver evaluation inputs require availability provenance")
     unsigned = {
-        "schema_version": 8,
+        "schema_version": 9,
         "product": "WAIVER ASSISTANT",
         "league_key": league_key,
         "captured_at": captured_at.astimezone(timezone.utc),
@@ -2060,7 +2079,7 @@ def save_waiver_evaluation_inputs(
 def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
     schema_version = int(value.get("schema_version") or 0)
-    if schema_version not in {1, 2, 3, 4, 5, 6, 7, 8}:
+    if schema_version not in {1, 2, 3, 4, 5, 6, 7, 8, 9}:
         raise ValueError("Unsupported Waiver evaluation-input schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Evaluation inputs must be Waiver-scoped")
@@ -2133,6 +2152,10 @@ def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
                 if row.get("season_points") is not None
                 else None
             ),
+            season_sample_size=row.get("season_sample_size"),
+            recent_sample_size=row.get("recent_sample_size"),
+            performance_as_of=(datetime.fromisoformat(str(row["performance_as_of"]))
+                               if row.get("performance_as_of") else None),
             season_position_rank=(
                 int(row["season_position_rank"])
                 if row.get("season_position_rank") is not None

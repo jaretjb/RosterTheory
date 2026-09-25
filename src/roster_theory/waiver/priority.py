@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from statistics import median, pstdev
 from typing import TYPE_CHECKING, Mapping, Sequence
 
@@ -11,6 +12,13 @@ if TYPE_CHECKING:
     from roster_theory.waiver.evaluation import PlayerValueInput
 
 
+WEEKLY_EVIDENCE_CAPS = {"QB": 24, "RB": 50, "WR": 50, "TE": 24, "K": 16, "DST": 16}
+
+
+def weekly_rank_eligible(rank: int | None, position: str) -> bool:
+    return bool(rank is not None and isfinite(rank) and 1 <= rank <= WEEKLY_EVIDENCE_CAPS.get(position, 0))
+
+
 @dataclass(frozen=True, slots=True)
 class WaiverPriorityWeights:
     weekly: float = 0.50
@@ -19,7 +27,7 @@ class WaiverPriorityWeights:
 
     def __post_init__(self) -> None:
         values = (self.weekly, self.waiver, self.ros)
-        if any(value <= 0 for value in values):
+        if any(not isfinite(value) or value <= 0 for value in values):
             raise ValueError("Waiver value weights must be positive")
         if not self.weekly > self.waiver > self.ros:
             raise ValueError("Waiver value weights must be ordered weekly > waiver > ROS")
@@ -185,11 +193,16 @@ def _waiver_wire_ranks(
                 )
             )
     ordered = sorted(aggregate, key=lambda item: (item[1], item[0]))
+    ranks = {}
+    previous = None
+    rank = 0
+    for index, (player_id, aggregate_rank, source) in enumerate(ordered, 1):
+        if aggregate_rank != previous:
+            rank = index
+        ranks[player_id] = (float(rank), source)
+        previous = aggregate_rank
     return (
-        {
-            player_id: (float(rank), source)
-            for rank, (player_id, _aggregate_rank, source) in enumerate(ordered, 1)
-        },
+        ranks,
         len(ordered),
     )
 
@@ -241,7 +254,7 @@ def build_waiver_priority_scores(
         for player_id, player in player_by_id.items()
         if (position := _position(player)) is not None
     }
-    weekly_scope: dict[str, int] = {}
+    weekly_scope = dict(WEEKLY_EVIDENCE_CAPS)
     ros_scope: dict[str, int] = {}
     performance_scopes: dict[str, dict[str, int]] = {
         "SEASON": {},
@@ -253,10 +266,6 @@ def build_waiver_priority_scores(
         position = position_by_id.get(value.player_id)
         if position is None:
             continue
-        if value.current_week_position_rank is not None:
-            weekly_scope[position] = max(
-                weekly_scope.get(position, 0), value.current_week_position_rank
-            )
         selected_ros = value.selected_rest_of_season_position_rank
         fallback_ros = value.rest_of_season_position_rank
         ros_rank = selected_ros if selected_ros is not None else fallback_ros
@@ -276,7 +285,7 @@ def build_waiver_priority_scores(
     replacement_ranks = league_replacement_ranks(
         players, owner_by_player or {}
     )
-    for position, scope in {**weekly_scope, **ros_scope}.items():
+    for position, scope in weekly_scope.items():
         replacement_ranks.setdefault(position, max(1, scope // 2))
     ww_by_id, ww_scope = _waiver_wire_ranks(waiver_wire_evidence)
     bye_teams = {str(team).upper() for team in current_bye_teams}
@@ -297,7 +306,7 @@ def build_waiver_priority_scores(
 
         weekly_rank = value.current_week_position_rank
         if (
-            weekly_rank is not None
+            weekly_rank_eligible(weekly_rank, position)
             and position is not None
             and weekly_scope.get(position)
             and (
@@ -335,6 +344,8 @@ def build_waiver_priority_scores(
                     and weekly_rank is not None
                     and position is not None
                     and weekly_rank > replacement_ranks[position]
+                    else "OUTSIDE_WEEKLY_EVIDENCE_CAP"
+                    if weekly_rank is not None and not weekly_rank_eligible(weekly_rank, position)
                     else "BYE_WEEK" if on_bye else "WEEKLY_RANK_UNAVAILABLE"
                 ),
             ))
@@ -485,7 +496,8 @@ def build_waiver_priority_scores(
             weighting_method=(
                 "acquisition uses league-adjusted weekly, Waiver Wire, and ROS ranks; "
                 "retention excludes acquisition-only Waiver rank and below-replacement "
-                "weekly rank; available rank weights renormalize; audited performance "
+                "weekly rank; universal weekly evidence caps QB/TE24, RB/WR50, K/DST16; "
+                "available rank weights renormalize; audited performance "
                 "is a bounded plus/minus-six modifier"
             ),
             acquisition_only=not owned,

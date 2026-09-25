@@ -377,7 +377,7 @@ class WaiverEvaluationTests(unittest.TestCase):
         evidence = waiver_wire_evidence()
         result = self.evaluate(waiver_wire_evidence=evidence)
         selected = result.candidates[0].ownership
-        self.assertEqual(result.schema_version, 16)
+        self.assertEqual(result.schema_version, 17)
         self.assertEqual(selected.waiver_wire_market_add_rank, 2.0)
         self.assertEqual(selected.waiver_wire_market_add_position_rank, 1.0)
         self.assertEqual(selected.waiver_wire_selected_add_ranks[0].expert_id, "17")
@@ -720,14 +720,18 @@ class WaiverEvaluationInputAndCliTests(unittest.TestCase):
                 drop_legality=legality(),
                 weeks=weeks(),
                 projections=projections(),
-                values=values(),
+                values=tuple(replace(row, season_sample_size=2, recent_sample_size=1,
+                                     performance_as_of=CAPTURED) for row in values()),
                 news_fresh={"add": True},
                 contingencies=(scenario,),
                 waiver_wire_evidence=waiver_wire_evidence(),
                 emergence_evidence=emergence_evidence(),
             )
             loaded = load_waiver_evaluation_inputs(path)
-            self.assertEqual(loaded.schema_version, 8)
+            self.assertEqual(loaded.schema_version, 9)
+            self.assertEqual(loaded.values[0].season_sample_size, 2)
+            self.assertEqual(loaded.values[0].recent_sample_size, 1)
+            self.assertEqual(loaded.values[0].performance_as_of, CAPTURED)
             self.assertEqual(loaded.league_key, "league_alpha")
             self.assertEqual(loaded.availability_source, "current roster delta")
             self.assertEqual(len(loaded.projections), len(projections()))

@@ -699,7 +699,7 @@ class WaiverSearchTests(unittest.TestCase):
     def test_exhaustive_search_covers_every_skill_position_and_legal_drop(self):
         result = search()
         self.assertEqual(result.schema_version, 11)
-        self.assertEqual(result.evaluation_schema_version, 16)
+        self.assertEqual(result.evaluation_schema_version, 17)
         self.assertEqual(
             set(result.eligible_candidate_ids), {"add", "fa_rb", "fa_wr", "fa_te"}
         )

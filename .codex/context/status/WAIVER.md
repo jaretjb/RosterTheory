@@ -2,33 +2,28 @@
 
 Updated: September 25, 2026 (America/Los_Angeles)
 
-AC-001/#7 and prerequisite PR #6 are merged. AC-002/#8 merged in PR #16.
-AC-003/#9 is merged in PR #17; all 20 CI checks passed.
-Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_003.md`.
-All supported legal cross-position drops compete without same-position preference.
-Default search is exhaustive over eligible adds; an explicit budget reports
-unevaluated IDs and cannot prove a global best/no-action result. Approved moves
-stay in canonical plan/display order, including specialists. Conditional claim
-branches recheck the changed roster and cumulative losses; other combinations
-remain unvalidated. Missing evidence is visible and quarantined locally, with
-affected position dependencies blocked. AC-002 retention/safety gates remain.
-Verification: 737 tests, Ruff and diff checks pass. No live report, provider
-refresh or Sleeper write occurred.
+AC-001/#7 through AC-004/#10 merged in PRs #15–#18; PR #18 passed all 20 checks.
+AC-005/#11 is implemented; PR #19 awaits review/merge.
+Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md`.
 
-The audit is NOT closed. AC-004–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
-track Trade decisions, ranking caps, specialist scoring, formats, freshness and performance.
-No next milestone is authorized.
+Universal weekly evidence caps: RB/WR50, QB/TE24, K/DST16. Fixed weekly
+normalization is independent of the provider tail; ownership still determines
+replacement and retention protection. Equal production/panel ranks preserve ties.
+Specialists use league-scored season totals with explicit normalized weights
+(K0.75, DST0.40) and played-game sample shrinkage. Production conflicts cannot
+be bypassed through the projection branch. Projection and rank/performance paths
+have distinct, truthful reasons. Missing samples remain unknown and disclosed;
+they do not stop the report. Inputs preserve counts/timestamps (schema9), and
+exact/search evidence identifies evaluation schema17.
+The ignored local raw-weight policy was migrated; both local league policies
+load universal defaults. No league calibration/result was transferred.
 
-Historical evidence remains in `docs/WAIVER_ASSISTANT_TASKS.md`:
+AC-002 candidate/retention safety and AC-003 cross-position/exhaustive search,
+budget disclosure and conditional-claim safeguards remain. Historical specialist
+calibration is unproven. No live report, provider refresh or Sleeper write ran.
+Verification: 762 tests, Ruff and diff checks pass.
 
-- WA-026 introduced generic retention-safe value defaults and isolated league
-  overrides. Its pruning tests do not prove general cross-position equivalence.
-- WA-027 exposed league-scored specialist production with local K/DST weight
-  adjustments. These are not historically validated universal calibration.
-- Missing roster value evidence is visible and excluded from automatic drops.
-- WA-025 separated acquisition and retention evidence. WA-017–WA-024 covered
-  input resilience, identity, reporting, rank evidence, and streaming.
-
-WA-006 audits recur; WA-016 remains optional research. The assistant is read-only;
-historical results are not current claims or proof that outstanding audit findings
-are resolved.
+The audit is NOT closed. AC-006–AC-008 in
+`docs/ASSISTANT_RELIABILITY_TASKS.md` remain planned; no next milestone is authorized.
+Historical WA-025–WA-027 evidence is not a current recommendation or proof of
+historical calibration. The assistant remains read-only.

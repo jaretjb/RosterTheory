@@ -405,6 +405,8 @@ def _best_waiver_reason(evaluation: Any, selected: Any) -> str:
     if decision is None:
         return _plain_waiver_reason(evaluation.strongest_uncertainty)
     path = decision.decision_path
+    if path in {"K_RANK_PERFORMANCE", "DST_RANK_PERFORMANCE"}:
+        return "The sample-adjusted weekly-rank and league-scored season-total comparison favors the add; projections do not establish the required streaming improvement."
     if path == "FRESH_RANK_DOMINANCE":
         return "The add ranks higher this week and for the rest of the season without losing projected value."
     if path == "DST_ROLLING_STREAM":
@@ -446,11 +448,20 @@ def _special_team_lines(
             if position == "DST" and selected.dst_streaming.applicable
             else ""
         )
+        specialist = evaluation.decision.specialist_evidence if evaluation.decision else None
+        basis = ""
+        if specialist:
+            basis = f" | basis {specialist['basis']}"
+            if specialist["performance_complete"]:
+                basis += (f" | season {specialist['season_add_points']:.2f} vs {specialist['season_drop_points']:.2f} pts"
+                          f" ({specialist['season_add_games']}/{specialist['season_drop_games']} games)")
+            elif not specialist["cross_position"]:
+                basis += " | season comparison unavailable/stale or missing game counts"
         lines.append(
             f"- {names.get(evaluation.add_player_id, evaluation.add_player_id)}: "
             f"{position}{rank if rank is not None else '?'} | "
             f"{selected.current_week_add_points:.2f} pts | "
-            f"{selected.current_week_delta:+.2f} vs {drop_name}{rolling} | {label}"
+            f"{selected.current_week_delta:+.2f} vs {drop_name}{rolling} | {label}{basis}"
         )
     return lines
 
