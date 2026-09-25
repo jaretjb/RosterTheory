@@ -447,7 +447,7 @@ def _secondary_move(
         )
 
     if dropping:
-        eligible = tuple(sorted(roster))
+        eligible = tuple(sorted(roster & valued_player_ids))
         automatic_candidates = eligible
     else:
         eligible = tuple(
@@ -1191,6 +1191,13 @@ def evaluate_trade(
     team_by_id = {team.roster_id: team for team in snapshot.teams}
     team_a = team_by_id[package.roster_a_id]
     team_b = team_by_id[package.roster_b_id]
+    relevant_missing = set(dict(snapshot.player_exclusions)) & (
+        (set(team_a.player_ids) - set(team_a.reserve_ids))
+        | (set(team_b.player_ids) - set(team_b.reserve_ids))
+        | {asset.player_id for asset in (*package.from_a, *package.from_b)}
+    )
+    if relevant_missing:
+        raise CoverageIncomplete("Evaluated rosters have unresolved player evidence: " + ", ".join(sorted(relevant_missing)))
     evaluated_player_ids = {player.player_id for player in snapshot.players}
     before_a = (set(team_a.player_ids) & evaluated_player_ids) - set(team_a.reserve_ids)
     before_b = (set(team_b.player_ids) & evaluated_player_ids) - set(team_b.reserve_ids)

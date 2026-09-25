@@ -189,7 +189,7 @@ class InSeasonExpertTests(unittest.TestCase):
 
 
 class TradeBoardTests(unittest.TestCase):
-    def test_trade_keeps_strict_rostered_coverage_while_waiver_can_report_it(self) -> None:
+    def test_missing_rostered_coverage_is_scoped_by_default_with_strict_opt_in(self) -> None:
         rows = []
         players = []
         overall_rank = 0
@@ -222,12 +222,11 @@ class TradeBoardTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(CoverageIncomplete, "missing-rostered"):
-            _required_market_universe(refresh, tuple(rows))
+            _required_market_universe(refresh, tuple(rows), require_all_rostered=True)
 
         _, _, _, _, missing = _required_market_universe(
             refresh,
             tuple(rows),
-            require_all_rostered=False,
         )
         self.assertEqual(missing, ("missing-rostered",))
 
@@ -279,14 +278,15 @@ class TradeBoardTests(unittest.TestCase):
         )
         self.assertTrue(all(row.coverage_status == "source_omission_zero" for row in future))
 
-        with self.assertRaisesRegex(CoverageIncomplete, "missing-rostered"):
-            _canonical_projections(
+        omitted, _, warnings = _canonical_projections(
                 datasets,
                 {},
                 {inactive.player_id: "RB"},
                 {},
                 {inactive.player_id: replace(inactive, active=None)},
-            )
+        )
+        self.assertTrue(all(row.coverage_status == "source_omission_zero" for row in omitted))
+        self.assertIn(inactive.player_id, warnings)
 
     def test_provider_only_projection_keeps_its_rank_slot_without_entering_board_universe(self) -> None:
         projections = tuple(
@@ -710,6 +710,7 @@ class TradeBoardTests(unittest.TestCase):
         )
         snapshot = SimpleNamespace(
             league_key="fixture",
+            player_exclusions=(),
             players=tuple(
                 Player(f"p{number}", f"Player {number}", ("RB",))
                 for number in range(1, 11)
@@ -746,6 +747,12 @@ class TradeBoardTests(unittest.TestCase):
         self.assertFalse(report["opponent_preference_claimed"])
         self.assertFalse(report["recommendation_generated"])
         self.assertFalse(report["sleeper_write_performed"])
+        self.assertTrue(report["boards_complete"])
+        result.selected_final = replace(selected, excluded_players=(("missing", "MISSING_MARKET_RANK"),))
+        partial = board_refresh_report(result)
+        self.assertFalse(partial["boards_complete"])
+        self.assertTrue(partial["included_rows_complete"])
+        self.assertEqual(partial["coverage_status"], "PARTIAL")
 
     def test_monotone_curve_pools_inversions(self) -> None:
         curve = fit_nonincreasing_curve(((1, 10), (2, 5), (3, 8), (4, 2)))

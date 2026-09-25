@@ -389,6 +389,20 @@ class FantasyProsAdapterTests(unittest.TestCase):
 
 
 class ScheduleAndSnapshotTests(unittest.TestCase):
+    def test_missing_directory_player_is_visible_without_aborting_other_rosters(self):
+        bundle = self._bundle()
+        bundle = replace(bundle, players=tuple(row for row in bundle.players if row.player_id != "p2"))
+        snapshot = build_trade_snapshot(league_key="fixture", user_id="u1", ranking_horizon="ROS",
+                                        sleeper=bundle, schedule=schedule_fixture())
+        self.assertEqual(snapshot.player_exclusions, (("p2", "PLAYER_IDENTITY_UNAVAILABLE"),))
+        self.assertFalse(snapshot.completeness.identity_complete)
+        self.assertIn(("p2", "2"), snapshot.owner_by_player)
+        self.assertNotIn("p2", snapshot.tradeable_player_ids)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "snapshot.json"
+            save_trade_snapshot(snapshot, path)
+            self.assertEqual(load_trade_snapshot(path).player_exclusions, snapshot.player_exclusions)
+
     def _bundle(self, client=None):
         client = client or FakeSleeperClient()
         directory = tempfile.TemporaryDirectory()

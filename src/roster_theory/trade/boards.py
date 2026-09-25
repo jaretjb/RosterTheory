@@ -80,6 +80,8 @@ class ValueBoard:
     overall_curve: MonotoneCurve
     complete: bool
     stamps: tuple[DataStamp, ...] = ()
+    # `complete` describes included rows, not the entire requested league universe.
+    excluded_players: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -271,6 +273,7 @@ def build_projection_curves(
     required_counts: Mapping[str, int],
     expected_weeks: Sequence[int] = (),
     current_week: int | None = None,
+    allow_partial: bool = False,
 ) -> tuple[ProjectionCurve, ...]:
     by_player: dict[str, list[Projection]] = {}
     current_week = current_week if current_week is not None else min(expected_weeks, default=None)
@@ -318,13 +321,13 @@ def build_projection_curves(
                 continue
             source_modes.add(source_mode)
             candidates.append((player_id, total))
-        if len(candidates) < required_count:
+        if len(candidates) < required_count and not allow_partial:
             raise CoverageIncomplete(
                 f"{position} projection distribution has {len(candidates)} players; "
                 f"requires {required_count}; excluded: "
                 + "; ".join(f"{player_id}: {reason}" for player_id, reason in sorted(excluded))
             )
-        if len(source_modes) != 1:
+        if len(source_modes) > 1:
             raise CoverageIncomplete("A projection curve cannot mix direct ROS and weekly sums")
         ordered = sorted(candidates, key=lambda item: (-item[1], item[0]))
         raw_ranks = tuple((player_id, rank) for rank, (player_id, _) in enumerate(ordered, 1))
@@ -337,7 +340,7 @@ def build_projection_curves(
                 ),
                 raw_player_points=tuple(sorted(candidates)),
                 raw_player_ranks=tuple(sorted(raw_ranks)),
-                source_mode=next(iter(source_modes)),
+                source_mode=next(iter(source_modes), "UNAVAILABLE"),
                 weeks=tuple(sorted(expected_weeks)),
                 excluded_players=tuple(sorted(excluded)),
             )
@@ -361,6 +364,31 @@ def _curve_tiers(values: Sequence[tuple[str, float]], fraction: float = 0.08) ->
     return result
 
 
+def scoped_board_universe(
+    positions: Mapping[str, str],
+    rank_maps: Sequence[Mapping[str, int]],
+    curves: Sequence[ProjectionCurve],
+    replacement_baselines: Mapping[str, float],
+) -> tuple[dict[str, str], tuple[tuple[str, str], ...]]:
+    """Intersect usable evidence before building any board, without renumbering ranks."""
+    by_position = {row.position: row for row in curves}
+    usable = {}
+    exclusions = []
+    for player_id, position in sorted(positions.items()):
+        curve = by_position.get(position)
+        if curve is None or player_id not in dict(curve.raw_player_points):
+            reason = "INCOMPLETE_PROJECTION_EVIDENCE"
+        elif any(ranks.get(player_id) not in dict(curve.slot_points) for ranks in rank_maps):
+            reason = "AUTHORITATIVE_RANK_SLOT_UNAVAILABLE"
+        elif position not in replacement_baselines:
+            reason = "POSITION_REPLACEMENT_BASELINE_UNAVAILABLE"
+        else:
+            usable[player_id] = position
+            continue
+        exclusions.append((player_id, reason))
+    return usable, tuple(exclusions)
+
+
 def build_value_board(
     *,
     board_id: str,
@@ -372,6 +400,7 @@ def build_value_board(
     overall_ranks: Mapping[str, int] | None = None,
     player_warnings: Mapping[str, tuple[str, ...]] | None = None,
     stamps: Sequence[DataStamp] = (),
+    excluded_players: Sequence[tuple[str, str]] = (),
 ) -> ValueBoard:
     if horizon not in SUPPORTED_HORIZONS:
         raise ValueError(
@@ -426,7 +455,7 @@ def build_value_board(
     overall_curve = fit_nonincreasing_curve(
         (derived[str(row["player_id"])], float(row["positional_vorp"]))
         for row in provisional
-    )
+    ) if provisional else MonotoneCurve((), 0, 0)
     reconciled = {
         str(row["player_id"]): overall_curve.value(derived[str(row["player_id"])])
         for row in provisional
@@ -468,6 +497,7 @@ def build_value_board(
         overall_curve=overall_curve,
         complete=True,
         stamps=tuple(stamps),
+        excluded_players=tuple(excluded_players),
     )
 
 

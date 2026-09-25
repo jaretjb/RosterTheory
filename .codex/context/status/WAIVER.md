@@ -2,16 +2,19 @@
 
 Updated: September 25, 2026 (America/Los_Angeles)
 
-AC-001 is implemented in PR #15, stacked on PR #6, pending review. Shared
-current-status/omission handling and Waiver projection validation now distinguish
-missing evidence from zeroes and preserve supplied future forecasts. Verification:
-696 tests and Ruff pass; no live provider call or Sleeper write occurred.
-Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
+AC-001/#7 and prerequisite PR #6 are merged. AC-002/#8 is implemented, pending
+PR review/merge. PR link: `docs/ASSISTANT_RELIABILITY_TASKS.md`.
+Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_002.md`.
+Production Waiver Value enforces evidence, weekly/depth/downside, QB holding,
+and retention gates. WATCH needs a plausible bounded move and specific blocker.
+Unknown/locked drops are excluded locally. Drop locks use actual league settings,
+matchup starters, kickoff, and byes, never scored points.
+Verification: 722 tests and Ruff pass; no live report or Sleeper write occurred.
 
-The audit is NOT closed. AC-002–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
+The audit is NOT closed. AC-003–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
 track safety gates, cross-position optimization, pruning/report consistency,
 ranking caps, specialist scoring, formats, freshness, and performance.
-AC-002 (issue #8) is next; no further implementation milestone is active.
+No further implementation milestone is authorized.
 
 Historical evidence remains in `docs/WAIVER_ASSISTANT_TASKS.md`:
 
@@ -19,8 +22,7 @@ Historical evidence remains in `docs/WAIVER_ASSISTANT_TASKS.md`:
   overrides. Its pruning tests do not prove general cross-position equivalence.
 - WA-027 exposed league-scored specialist production with local K/DST weight
   adjustments. These are not historically validated universal calibration.
-- Missing roster value evidence is visible and excluded from automatic drops;
-  broader safety and Trade coverage recovery remain AC-002 work.
+- Missing roster value evidence is visible and excluded from automatic drops.
 - WA-025 separated acquisition and retention evidence. WA-017–WA-024 covered
   input resilience, identity, reporting, rank evidence, and streaming.
 

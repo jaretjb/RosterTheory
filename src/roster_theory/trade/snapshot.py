@@ -61,6 +61,7 @@ class TradeSnapshot:
     completeness: SnapshotCompleteness
     warnings: tuple[str, ...]
     manifest: AnalysisManifest
+    player_exclusions: tuple[tuple[str, str], ...] = ()
 
 
 def retag_trade_snapshot(snapshot: TradeSnapshot, ranking_horizon: str) -> TradeSnapshot:
@@ -80,6 +81,7 @@ def retag_trade_snapshot(snapshot: TradeSnapshot, ranking_horizon: str) -> Trade
         "weeks": snapshot.weeks,
         "owner_by_player": snapshot.owner_by_player,
         "ranking_horizon": ranking_horizon,
+        "player_exclusions": snapshot.player_exclusions,
     }
     manifest = AnalysisManifest.build(
         league_id=snapshot.manifest.league_id,
@@ -149,26 +151,22 @@ def build_trade_snapshot(
         )
     player_by_id = {player.player_id: player for player in sleeper.players}
     missing = sorted(player_id for player_id in owner_by_player if player_id not in player_by_id)
-    if missing:
-        raise IdentityIncomplete(
-            "Rostered players missing from Sleeper directory: " + ", ".join(missing)
-        )
 
     rostered_skill_ids = {
         player_id
         for player_id in owner_by_player
-        if SKILL_POSITIONS.intersection(player_by_id[player_id].positions)
+        if player_id in player_by_id and SKILL_POSITIONS.intersection(player_by_id[player_id].positions)
     }
     missing_teams = sorted(
         player_id
         for player_id in rostered_skill_ids
         if player_by_id[player_id].nfl_team not in schedule.teams
     )
-    if missing_teams:
-        raise IdentityIncomplete(
-            "Rostered skill players lack a scheduled NFL team: "
-            + ", ".join(missing_teams)
-        )
+    player_exclusions = tuple(sorted(
+        [(pid, "PLAYER_IDENTITY_UNAVAILABLE") for pid in missing]
+        + [(pid, "SCHEDULED_NFL_TEAM_UNAVAILABLE") for pid in missing_teams]
+    ))
+    warnings = (*warnings, *(f"Player {pid} excluded: {reason}" for pid, reason in player_exclusions))
 
     valuation_universe = tuple(
         player
@@ -241,7 +239,7 @@ def build_trade_snapshot(
         league_complete=True,
         ownership_complete=True,
         user_resolved=True,
-        identity_complete=True,
+        identity_complete=not player_exclusions,
         schedule_complete=True,
         valuation_inputs_complete=valuation_inputs_complete,
     )
@@ -260,6 +258,7 @@ def build_trade_snapshot(
         "weeks": weeks,
         "owner_by_player": owner_by_player,
         "ranking_horizon": ranking_horizon,
+        "player_exclusions": player_exclusions,
     }
     input_hashes = (
         ("league", stable_hash(league)),
@@ -316,6 +315,7 @@ def build_trade_snapshot(
         completeness=completeness,
         warnings=warnings,
         manifest=manifest,
+        player_exclusions=player_exclusions,
     )
 
 
@@ -435,6 +435,7 @@ def load_trade_snapshot(path: str | Path) -> TradeSnapshot:
         completeness=completeness,
         warnings=tuple(value.get("warnings") or ()),
         manifest=manifest,
+        player_exclusions=tuple(tuple(row) for row in value.get("player_exclusions", ())),
     )
     return replace(snapshot, warnings=(*snapshot.warnings, "OFFLINE/NON-CURRENT snapshot"))
 
