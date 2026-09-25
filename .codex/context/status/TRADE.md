@@ -14,7 +14,7 @@ bounded secondary combinations are not claimed exhaustive. ECR-only pricing is
 visibly provisional. Verification: 776 tests, Ruff and diff checks pass.
 No live report, provider refresh or Sleeper write occurred.
 
-AC-005 merged in PR #19. AC-006/#12 is implemented; PR handoff pending.
+AC-005 merged in PR #19. AC-006/#12 is implemented in PR #21; GitHub records its merge state.
 Format mapping, custom-scoring disclosures, premium raw-stat scoring and season-aware
 resources are covered by `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_006.md`.
 The audit remains open: AC-007–AC-008 cover freshness and integration/performance.

@@ -17,7 +17,7 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 | AC-003 | [#9](https://github.com/jaretjb/RosterTheory/issues/9) | Merged in [PR #17](https://github.com/jaretjb/RosterTheory/pull/17) |
 | AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Merged in [PR #18](https://github.com/jaretjb/RosterTheory/pull/18) |
 | AC-005 | [#11](https://github.com/jaretjb/RosterTheory/issues/11) | Merged in [PR #19](https://github.com/jaretjb/RosterTheory/pull/19) |
-| AC-006 | [#12](https://github.com/jaretjb/RosterTheory/issues/12) | Implemented; PR handoff pending |
+| AC-006 | [#12](https://github.com/jaretjb/RosterTheory/issues/12) | Implemented in [PR #21](https://github.com/jaretjb/RosterTheory/pull/21) |
 | AC-007 | [#13](https://github.com/jaretjb/RosterTheory/issues/13) | Planned |
 | AC-008 | [#14](https://github.com/jaretjb/RosterTheory/issues/14) | Planned |
 
@@ -111,7 +111,8 @@ Any empirical calibration needing unavailable history remains explicitly unprove
 
 ## AC-006 — Supported scoring formats and season portability
 
-Status: implemented; PR handoff pending. Finding: D3. Depends on AC-001 (merged).
+Status: implemented in [PR #21](https://github.com/jaretjb/RosterTheory/pull/21).
+GitHub records its current review/merge state. Finding: D3. Depends on AC-001 (merged).
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_006.md`.
 
 Replace hardcoded HALF ranking authority with documented format mapping or visible

@@ -4,7 +4,7 @@ AC-005 — Explicit ranking caps and specialist performance policy (issue #11) i
 merged in PR #19; all 20 CI checks passed and issue #11 is closed.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md`.
 AC-006 — Supported scoring formats and season portability (issue #12) is implemented;
-tested PR handoff pending. Authorized by the user's request to do #12.
+tested handoff is PR #21 (consult GitHub for merge state). Authorized by the user's request to do #12.
 Tracking reconciliation merged in PR #20. No next milestone is authorized.
 Load only AC-006 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
 Verify primary provider documentation, replace hardcoded ranking format authority,
