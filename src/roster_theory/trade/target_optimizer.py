@@ -15,6 +15,7 @@ from roster_theory.inseason.evaluation import (
     weighted_lineup_score,
 )
 from roster_theory.trade.boards import ValueBoard
+from roster_theory.trade.coverage import RosterCoverageExclusion, roster_projection_exclusions
 from roster_theory.trade.consolidation import ConsolidationEvidence, analyze_consolidation
 from roster_theory.trade.evaluation import (
     EvaluationOptions,
@@ -283,6 +284,7 @@ class TargetPackageSearchResult:
     rejection_counts: tuple[tuple[str, str, str, int], ...]
     warnings: tuple[str, ...]
     evidence_hash: str
+    roster_exclusions: tuple[RosterCoverageExclusion, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -319,6 +321,7 @@ def _context(snapshot: TradeSnapshot) -> InSeasonContext:
             InSeasonWeek(week.week, week.playoff, week.bye_teams) for week in snapshot.weeks
         ),
         unowned_player_ids=snapshot.free_agent_ids,
+        current_week=snapshot.manifest.current_week,
     )
 
 
@@ -1053,6 +1056,8 @@ def optimize_target_packages(
     }
     context = _context(snapshot)
     matrix = build_weekly_projection_matrix(context, projections)
+    roster_exclusions = roster_projection_exclusions(snapshot, matrix)
+    excluded_rosters = {row.roster_id for row in roster_exclusions}
     diagnoses = {
         roster_id: diagnose_roster(
             snapshot,
@@ -1062,6 +1067,7 @@ def optimize_target_packages(
             projection_matrix=matrix,
         )
         for roster_id in sorted(teams_by_id)
+        if roster_id not in excluded_rosters
     }
     base_scores = {
         roster_id: weighted_lineup_score(
@@ -1071,6 +1077,7 @@ def optimize_target_packages(
             options,
         )
         for roster_id in teams_by_id
+        if roster_id not in excluded_rosters
     }
     metric_cache: dict[tuple[str, str, bool], _PlayerMetrics] = {}
     package_delta_cache: dict[tuple[str, tuple[str, ...], tuple[str, ...]], float] = {}
@@ -1105,7 +1112,10 @@ def optimize_target_packages(
             )
         return package_delta_cache[key]
 
-    _, user_surplus = _diagnosis_sets(diagnoses[snapshot.user_roster_id])
+    user_surplus = (
+        _diagnosis_sets(diagnoses[snapshot.user_roster_id])[1]
+        if snapshot.user_roster_id in diagnoses else set()
+    )
     all_seeds: list[OutgoingSeedEvidence] = []
     candidates_by_key: dict[
         tuple[str, str, str, str, tuple[str, ...], tuple[str, ...]], _Candidate
@@ -1139,6 +1149,10 @@ def optimize_target_packages(
         else:
             opponent_ids = (target.roster.owner_roster_id,)
         for opponent_id in opponent_ids:
+            if snapshot.user_roster_id in excluded_rosters or opponent_id in excluded_rosters:
+                key = (target.kind, "TARGET", "INCOMPLETE_ROSTER_PROJECTIONS")
+                construction_rejections[key] = construction_rejections.get(key, 0) + 1
+                continue
             if opponent_id == snapshot.user_roster_id or opponent_id not in teams_by_id:
                 key = (target.kind, "TARGET", "INVALID_TARGET_OWNER")
                 construction_rejections[key] = construction_rejections.get(key, 0) + 1
@@ -1434,5 +1448,6 @@ def optimize_target_packages(
         ),
         warnings=warnings,
         evidence_hash="",
+        roster_exclusions=roster_exclusions,
     )
     return replace(base, evidence_hash=stable_hash(asdict(base)))

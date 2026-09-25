@@ -417,11 +417,10 @@ class WaiverEvaluationTests(unittest.TestCase):
                 expected = "UNROSTERED" if state == "UNKNOWN" else "PENDING"
                 self.assertEqual(result.acquisition_state, expected)
 
-    def test_unknown_drop_legality_blocks_complete_automatic_search(self):
+    def test_unknown_drop_legality_excludes_only_affected_drop(self):
         incomplete = legality()
         incomplete.pop("wr")
-        with self.assertRaisesRegex(RosterIllegal, "every skill player"):
-            evaluate_waiver(
+        result = evaluate_waiver(
                 waiver_snapshot(),
                 add="Target Quarterback",
                 weeks=weeks(),
@@ -429,7 +428,9 @@ class WaiverEvaluationTests(unittest.TestCase):
                 values=values(),
                 drop_legality=incomplete,
                 now=NOW,
-            )
+        )
+        self.assertNotIn("wr", {row.drop_player_id for row in result.candidates})
+        self.assertTrue(any(row.reason == "DROP_LEGALITY_UNKNOWN" for row in result.exclusions))
 
     def test_locked_or_reserve_named_drop_stops(self):
         for name, message in (

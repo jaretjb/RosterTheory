@@ -5,6 +5,7 @@ from itertools import combinations
 from typing import Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, RosterIllegal
+from roster_theory.trade.coverage import RosterCoverageExclusion, roster_projection_exclusions
 from roster_theory.core.lineup import lineup_slots
 from roster_theory.core.models import Projection
 from roster_theory.core.provenance import stable_hash
@@ -126,6 +127,7 @@ class LeagueSearchResult:
     rejection_counts: tuple[tuple[str, int], ...]
     exhaustive_large_search: bool
     evidence_hash: str
+    roster_exclusions: tuple[RosterCoverageExclusion, ...] = ()
 
 
 def _board_values(board: ValueBoard) -> dict[str, float]:
@@ -577,6 +579,8 @@ def search_league(
     config: SearchConfig = SearchConfig(),
 ) -> LeagueSearchResult:
     projection_matrix = build_weekly_projection_matrix(snapshot, projections)
+    roster_exclusions = roster_projection_exclusions(snapshot, projection_matrix)
+    excluded_rosters = {row.roster_id for row in roster_exclusions}
     diagnostics = tuple(
         diagnose_roster(
             snapshot,
@@ -586,6 +590,7 @@ def search_league(
             projection_matrix=projection_matrix,
         )
         for team in sorted(snapshot.teams, key=lambda row: row.roster_id)
+        if team.roster_id not in excluded_rosters
     )
     diagnosis_by_id = {row.roster_id: row for row in diagnostics}
     selected_values = _board_values(selected_board)
@@ -597,7 +602,7 @@ def search_league(
         diagnosis_by_id[snapshot.user_roster_id],
         selected_values,
         config.small_pool_per_team,
-    )
+    ) if snapshot.user_roster_id in diagnosis_by_id else ()
     coverage_counts: dict[str, list[int]] = {}
     rejection_counts: dict[str, int] = {}
     opportunities: list[SearchOpportunity] = []
@@ -605,6 +610,10 @@ def search_league(
         (team for team in snapshot.teams if team.roster_id != snapshot.user_roster_id),
         key=lambda row: row.roster_id,
     ):
+        if snapshot.user_roster_id in excluded_rosters or opponent.roster_id in excluded_rosters:
+            reason = "INCOMPLETE_ROSTER_PROJECTIONS"
+            rejection_counts[reason] = rejection_counts.get(reason, 0) + 1
+            continue
         opponent_pool = _candidate_pool(
             snapshot,
             opponent.roster_id,
@@ -732,5 +741,6 @@ def search_league(
         rejection_counts=tuple(sorted(rejection_counts.items())),
         exhaustive_large_search=False,
         evidence_hash="",
+        roster_exclusions=roster_exclusions,
     )
     return replace(base, evidence_hash=stable_hash(asdict(base)))

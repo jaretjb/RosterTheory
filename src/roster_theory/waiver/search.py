@@ -380,6 +380,7 @@ def _validate_search_inputs(
 
     acquirable: list[str] = []
     omissions: list[WaiverSearchOmission] = []
+    moves_locked = dict(snapshot.league.platform_settings).get("disable_adds") == 1
     for player in snapshot.players:
         acquisition = acquisition_by_id[player.player_id]
         if not SUPPORTED_POSITIONS.intersection(player.positions):
@@ -388,6 +389,8 @@ def _validate_search_inputs(
                     player.player_id, acquisition.state, "OUT_OF_SCOPE_POSITION"
                 )
             )
+        elif moves_locked and acquisition.state in ACQUIRABLE_STATES:
+            omissions.append(WaiverSearchOmission(player.player_id, acquisition.state, "LEAGUE_MOVES_LOCKED"))
         elif acquisition.state in ACQUIRABLE_STATES:
             acquirable.append(player.player_id)
         else:
@@ -616,11 +619,23 @@ def _validate_search_inputs(
                 if not isinstance(drop_legality.get(player_id), bool)
             )
         )
-        if unknown_legality:
-            raise RosterIllegal(
-                "Complete search requires proved drop legality for every active skill "
-                "player: " + ", ".join(unknown_legality)
-            )
+        for player_id in unknown_legality:
+            drop_evidence_exclusions[player_id] = "DROP_LEGALITY_UNKNOWN"
+            omissions.append(WaiverSearchOmission(
+                player_id, acquisition_by_id[player_id].state, "DROP_LEGALITY_UNKNOWN"
+            ))
+        legal_drops = {
+            player_id for player_id in supported_roster - set(drop_evidence_exclusions)
+            if drop_legality.get(player_id) is True
+        }
+        for player_id in tuple(eligible):
+            positions = set(player_by_id[player_id].positions)
+            category = positions & {"K", "DST", "DEF"} or {"QB", "RB", "WR", "TE"}
+            if not any(category.intersection(player_by_id[drop_id].positions) for drop_id in legal_drops):
+                eligible.remove(player_id)
+                omissions.append(WaiverSearchOmission(
+                    player_id, acquisition_by_id[player_id].state, "NO_PROVED_LEGAL_DROP"
+                ))
     return (
         tuple(sorted(eligible)),
         tuple(sorted(omissions, key=lambda row: (row.reason, row.player_id))),

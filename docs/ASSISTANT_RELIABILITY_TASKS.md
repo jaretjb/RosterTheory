@@ -12,8 +12,8 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 
 | Milestone | Issue | State |
 | --- | --- | --- |
-| AC-001 | [#7](https://github.com/jaretjb/RosterTheory/issues/7) | Implemented; [PR #15](https://github.com/jaretjb/RosterTheory/pull/15), pending review |
-| AC-002 | [#8](https://github.com/jaretjb/RosterTheory/issues/8) | Planned |
+| AC-001 | [#7](https://github.com/jaretjb/RosterTheory/issues/7) | Merged in [PR #15](https://github.com/jaretjb/RosterTheory/pull/15) |
+| AC-002 | [#8](https://github.com/jaretjb/RosterTheory/issues/8) | Implemented; tested PR handoff |
 | AC-003 | [#9](https://github.com/jaretjb/RosterTheory/issues/9) | Planned |
 | AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Planned |
 | AC-005 | [#11](https://github.com/jaretjb/RosterTheory/issues/11) | Planned |
@@ -23,7 +23,7 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 
 ## AC-001 — Weekly availability and projection provenance
 
-Status: IMPLEMENTED; tested, pending PR review. Findings: T1, T2. Dependencies: none.
+Status: MERGED in PR #15; all CI checks passed. Findings: T1, T2. Dependencies: none.
 Acceptance evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
 
 Correct current-status leakage into future weeks and ensure missing/partial
@@ -42,7 +42,9 @@ subset. Full suite and Ruff must pass. No live data is required for this repair.
 
 ## AC-002 — Candidate-scoped safety and transaction legality
 
-Status: PLANNED. Findings: W3, W5, T3, D1. Depends on AC-001.
+Status: IMPLEMENTED, pending PR review/merge. Findings: W3, W5, T3, D1.
+Depends on AC-001 (merged). Evidence:
+`docs/COMPLETED_ASSISTANT_RELIABILITY_AC_002.md` (722 tests and Ruff).
 
 Enforce mandatory completeness, lineup/depth/downside, and retention safeguards in
 the production Waiver score path. WATCH must identify a plausible move and a

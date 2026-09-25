@@ -405,6 +405,10 @@ def format_search_result(result: SearchRunResult) -> str:
             )
         )
     lines.append("Coverage (enumerated / pruned / exact / accepted):")
+    for row in result.search.roster_exclusions:
+        lines.append(f"  Excluded roster {row.roster_id}: {row.reason}; " + ", ".join(
+            f"{pid}/W{week}" for pid, week in row.missing_player_weeks
+        ))
     lines.extend(
         f"  {row.package_size}: {row.enumerated} / {row.pruned} / {row.evaluated} / {row.accepted}"
         for row in result.search.coverage

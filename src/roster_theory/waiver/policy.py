@@ -965,7 +965,52 @@ def _assess_composite_waiver_value_candidate(
         )
     )
     news_passed = evaluation.material_news_fresh
+    holding = selected.holding
+    evidence_complete = (
+        evaluation.value_inputs_complete
+        and evaluation.projection_inputs_complete
+        and (not holding.applicable or not holding.streaming_omission_ids)
+    )
+    hold_passed = not holding.applicable or (
+        holding.net_hold_value >= policy.qb_net_hold_value_floor
+        or (
+            holding.injury_insurance_value >= policy.qb_insurance_advantage_floor
+            and holding.bench_slot_opportunity_cost
+            <= policy.qb_maximum_bench_slot_opportunity_cost
+        )
+    )
     gates = (
+        _gate(
+            "complete_required_evidence", evidence_complete, "==", True, evidence_complete,
+            "Required values, projections, and any one-QB streamer pool must be complete",
+        ),
+        _gate(
+            "current_week_delta", selected.current_week_delta, ">=",
+            -policy.maximum_current_week_loss,
+            selected.current_week_delta >= -policy.maximum_current_week_loss,
+            "A future-facing add cannot create an excessive current-week loss",
+        ),
+        _gate(
+            "depth_delta", selected.lineup.depth_delta, ">=", -policy.maximum_depth_loss,
+            holding.applicable or selected.lineup.depth_delta >= -policy.maximum_depth_loss,
+            "Replacement exposure must be bounded; one-QB holds charge bench-slot opportunity cost",
+        ),
+        _gate(
+            "offense_downside_increase", selected.risk.offense_downside_loss_delta, "<=",
+            policy.maximum_downside_increase,
+            selected.risk.offense_downside_loss_delta <= policy.maximum_downside_increase,
+            "The move cannot add excessive same-offense downside",
+        ),
+        _gate(
+            "qb_hold_value", hold_passed, "==", True, hold_passed,
+            "A one-QB backup needs positive net hold value or materially superior injury insurance",
+        ),
+        _gate(
+            "protected_upside_incremental_value", selected.contingency.incremental_option_value,
+            ">=", selected.contingency.required_incremental_value,
+            selected.contingency.incremental_gate_passed,
+            "A protected bench option requires sufficient incremental acquisition upside",
+        ),
         _gate(
             "waiver_value_comparable",
             comparable,
@@ -1027,6 +1072,17 @@ def _assess_composite_waiver_value_candidate(
     watch = (
         comparable
         and delta >= policy.priority_watch_value_gain
+        and evidence_complete
+        and not retention_protected
+        and selected.contingency.incremental_gate_passed
+        and selected.lineup.weighted_delta >= policy.watch_lineup_floor
+        and selected.current_week_delta >= -policy.watch_maximum_current_week_loss
+        and (
+            holding.net_hold_value >= policy.qb_watch_net_hold_value_floor
+            if holding.applicable
+            else selected.lineup.depth_delta >= -policy.watch_maximum_depth_loss
+        )
+        and selected.risk.offense_downside_loss_delta <= policy.watch_maximum_downside_increase
         and evaluation.add_currently_active
         and (news_passed or policy.allow_watch_on_missing_news)
     )
@@ -1043,7 +1099,7 @@ def _assess_composite_waiver_value_candidate(
         )
     elif watch:
         label = "WATCH"
-        decision_path = "THREE_SIGNAL_WAIVER_VALUE_NEAR_THRESHOLD"
+        decision_path = "THREE_SIGNAL_WAIVER_VALUE_BLOCKED"
         uncertainty = next(gate.explanation for gate in gates if not gate.passed)
     else:
         label = "PASS"

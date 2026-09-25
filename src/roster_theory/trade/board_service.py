@@ -48,6 +48,7 @@ from roster_theory.trade.boards import (
     aggregate_selected_ranks,
     build_projection_curves,
     build_value_board,
+    scoped_board_universe,
     export_board_evidence,
     valuation_gaps,
 )
@@ -713,7 +714,7 @@ def _required_market_universe(
     snapshot_result: RefreshResult,
     market_rows: Sequence[RankObservation],
     *,
-    require_all_rostered: bool = True,
+    require_all_rostered: bool = False,
 ) -> tuple[
     tuple[RankObservation, ...],
     dict[str, str],
@@ -757,7 +758,9 @@ def _required_market_universe(
             key=lambda row: float(row.position_rank or 0),
         )
         ranks = [int(row.position_rank or 0) for row in rows]
-        if ranks != list(range(1, cutoff + 1)):
+        if len(ranks) != len(set(ranks)):
+            raise CoverageIncomplete(f"Duplicate {position} ECR ranks")
+        if require_all_rostered and ranks != list(range(1, cutoff + 1)):
             raise CoverageIncomplete(
                 f"Mapped {position} ECR is not contiguous through rank {cutoff}"
             )
@@ -890,11 +893,14 @@ def _canonical_projections(
             "missing future projections do not establish absence",
         )
     absent_required = sorted(set(required_positions) - set(complete_positions))
-    if absent_required:
-        raise CoverageIncomplete(
-            "Required ranked players have no FantasyPros projection identity: "
-            + ", ".join(absent_required)
-        )
+    for player_id in absent_required:
+        complete_positions[player_id] = required_positions[player_id]
+        warning_map[player_id] = ("No FantasyPros projection identity; unavailable, not zero",)
+        result.extend(Projection(
+            player_id=player_id, horizon="WEEKLY", week=week, raw_stats=(),
+            league_points=0.0, source="FantasyPros source omission",
+            coverage_status="source_omission_zero",
+        ) for week in weeks)
     normalized = reconcile_current_inactive_omissions(
         tuple(sleeper_players.values()), current_week, tuple(result)
     ) if current_week is not None else tuple(result)
@@ -928,6 +934,7 @@ def _build_provider_projection_curves(
         required_counts=required_counts,
         expected_weeks=expected_weeks,
         current_week=current_week,
+        allow_partial=True,
     )
 
 
@@ -1011,7 +1018,7 @@ def refresh_value_boards(
     expert_pool_resolver: Callable[
         [ValueInputs, datetime], ExpertPoolResolution
     ] | None = None,
-    require_all_rostered_market_coverage: bool = True,
+    require_all_rostered_market_coverage: bool = False,
 ) -> BoardRefreshResult:
     # During Week 1 the final Draft boards own long-term value. The current
     # weekly feed is still fetched below, but only as a separate signal.
@@ -1308,26 +1315,28 @@ def refresh_value_boards(
         expected_weeks=weeks,
         current_week=snapshot.manifest.current_week,
     )
-    raw_points = {
-        player_id: sum(
-            projection.league_points
-            for projection in canonical_projections
-            if projection.player_id == player_id
-        )
-        for player_id in positions
-    }
+    raw_points = {pid: points for curve in curves for pid, points in curve.raw_player_points
+                  if pid in positions}
     baselines = positional_waiver_baselines(
-        (player_by_id[player_id] for player_id in positions),
+        (player_by_id[player_id] for player_id in raw_points),
         dict(snapshot.owner_by_player),
         raw_points,
         positions=POSITION_MINIMUMS,
         depth=1,
     )
-    if set(baselines) != set(POSITION_MINIMUMS):
-        raise CoverageIncomplete("Required universe lacks a free-agent replacement baseline")
     replacement = {position: baseline.points for position, baseline in baselines.items()}
+    requested_player_count = len(positions) + len(missing_rostered_player_ids)
+    positions, exclusions = scoped_board_universe(
+        positions,
+        ({row.player_id: row.final_position_rank for row in selected_ranks},
+         _raw_rank_ordinals(selected_ranks),
+         {row.player_id: int(row.position_rank or 0) for row in required_market}),
+        curves, replacement,
+    )
+    exclusions = tuple(sorted((*exclusions, *((pid, "MISSING_MARKET_RANK") for pid in missing_rostered_player_ids))))
     selected_final = build_value_board(
         board_id="selected_final",
+        excluded_players=exclusions,
         horizon=stage.mode,
         position_ranks={
             row.player_id: row.final_position_rank
@@ -1349,6 +1358,7 @@ def refresh_value_boards(
     )
     selected_raw = build_value_board(
         board_id="selected_raw",
+        excluded_players=exclusions,
         horizon=stage.mode,
         position_ranks={
             player_id: rank
@@ -1370,6 +1380,7 @@ def refresh_value_boards(
     )
     market = build_value_board(
         board_id="market",
+        excluded_players=exclusions,
         horizon=stage.mode,
         position_ranks={
             row.player_id: int(row.position_rank or 0)
@@ -1548,6 +1559,7 @@ def refresh_value_boards(
             f"{stage.mode} owns long-term value; CURRENT_SIGNAL remains separate",
             "CURRENT_SIGNAL weekly ranks/projections remain separate and do not change ownership value",
             "Valuation gaps are signals, not trade recommendations or opponent preferences",
+            f"Usable value-board rows: {len(positions)}/{requested_player_count}; {len(exclusions)} excluded",
         ),
         additional_evidence={
             "season_stage": asdict(stage),
@@ -1577,7 +1589,7 @@ def refresh_value_boards(
         call_plan=inputs.call_plan,
         output_path=target,
         identity_matches=identity_matches,
-        required_players=len(positions),
+        required_players=requested_player_count,
         stage=stage,
         horizon_views=horizon_views,
         prospective_snapshot_path=prospective_target,
@@ -1608,8 +1620,15 @@ def board_refresh_report(result: BoardRefreshResult) -> dict[str, Any]:
         "prospective_snapshot_path": str(result.prospective_snapshot_path),
         "selected_board": result.selected_final.board_id,
         "market_board": result.market.board_id,
-        "boards_complete": result.selected_final.complete and result.market.complete,
+        "boards_complete": (result.selected_final.complete and result.market.complete
+                            and not result.selected_final.excluded_players
+                            and not result.refresh.snapshot.player_exclusions),
+        "included_rows_complete": result.selected_final.complete and result.market.complete,
         "required_players": result.required_players,
+        "covered_players": len(result.selected_final.players),
+        "excluded_players": list(result.selected_final.excluded_players),
+        "coverage_status": "PARTIAL" if result.selected_final.excluded_players or result.refresh.snapshot.player_exclusions else "COMPLETE",
+        "snapshot_player_exclusions": list(result.refresh.snapshot.player_exclusions),
         "identity_matches": result.identity_matches,
         "missing_rostered_player_ids": list(
             getattr(result, "missing_rostered_player_ids", ())

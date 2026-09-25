@@ -1323,6 +1323,8 @@ def evaluate_waiver(
             f"{target_description} acquisition state is {acquisition.state}; evaluation requires "
             "current non-ownership and supported-position eligibility"
         )
+    if dict(snapshot.league.platform_settings).get("disable_adds") == 1:
+        raise RosterIllegal("League free-agent and waiver moves are locked")
     add_position = _waiver_position(add_player)
     team = next(team for team in snapshot.teams if team.roster_id == snapshot.user_roster_id)
     capacity = next(
@@ -1370,6 +1372,12 @@ def evaluate_waiver(
         for player_id in sorted(roster_evidence_excluded)
     )
     drop_evidence_exclusion_map = dict(drop_evidence_exclusions or {})
+    if drop is None:
+        supplied_values = {row.player_id: row for row in values}
+        for player_id in droppable_roster:
+            value = supplied_values.get(player_id)
+            if value is None or value.coverage_status.casefold() != "complete":
+                drop_evidence_exclusion_map.setdefault(player_id, "INCOMPLETE_VALUE_EVIDENCE")
     drop_evidence_excluded = {
         player_id
         for player_id in droppable_roster
@@ -1402,24 +1410,13 @@ def evaluate_waiver(
         unknown = tuple(
                 sorted(player_id for player_id in droppable_roster if drop_legality.get(player_id) is None)
         )
-        if unknown:
-            coverage_description = (
-                "every same-position special-team player"
-                if add_position in SPECIAL_TEAM_POSITIONS
-                else "every skill player"
-            )
-            raise RosterIllegal(
-                "Automatic drop selection requires proved legality for "
-                + coverage_description
-                + ": "
-                + ", ".join(unknown)
-            )
+        exclusions.extend(DropExclusion(player_id, "DROP_LEGALITY_UNKNOWN") for player_id in unknown)
         locked = tuple(
-            sorted(player_id for player_id in droppable_roster if drop_legality[player_id] is False)
+            sorted(player_id for player_id in droppable_roster if drop_legality.get(player_id) is False)
         )
         exclusions.extend(DropExclusion(player_id, "ROSTER_LOCKED") for player_id in locked)
         legal = tuple(
-            sorted(player_id for player_id in droppable_roster if drop_legality[player_id] is True)
+            sorted(player_id for player_id in droppable_roster if drop_legality.get(player_id) is True)
         )
         if not legal:
             raise RosterIllegal("No proved-legal same-category replacement is droppable")
@@ -1993,6 +1990,7 @@ def save_waiver_evaluation_inputs(
     waiver_wire_evidence: WaiverWireEvidence | None = None,
     ros_panel_evidence: Mapping[str, Any] | None = None,
     emergence_evidence: EmergenceEvidence | None = None,
+    drop_legality_evidence: Mapping[str, Any] | None = None,
 ) -> Path:
     if captured_at.tzinfo is None:
         raise ValueError("Waiver evaluation-input timestamp must be timezone-aware")
@@ -2006,6 +2004,7 @@ def save_waiver_evaluation_inputs(
         "availability_source": availability_source,
         "availability_by_player": dict(sorted(availability_by_player.items())),
         "drop_legality": dict(sorted(drop_legality.items())),
+        "drop_legality_evidence": drop_legality_evidence,
         "weeks": tuple(sorted(weeks, key=lambda row: row.week)),
         "projections": tuple(
             sorted(
