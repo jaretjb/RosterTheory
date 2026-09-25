@@ -3,7 +3,7 @@
 Updated: September 25, 2026 (America/Los_Angeles)
 
 AC-001/#7 through AC-004/#10 merged in PRs #15–#18; PR #18 passed all 20 checks.
-AC-005/#11 is implemented; tested PR handoff pending.
+AC-005/#11 is implemented; PR #19 awaits review/merge.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md`.
 
 Universal weekly evidence caps: RB/WR50, QB/TE24, K/DST16. Fixed weekly

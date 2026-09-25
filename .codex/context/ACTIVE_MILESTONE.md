@@ -1,7 +1,7 @@
 # Active milestone
 
 AC-005 — Explicit ranking caps and specialist performance policy (issue #11) is
-implemented; tested PR handoff pending. Authorized by the request to merge PR #18
+implemented; PR #19 awaits review/merge. Authorized by the request to merge PR #18
 and start #11. No next milestone is authorized.
 Load only AC-005 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
 Implement weekly ranking caps independent of replacement normalization, truthful

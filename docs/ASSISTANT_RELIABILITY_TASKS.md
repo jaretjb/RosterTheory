@@ -92,7 +92,8 @@ moves, and bounded-search disclosure. Waiver-specific policy must not leak here.
 
 ## AC-005 — Explicit ranking caps and specialist performance policy
 
-Status: implemented; PR handoff pending. Findings: W6, W8, W9, D4.
+Status: implemented; [PR #19](https://github.com/jaretjb/RosterTheory/pull/19)
+awaits review/merge. Findings: W6, W8, W9, D4.
 Depends on AC-003 (merged). Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md`.
 
 Implement the requested RB/WR top-50 weekly evidence cutoff independently of
