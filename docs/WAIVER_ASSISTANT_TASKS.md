@@ -933,3 +933,55 @@ was DST7/season7/ROS6, New England DST11/season1/ROS7, and Carolina
 DST9/season6, while Cincinnati was DST17/season3/ROS19. The engine therefore
 returned Minnesota, New England, and Carolina and did not hard-code the older
 Carolina/Cincinnati/Minnesota order. Ruff and all 661 tests pass.
+
+## WA-026 — Universal retention safety and pruning equivalence
+
+Status: completed September 24, 2026
+
+Depends on: WA-020, WA-024, and WA-025
+
+Goal: make retention-safe Waiver Value the generic default for every configured
+Sleeper league while keeping only empirically calibrated weights league-local,
+and prevent bounded search from hiding a move that exact named evaluation would
+recommend.
+
+Context: load Waiver requirements sections 3.1–3.3 and 4–6 and Waiver design
+sections Architecture, Data flow, and Fail-closed boundaries.
+
+Acceptance:
+
+- Enable the generic weekly/Waiver/ROS acquisition-versus-retention model for
+  every valid Waiver policy. Default weights remain generic; a league may
+  override weights only in its own policy. Below-replacement weekly ranks and
+  injury-uncertain, above-replacement ROS holds are universal safety behavior.
+- Migrate legacy same-league policies without transferring another league's
+  calibrated weights or thresholds.
+- Make pruning preserve candidates that strictly dominate a same-position legal
+  drop in fresh weekly rank, ROS rank, and remaining projection, regardless of
+  the long-term value horizon. Exact evaluation still owns the decision. A
+  notable candidate must never be labeled below-threshold merely because it
+  fell behind the exact-evaluation budget.
+- Add player-agnostic regressions for an injury-depressed rostered player, a
+  Dobbins-style add that is affirmative only against the best legal drop, and
+  search/evaluate decision equivalence. Preserve current K/DST behavior and
+  read-only Sleeper boundaries.
+- Run focused tests, Ruff, the full repository suite, and fresh read-only
+  searches for both configured leagues before completion.
+
+Completed September 24, 2026. Retention-safe Waiver Value is now enabled by
+the application for every valid league policy; a league may override the
+generic 50/30/20 weights, but omitting `waiver_priority` no longer disables
+the safety model. New policy scaffolds expose the same generic defaults without
+copying another league's calibrated settings. Search budget pruning now yields
+to same-position weekly/ROS/projection dominance, and budget-only omissions are
+reported as not exactly evaluated rather than below threshold. A controlled
+bounded-versus-exhaustive regression proves the same affirmative decision and
+drop selection.
+
+The fresh League Beta read-only search selected J.K. Dobbins for Rachaad White and
+performed no Sleeper write. Exact follow-up found Kyle Pitts improves the
+modeled lineup over Oronde Gadsden but fails the retention-safe value gate
+(60.1 versus 68.4), so the swap is a PASS. The fresh League Alpha search was
+attempted and failed closed before recommendation because current input
+coverage omits rostered skill player `12508`; that unrelated external-state
+blocker was not bypassed. Ruff and all 668 tests pass.

@@ -55,6 +55,14 @@ def target_values(*, bad_drop_case=False):
 
 
 class WaiverDecisionPolicyTests(unittest.TestCase):
+    def test_legacy_policy_uses_universal_retention_safe_defaults(self):
+        policy = load_waiver_policy(LEAGUE_BETA_POLICY_PATH)
+
+        self.assertTrue(policy.priority_enabled)
+        self.assertEqual(policy.priority_weekly_weight, 0.50)
+        self.assertEqual(policy.priority_waiver_weight, 0.30)
+        self.assertEqual(policy.priority_ros_weight, 0.20)
+
     def test_three_signal_value_owns_add_drop_comparison_when_enabled(self):
         def priority(player_id, score):
             return WaiverPriorityEvidence(

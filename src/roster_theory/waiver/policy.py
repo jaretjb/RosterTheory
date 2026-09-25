@@ -21,6 +21,15 @@ from roster_theory.waiver.snapshot import ACQUIRABLE_STATES, AcquisitionState
 
 DEFAULT_WAIVER_CONFIG_DIR = Path("config/waiver")
 _SAFE_LEAGUE_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
+DEFAULT_WAIVER_PRIORITY_CONFIG = {
+    "weekly_weight": 0.50,
+    "waiver_weight": 0.30,
+    "ros_weight": 0.20,
+    "minimum_value_gain": 0.0,
+    "minimum_lineup_gain": 0.0,
+    "watch_value_gain": -3.0,
+    "exact_candidate_count": 12,
+}
 
 
 def default_waiver_policy_path(
@@ -118,16 +127,7 @@ def load_waiver_policy(
     if str(value.get("calibration_mode") or "") != "CONTROLLED_FIXTURES":
         raise ValueError("Waiver policy must identify controlled-fixture calibration")
     priority_config = value.get("waiver_priority")
-    priority = {
-        "weekly_weight": 0.50,
-        "waiver_weight": 0.30,
-        "ros_weight": 0.20,
-        "minimum_value_gain": 0.0,
-        "minimum_lineup_gain": 0.0,
-        "watch_value_gain": -3.0,
-        "exact_candidate_count": 12,
-        **(priority_config or {}),
-    }
+    priority = {**DEFAULT_WAIVER_PRIORITY_CONFIG, **(priority_config or {})}
     priority_weekly_weight = float(priority["weekly_weight"])
     priority_waiver_weight = float(priority["waiver_weight"])
     priority_ros_weight = float(priority["ros_weight"])
@@ -359,7 +359,10 @@ def load_waiver_policy(
         version=version,
         calibration_mode="CONTROLLED_FIXTURES",
         allow_watch_on_missing_news=bool(value.get("allow_watch_on_missing_news")),
-        priority_enabled=priority_config is not None,
+        # Acquisition-versus-retention scoring is universal safety behavior.
+        # League policy may calibrate the weights, but omission of the block
+        # must not disable injury-aware retention protection.
+        priority_enabled=True,
         priority_weekly_weight=priority_weekly_weight,
         priority_waiver_weight=priority_waiver_weight,
         priority_ros_weight=priority_ros_weight,

@@ -141,13 +141,25 @@ def search(
         emergence_evidence=role_evidence,
         input_bundle_hash="controlled-bundle-hash",
         availability_source="controlled fixture",
-        policy=load_waiver_policy(POLICY_PATH),
+        policy=replace(load_waiver_policy(POLICY_PATH), priority_enabled=False),
         enable_pruning=enable_pruning,
         now=NOW,
     )
 
 
 def input_payload(*, league_key="league_alpha"):
+    rank_by_id = {
+        "add": 1,
+        "fa_rb": 10,
+        "fa_wr": 10,
+        "fa_te": 10,
+        "qb": 2,
+        "rb": 2,
+        "wr": 2,
+        "bench": 3,
+        "ir": 4,
+        "other": 5,
+    }
     payload = {
         "schema_version": 1,
         "product": "WAIVER ASSISTANT",
@@ -183,6 +195,9 @@ def input_payload(*, league_key="league_alpha"):
                 "selected_value": row.selected_value,
                 "market_value": row.market_value,
                 "raw_projection": row.raw_projection,
+                "current_week_position_rank": rank_by_id[row.player_id],
+                "selected_rest_of_season_position_rank": rank_by_id[row.player_id],
+                "rest_of_season_position_rank": rank_by_id[row.player_id],
                 "coverage_status": row.coverage_status,
                 "warnings": list(row.warnings),
             }
@@ -242,6 +257,88 @@ class WaiverSearchTests(unittest.TestCase):
                 row.reason.startswith("WAIVER_VALUE_BELOW_EXACT_CUTOFF")
                 for row in result.pruned_candidates
             )
+        )
+
+    def test_waiver_value_budget_does_not_prune_exact_rank_dominance(self):
+        rank_by_id = {
+            "add": 1,
+            "fa_rb": 4,
+            "fa_wr": 10,
+            "fa_te": 10,
+            "qb": 2,
+            "rb": 5,
+            "wr": 2,
+            "bench": 3,
+            "ir": 4,
+            "other": 5,
+        }
+        ranked_values = tuple(
+            replace(
+                row,
+                raw_projection=31.0 if row.player_id == "fa_rb" else row.raw_projection,
+                current_week_position_rank=rank_by_id[row.player_id],
+                selected_rest_of_season_position_rank=rank_by_id[row.player_id],
+            )
+            for row in complete_values()
+        )
+        ranked_projections = tuple(
+            replace(row, league_points=11.0)
+            if row.player_id == "fa_rb"
+            else row
+            for row in complete_projections()
+        )
+        policy = replace(
+            load_waiver_policy(POLICY_PATH),
+            priority_exact_candidate_count=1,
+        )
+
+        result = search_waiver_candidates(
+            complete_search_snapshot(),
+            weeks=weeks(),
+            projections=ranked_projections,
+            values=ranked_values,
+            drop_legality=legality(),
+            news_fresh=news(),
+            waiver_wire_evidence=waiver_wire_evidence(),
+            input_bundle_hash="controlled-bundle-hash",
+            availability_source="controlled fixture",
+            policy=policy,
+            enable_pruning=True,
+            now=NOW,
+        )
+        exhaustive = search_waiver_candidates(
+            complete_search_snapshot(),
+            weeks=weeks(),
+            projections=ranked_projections,
+            values=ranked_values,
+            drop_legality=legality(),
+            news_fresh=news(),
+            waiver_wire_evidence=waiver_wire_evidence(),
+            input_bundle_hash="controlled-bundle-hash",
+            availability_source="controlled fixture",
+            policy=policy,
+            enable_pruning=False,
+            now=NOW,
+        )
+
+        exact_ids = {row.add_player_id for row in result.exact_evaluations}
+        pruned_ids = {row.player_id for row in result.pruned_candidates}
+        bounded_evaluation = next(
+            row for row in result.exact_evaluations if row.add_player_id == "fa_rb"
+        )
+        exhaustive_evaluation = next(
+            row for row in exhaustive.exact_evaluations if row.add_player_id == "fa_rb"
+        )
+        self.assertIn("fa_rb", exact_ids)
+        self.assertNotIn("fa_rb", pruned_ids)
+        self.assertIn(bounded_evaluation.decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
+        self.assertEqual(
+            bounded_evaluation.decision_label,
+            exhaustive_evaluation.decision_label,
+        )
+        self.assertEqual(
+            bounded_evaluation.selected_drop_player_id,
+            exhaustive_evaluation.selected_drop_player_id,
         )
 
     def test_emerging_candidate_below_ordinary_ownership_floor_is_exact(self):
