@@ -1,7 +1,7 @@
 # Active milestone
 
 AC-004 — Consistent Trade decisions and secondary moves (issue #10) is implemented,
-pending PR handoff/review. Authorized by the request to merge PR #17 and start #10.
+PR #18 awaits review/merge. Authorized by the request to merge PR #17 and start #10.
 Load only AC-004 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
 Implement common entered/search decision axes and verdicts, gate-aware required
 secondary moves with retention protection, and truthful provisional/bounded
