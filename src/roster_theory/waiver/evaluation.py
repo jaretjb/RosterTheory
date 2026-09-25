@@ -194,8 +194,12 @@ class OwnershipDelta:
     rest_of_season_drop_rank: int | None
     season_add_rank: int | None
     season_drop_rank: int | None
+    season_add_points: float | None
+    season_drop_points: float | None
     recent_add_rank: int | None
     recent_drop_rank: int | None
+    recent_add_points_per_game: float | None
+    recent_drop_points_per_game: float | None
     long_term_value_horizon_add: str
     long_term_value_horizon_drop: str | None
     fresh_rank_dominance: bool
@@ -523,8 +527,12 @@ def _ownership_delta(
         ),
         season_add_rank=add.season_position_rank,
         season_drop_rank=drop.season_position_rank if drop else None,
+        season_add_points=add.season_points,
+        season_drop_points=drop.season_points if drop else None,
         recent_add_rank=add.recent_position_rank,
         recent_drop_rank=drop.recent_position_rank if drop else None,
+        recent_add_points_per_game=add.recent_points_per_game,
+        recent_drop_points_per_game=(drop.recent_points_per_game if drop else None),
         long_term_value_horizon_add=add.long_term_value_horizon,
         long_term_value_horizon_drop=(drop.long_term_value_horizon if drop else None),
         fresh_rank_dominance=fresh_rank_dominates(

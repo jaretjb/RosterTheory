@@ -2,6 +2,19 @@
 
 No product milestone is active.
 
+WA-027 — League-scored specialist performance weighting completed September
+25, 2026 (America/Los_Angeles). K and DST exact evidence now preserves actual
+season and recent league-scored production, and rank fallback must clear one
+transparent combined score rather than any favorable rank authorizing a swap.
+The current league uses a larger K season-points weight and a smaller DST
+weight; other leagues retain neutral defaults pending separate evidence.
+
+Fresh read-only validation protects the productive rostered kicker, removes
+Detroit from the claim plan behind Cincinnati, and retains only San Francisco
+and New England as affirmative DST alternatives. All 676 tests and Ruff pass;
+no Sleeper write occurred. Acceptance evidence is in WA-027 of
+`docs/WAIVER_ASSISTANT_TASKS.md`.
+
 WA-026 — Universal retention safety and pruning equivalence completed
 September 24, 2026 (America/Los_Angeles). Retention-safe Waiver Value is now
 application-default behavior for every league policy, while calibrated weight
