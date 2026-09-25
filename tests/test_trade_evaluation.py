@@ -614,7 +614,7 @@ class ProjectionAndEvaluationTests(unittest.TestCase):
         result = self.evaluate(("a_wr", "a_low"), ("b_wr",))
         moves = {move.roster_id: move for move in result.secondary_moves}
         self.assertEqual((moves["1"].kind, moves["1"].chosen_player_id), ("ADD", "fa_wr"))
-        self.assertEqual((moves["2"].kind, moves["2"].chosen_player_id), ("DROP", "a_low"))
+        self.assertEqual((moves["2"].kind, moves["2"].chosen_player_id), ("DROP", "b_low"))
         self.assertEqual(result.team_impacts[0].weighted_delta, 18.0)
         self.assertEqual(result.team_impacts[1].weighted_delta, -12.0)
         self.assertIsNotNone(moves["1"].next_best_player_id)
@@ -644,7 +644,7 @@ class ProjectionAndEvaluationTests(unittest.TestCase):
             ("b_wr", "b_bench", "b_low"),
         )
         moves = {move.roster_id: move for move in result.secondary_moves}
-        self.assertEqual((moves["1"].kind, moves["1"].chosen_player_ids), ("DROP", ("b_bench",)))
+        self.assertEqual((moves["1"].kind, moves["1"].chosen_player_ids), ("DROP", ("a_bench",)))
         self.assertEqual((moves["2"].kind, moves["2"].chosen_player_ids), ("ADD", ("fa_wr",)))
         self.assertEqual(moves["2"].candidate_pool_size, len(self.snapshot.free_agent_ids))
         self.assertEqual(result.ownership_impacts[1].market_secondary_delta, 3.0)

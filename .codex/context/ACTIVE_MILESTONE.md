@@ -1,17 +1,18 @@
 # Active milestone
 
-AC-003 — Joint cross-position optimization and claim plans (issue #9) is implemented,
-PR #17 awaits review/merge. Authorized by the request to merge PR #16 and work #9.
-Load only AC-003 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
-Implement joint add/drop ranking, truthful bounded-search coverage, consistent
-recommendation/report identity and ordering, and safe claim branches. Preserve
-AC-002 safety gates; no calibration changes or Trade strategy work are authorized.
-Verification: 737 tests and Ruff pass. Stop at the tested PR handoff.
+AC-004 — Consistent Trade decisions and secondary moves (issue #10) is implemented,
+pending PR handoff/review. Authorized by the request to merge PR #17 and start #10.
+Load only AC-004 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
+Implement common entered/search decision axes and verdicts, gate-aware required
+secondary moves with retention protection, and truthful provisional/bounded
+coverage. Preserve AC-002 safety; no Waiver policy or calibration changes.
+Verification: 746 tests, Ruff and diff checks pass. Stop at the tested PR handoff.
 
 AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
 all CI checks. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
-AC-002/#8 merged in PR #16 with all CI checks passing. AC-004–AC-008 remain
-planned; the overall audit is not closed. All league actions remain read-only.
+AC-002/#8 and AC-003/#9 merged in PRs #16 and #17 with all checks passing.
+Baseline: 737 tests and Ruff pass. AC-005–AC-008 remain planned; the audit is open.
+All league actions remain read-only.
 
 WA-027 — League-scored specialist performance weighting completed September
 25, 2026 (America/Los_Angeles). K and DST exact evidence now preserves actual

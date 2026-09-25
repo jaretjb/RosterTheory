@@ -1,8 +1,8 @@
 # AC-003 — Joint cross-position optimization and claim plans
 
 Issue: [#9](https://github.com/jaretjb/RosterTheory/issues/9).
-Status: implemented; [PR #17](https://github.com/jaretjb/RosterTheory/pull/17)
-awaits review/merge. Prerequisite AC-002 merged in
+Status: merged in [PR #17](https://github.com/jaretjb/RosterTheory/pull/17)
+with all 20 checks passing. Prerequisite AC-002 merged in
 [PR #16](https://github.com/jaretjb/RosterTheory/pull/16).
 
 ## Decision behavior
