@@ -13,6 +13,20 @@ def words(path: str) -> int:
 
 
 class ContextRoutingTests(unittest.TestCase):
+    def test_ac005_merged_status_is_consistent_across_tracking_records(self):
+        tracker = (ROOT / "docs/ASSISTANT_RELIABILITY_TASKS.md").read_text(encoding="utf-8")
+        table_row = next(line for line in tracker.splitlines() if line.startswith("| AC-005 |"))
+        self.assertIn("Merged in [PR #19]", table_row)
+        detail = tracker.split("## AC-005", 1)[1].split("## AC-006", 1)[0]
+        self.assertIn("Status: merged in [PR #19]", detail)
+        self.assertIn("issue #11 is closed", detail)
+        for path in (".codex/context/status/WAIVER.md", ".codex/context/ACTIVE_MILESTONE.md",
+                     "docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md"):
+            text = (ROOT / path).read_text(encoding="utf-8")
+            self.assertNotRegex(text, r"PR #19[^\n]*awaits review/merge")
+        completed = (ROOT / "docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md").read_text(encoding="utf-8")
+        self.assertIn("7bf808cf0315369ee11f1eca9ce276f46dd91bdd", completed)
+
     def test_always_loaded_context_stays_bounded(self):
         self.assertLessEqual(words("AGENTS.md"), 300)
         self.assertLessEqual(words(".codex/context/STEERING.md"), 400)
