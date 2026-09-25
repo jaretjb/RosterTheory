@@ -1,7 +1,7 @@
 # Active milestone
 
 AC-003 — Joint cross-position optimization and claim plans (issue #9) is implemented,
-pending tested PR handoff/review. Authorized by the request to merge PR #16 and work #9.
+PR #17 awaits review/merge. Authorized by the request to merge PR #16 and work #9.
 Load only AC-003 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
 Implement joint add/drop ranking, truthful bounded-search coverage, consistent
 recommendation/report identity and ordering, and safe claim branches. Preserve
