@@ -3,7 +3,7 @@
 Updated: September 25, 2026 (America/Los_Angeles)
 
 AC-001/#7, AC-002/#8 and AC-003/#9 are merged (PRs #15–#17).
-AC-004/#10 is implemented; PR handoff/review is pending.
+AC-004/#10 is implemented; PR #18 awaits review/merge.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_004.md`.
 Entered and target-search packages share verdicts and intrinsic/partner/legality/
 confidence axes. Search-only strategy/market filters are explicit and cannot

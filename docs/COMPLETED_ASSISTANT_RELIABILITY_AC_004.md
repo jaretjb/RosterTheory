@@ -1,7 +1,8 @@
 # AC-004 — Consistent Trade decisions and secondary moves
 
 Issue: [#10](https://github.com/jaretjb/RosterTheory/issues/10).
-Status: implemented; tested PR handoff pending.
+Status: implemented; [PR #18](https://github.com/jaretjb/RosterTheory/pull/18)
+awaits review/merge.
 
 ## Shared decision contract
 
