@@ -300,6 +300,7 @@ def build_waiver_inputs(
         ros_ranking_max_age=timedelta(hours=2),
         ros_experts_max_age=timedelta(hours=2),
         expert_pool_resolver=WaiverRosPanelSelector(league_key),
+        require_all_rostered_market_coverage=False,
     )
     snapshot = board.refresh.snapshot
     waiver_state = refresh_waiver_snapshot(
@@ -454,7 +455,9 @@ def build_waiver_inputs(
         for player_id in sorted(covered_ids)
     )
     projections = tuple(
-        row for row in board.weekly_projections if row.player_id in covered_ids
+        row
+        for row in board.weekly_projections
+        if row.player_id in covered_ids | active_supported_ids
     )
     contingencies = load_contingency_inputs(
         contingency_file,
@@ -480,6 +483,10 @@ def build_waiver_inputs(
         for player_id in active_supported_ids.intersection(starters)
         if points.get(player_id, 0.0) != 0.0
     }
+    ros_panel_evidence = {
+        **dict(board.expert_pool_evidence or {}),
+        "missing_rostered_player_ids": list(board.missing_rostered_player_ids),
+    }
     captured_at = datetime.now(timezone.utc)
     save_waiver_evaluation_inputs(
         output_path,
@@ -501,7 +508,7 @@ def build_waiver_inputs(
         news_fresh={player_id: True for player_id in sorted(covered_ids)},
         contingencies=contingencies,
         waiver_wire_evidence=waiver_wire_refresh.evidence,
-        ros_panel_evidence=board.expert_pool_evidence,
+        ros_panel_evidence=ros_panel_evidence,
     )
     return {
         "operation": "WAIVER LIVE INPUT BUILD",
@@ -518,6 +525,9 @@ def build_waiver_inputs(
         "contingency_relationships": len(contingencies),
         "user_drop_legality_rows": len(active_supported_ids),
         "user_players_missing_value_inputs": sorted(active_supported_ids - covered_ids),
+        "league_rostered_players_missing_value_board": list(
+            board.missing_rostered_player_ids
+        ),
         "proved_locked_user_players": sorted(proved_locked),
         "fantasypros_calls": (
             board.call_plan.fantasypros_calls
@@ -548,7 +558,7 @@ def build_waiver_inputs(
             for row in waiver_wire_refresh.evidence.expert_selection
         ],
         "waiver_wire_warnings": list(waiver_wire_refresh.evidence.warnings),
-        "ros_panel": dict(board.expert_pool_evidence or {}),
+        "ros_panel": ros_panel_evidence,
         "fantasypros_remaining_after_plan": (
             board.call_plan.fantasypros_remaining_after_plan
         ),

@@ -199,6 +199,7 @@ class BoardRefreshResult:
     expert_pool: tuple[ExpertPoolMember, ...] = ()
     expert_pool_evidence: Mapping[str, Any] | None = None
     current_experts: tuple[CurrentExpert, ...] = ()
+    missing_rostered_player_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -705,8 +706,14 @@ def _canonical_rank(
 def _required_market_universe(
     snapshot_result: RefreshResult,
     market_rows: Sequence[RankObservation],
+    *,
+    require_all_rostered: bool = True,
 ) -> tuple[
-    tuple[RankObservation, ...], dict[str, str], dict[str, str], dict[str, int]
+    tuple[RankObservation, ...],
+    dict[str, str],
+    dict[str, str],
+    dict[str, int],
+    tuple[str, ...],
 ]:
     snapshot = snapshot_result.snapshot
     by_id = {row.player_id: row for row in market_rows}
@@ -717,7 +724,7 @@ def _required_market_universe(
         for player_id in owned
         if player_id in set(snapshot.tradeable_player_ids) and player_id not in by_id
     )
-    if missing_rostered:
+    if missing_rostered and require_all_rostered:
         raise CoverageIncomplete(
             "Active ownership board does not cover rostered skill players: "
             + ", ".join(missing_rostered)
@@ -757,7 +764,13 @@ def _required_market_universe(
     }
     if any(player_id not in players for player_id in board_positions):
         raise IdentityIncomplete("Required ranking universe is absent from Sleeper players")
-    return tuple(required_rows), board_positions, curve_positions, required_counts
+    return (
+        tuple(required_rows),
+        board_positions,
+        curve_positions,
+        required_counts,
+        tuple(missing_rostered),
+    )
 
 
 def _canonical_projections(
@@ -839,7 +852,10 @@ def _canonical_projections(
     known_inactive = {"IR", "PUP", "SUSP", "OUT"}
     for player_id in tuple(absent_required):
         player = sleeper_players.get(player_id)
-        if player is None or str(player.injury_status or "").upper() not in known_inactive:
+        if player is None or (
+            player.active is not False
+            and str(player.injury_status or "").upper() not in known_inactive
+        ):
             continue
         position = required_positions[player_id]
         result.extend(
@@ -849,14 +865,22 @@ def _canonical_projections(
                 week=week,
                 raw_stats=(),
                 league_points=0.0,
-                source=f"Sleeper {player.injury_status} status",
+                source=(
+                    f"Sleeper {player.injury_status} status"
+                    if player.injury_status
+                    else "Sleeper inactive status"
+                ),
                 coverage_status="known_inactive_zero",
             )
             for week in weeks
         )
         complete_positions[player_id] = position
         warning_map[player_id] = (
-            f"No weekly projection; explicit zero retained for Sleeper {player.injury_status} status",
+            (
+                f"No weekly projection; explicit zero retained for Sleeper {player.injury_status} status"
+                if player.injury_status
+                else "No weekly projection; explicit zero retained for Sleeper inactive status"
+            ),
         )
     absent_required = sorted(set(required_positions) - set(complete_positions))
     if absent_required:
@@ -970,6 +994,7 @@ def refresh_value_boards(
     expert_pool_resolver: Callable[
         [ValueInputs, datetime], ExpertPoolResolution
     ] | None = None,
+    require_all_rostered_market_coverage: bool = True,
 ) -> BoardRefreshResult:
     # During Week 1 the final Draft boards own long-term value. The current
     # weekly feed is still fetched below, but only as a separate signal.
@@ -1162,8 +1187,16 @@ def refresh_value_boards(
             is not None
         )
         market_rows = draft_market
-    required_market, positions, curve_positions, required_counts = _required_market_universe(
-        refresh, market_rows
+    (
+        required_market,
+        positions,
+        curve_positions,
+        required_counts,
+        missing_rostered_player_ids,
+    ) = _required_market_universe(
+        refresh,
+        market_rows,
+        require_all_rostered=require_all_rostered_market_coverage,
     )
     required_ids = set(curve_positions)
     if stage.mode == "ROS":
@@ -1217,10 +1250,34 @@ def refresh_value_boards(
         refresh.schedule_path, expected_season=snapshot.league.season
     )
     player_by_id = {player.player_id: player for player in snapshot.players}
+    projection_required_positions = dict(positions)
+    if not require_all_rostered_market_coverage:
+        projection_required_positions.update(
+            {
+                player_id: next(
+                    position
+                    for position in POSITION_MINIMUMS
+                    if position in {
+                        "DST" if item.upper() == "DEF" else item.upper()
+                        for item in player_by_id[player_id].positions
+                    }
+                )
+                for player_id in missing_rostered_player_ids
+                if player_id in player_by_id
+                and player_by_id[player_id].active is False
+                and any(
+                    position in {
+                        "DST" if item.upper() == "DEF" else item.upper()
+                        for item in player_by_id[player_id].positions
+                    }
+                    for position in POSITION_MINIMUMS
+                )
+            }
+        )
     canonical_projections, distribution_positions, projection_warnings = _canonical_projections(
         inputs.projection_sets,
         identity_map,
-        positions,
+        projection_required_positions,
         dict(schedule.bye_weeks),
         player_by_id,
         ranking_positions,
@@ -1479,6 +1536,7 @@ def refresh_value_boards(
                 asdict(row) for row in freshness_exclusions
             ],
             "scoring_capability": asdict(scoring_capability),
+            "missing_rostered_player_ids": list(missing_rostered_player_ids),
             "draft_anchor": {
                 "league_key": league_key,
                 "league_id": snapshot.league.league_id,
@@ -1508,6 +1566,7 @@ def refresh_value_boards(
         expert_pool=pool,
         expert_pool_evidence=dict(pool_resolution.evidence),
         current_experts=inputs.current_experts,
+        missing_rostered_player_ids=missing_rostered_player_ids,
     )
 
 
@@ -1531,6 +1590,9 @@ def board_refresh_report(result: BoardRefreshResult) -> dict[str, Any]:
         "boards_complete": result.selected_final.complete and result.market.complete,
         "required_players": result.required_players,
         "identity_matches": result.identity_matches,
+        "missing_rostered_player_ids": list(
+            getattr(result, "missing_rostered_player_ids", ())
+        ),
         "selected_experts": [
             {"expert_id": member.expert_id, "name": member.expert_name, "weight": member.weight}
             for member in getattr(result, "expert_pool", ())

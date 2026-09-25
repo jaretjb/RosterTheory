@@ -1,30 +1,28 @@
 # Waiver Assistant current status
 
-Updated: September 22, 2026 (America/Los_Angeles)
+Updated: September 25, 2026 (America/Los_Angeles)
 
-The Waiver Assistant is read-only for both leagues. Detailed requirements,
-task evidence, and exit proofs remain in `docs/WAIVER_ASSISTANT_TASKS.md`.
+The Waiver Assistant is read-only. Evidence is in
+`docs/WAIVER_ASSISTANT_TASKS.md`.
 
+- WA-026 makes retention-safe Waiver Value universal with generic 50/30/20
+  defaults, isolated league overrides, and pruning equivalence.
+- WA-027 makes league-scored season production explicit in specialist add/drop
+  evidence and requires one combined fallback score. The current league gives
+  K season points a `2.0` weight and DST a smaller `0.5` weight; other leagues
+  retain neutral defaults until separately calibrated. Fresh validation keeps
+  the incumbent kicker, removes Detroit-for-Cincinnati, and retains only San
+  Francisco and New England as affirmative DST alternatives.
+- Missing roster value evidence is now isolated instead of aborting search.
+  The uncovered player is visible and excluded from automatic drop selection;
+  missing lineup projections produce a partial, non-affirmative result. Trade's
+  stricter all-roster market gate is unchanged.
 - WA-025 separates acquisition from retention. Waiver rank is acquisition-only;
-  below-replacement weekly ranks no longer reduce keep value; injury-uncertain,
-  above-replacement ROS players are protected. Recent league-scored performance
-  is bounded. Lineup and same-position ROS gates prevent destructive cuts.
-  K/DST have rank/performance fallback, and search returns an ordered claim plan
-  with shared-drop conflicts.
-- The fresh `fourth_and_20` proof protected Caleb Williams and Rico Dowdle and
-  reproduced the requested skill and kicker moves. Updated defense evidence
-  selected Minnesota, New England, and Carolina. It evaluated 57/pruned 75,
-  made no Sleeper write, and passed Ruff plus all 661 tests.
-- WA-024 introduced weekly/Waiver/ROS scoring. WA-025 supersedes symmetric
-  add/drop treatment and applies 40/35/25 to `fourth_and_20` only. Trustworthy
-  expert panels and Latest-ECR fallbacks remain horizon-specific.
-- WA-023 values DST moves against current-week and decaying four-week
-  incumbent/streamer baselines; K/DST replacements remain position-matched.
-- WA-022 provides one-command preparation and reporting.
-- WA-017–WA-021 cover inactive projection omissions, action-first reports, DST
-  identity matching, visible omitted candidates, and fresh-rank dominance.
-- WA-012–WA-015 cover Waiver Wire, role, emerging-upside, and league policy.
+  below-replacement weekly ranks do not reduce keep value, and injury-uncertain,
+  above-replacement ROS players are protected. Calibrated weights remain local.
+- WA-023–WA-025 cover DST streaming, three-signal scoring, retention safety,
+  K/DST fallback, and ordered claim plans. WA-017–WA-022 cover input resilience,
+  reporting, identity, visible omissions, rank dominance, and one-command use.
 
-WA-006 audits recur. WA-016 remains optional fail-closed research. Replacement
-baselines use the next legal alternative. Full proofs remain in JSON. No Waiver
-milestone is active.
+Ruff and all 676 tests pass. WA-006 audits recur; WA-016 remains optional
+fail-closed research. No Waiver milestone is active.

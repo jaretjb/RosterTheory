@@ -755,13 +755,21 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
         drop_name = names.get(drop_id, drop_id) if drop_id else "open roster slot"
         lines.insert(
             6,
-            "Special-team ranks: Week "
+            "Special-team evidence: Week rank "
             + (
                 str(selected.ownership.current_week_add_rank)
                 if selected.ownership.current_week_add_rank is not None
                 else "unavailable"
             )
-            + "; ROS "
+            + "; season points "
+            + (
+                f"{selected.ownership.season_add_points:.2f} vs "
+                f"{selected.ownership.season_drop_points:.2f}"
+                if selected.ownership.season_add_points is not None
+                and selected.ownership.season_drop_points is not None
+                else "unavailable"
+            )
+            + "; ROS rank "
             + (
                 str(selected.ownership.rest_of_season_add_rank)
                 if selected.ownership.rest_of_season_add_rank is not None
