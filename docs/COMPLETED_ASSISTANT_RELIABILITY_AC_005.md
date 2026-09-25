@@ -1,6 +1,7 @@
 # AC-005 — Ranking caps and specialist performance policy
 
-Implemented September 25, 2026; issue #11. PR handoff pending.
+Implemented September 25, 2026; issue #11.
+[PR #19](https://github.com/jaretjb/RosterTheory/pull/19) awaits review/merge.
 Prerequisites: AC-003 merged in PR #17; AC-004 merged in PR #18.
 The overall reliability audit remains open: AC-006–AC-008 are not implemented.
 
