@@ -1538,7 +1538,7 @@ def _assess_special_team_candidate(
         evaluation.material_news_fresh
         and evaluation.value_inputs_complete
         and weekly_rank_complete
-        and (evaluation.projection_inputs_complete or rank_fallback_complete)
+        and (evaluation.projection_inputs_complete or (selected.same_position and rank_fallback_complete))
     )
     elite = (
         evaluation.add_position == "DST"
@@ -1644,6 +1644,12 @@ def _assess_special_team_candidate(
         )
     else:
         projection_stream_pass = selected.current_week_delta >= stream_floor
+    cross_position = selected.drop_player_id is not None and not selected.same_position
+    if cross_position:
+        # Positional ranks/season totals are not comparable across positions.
+        # Require an actual full-roster gain and preserve the displaced asset.
+        projection_stream_pass = selected.current_week_delta >= stream_floor
+        rank_priority_score = 0.0
     stream_pass = projection_stream_pass or rank_stream_pass
     gates = (
         _gate(
@@ -1679,6 +1685,20 @@ def _assess_special_team_candidate(
             ),
         ),
     )
+    if cross_position:
+        cross_safe = (
+            selected.lineup.weighted_delta >= policy.priority_minimum_lineup_gain
+            and selected.lineup.depth_delta >= -policy.maximum_depth_loss
+            and selected.risk.offense_downside_loss_delta <= policy.maximum_downside_increase
+            and selected.contingency.incremental_gate_passed
+            and not (selected.waiver_value.drop and selected.waiver_value.drop.retention_protected)
+            and selected.ownership.selected_delta >= policy.selected_value_floor
+            and selected.ownership.market_delta >= policy.market_value_floor
+        )
+        gates = (*gates, _gate(
+            "cross_position_roster_safety", cross_safe, "==", True, cross_safe,
+            "Cross-position specialist claims must preserve lineup, depth, downside, ownership and protected retention value",
+        ))
     affirmative = all(gate.passed for gate in gates)
     watch_plausible = (
         (
@@ -1734,6 +1754,11 @@ def _assess_special_team_candidate(
         )
     else:
         projection_priority_score = dst_streaming.weighted_advantage
+    if cross_position:
+        projection_priority_score = (
+            policy.special_teams_current_week_weight * selected.current_week_delta
+            + selected.lineup.weighted_delta - selected.current_week_delta
+        )
     priority_score = max(rank_priority_score, projection_priority_score)
     decision = WaiverDecisionAssessment(
         label=label,
@@ -1772,7 +1797,13 @@ def apply_waiver_policy(
         for candidate in evaluation.candidates
     )
     assessments = tuple(
-        (candidate, *_assess_candidate(evaluation, candidate, policy))
+        (candidate, *_assess_candidate(
+            replace(evaluation, projection_inputs_complete=(
+                evaluation.projection_inputs_complete and candidate.projection_inputs_complete
+            )),
+            candidate,
+            policy,
+        ))
         for candidate in policy_candidates
     )
     label_tier = {"ADD NOW": 0, "CLAIM": 0, "ACQUIRE": 0, "WATCH": 1, "PASS": 2}
@@ -1783,7 +1814,6 @@ def apply_waiver_policy(
                 label_tier[row[1].label],
                 row[0].contingency.drop_protected
                 and not row[0].contingency.incremental_gate_passed,
-                not row[0].same_position,
                 -row[1].priority_score,
                 -row[0].lineup.after_weighted_points,
                 -row[0].ownership.selected_delta,
@@ -1858,6 +1888,8 @@ def apply_waiver_policy(
     base = replace(
         evaluation,
         selected_drop_player_id=selected.drop_player_id,
+        projection_inputs_complete=(evaluation.projection_inputs_complete
+                                    and selected.projection_inputs_complete),
         selection_basis=(
             "best Waiver decision tier, then current-week-weighted special-team "
             "priority" if evaluation.add_position in {"K", "DST"} else

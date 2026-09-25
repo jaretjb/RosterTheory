@@ -2,19 +2,22 @@
 
 Updated: September 25, 2026 (America/Los_Angeles)
 
-AC-001/#7 and prerequisite PR #6 are merged. AC-002/#8 is implemented, pending
-PR review/merge. PR link: `docs/ASSISTANT_RELIABILITY_TASKS.md`.
-Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_002.md`.
-Production Waiver Value enforces evidence, weekly/depth/downside, QB holding,
-and retention gates. WATCH needs a plausible bounded move and specific blocker.
-Unknown/locked drops are excluded locally. Drop locks use actual league settings,
-matchup starters, kickoff, and byes, never scored points.
-Verification: 722 tests and Ruff pass; no live report or Sleeper write occurred.
+AC-001/#7 and prerequisite PR #6 are merged. AC-002/#8 merged in PR #16.
+AC-003/#9 is implemented; PR #17 awaits review/merge.
+Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_003.md`.
+All supported legal cross-position drops compete without same-position preference.
+Default search is exhaustive over eligible adds; an explicit budget reports
+unevaluated IDs and cannot prove a global best/no-action result. Approved moves
+stay in canonical plan/display order, including specialists. Conditional claim
+branches recheck the changed roster and cumulative losses; other combinations
+remain unvalidated. Missing evidence is visible and quarantined locally, with
+affected position dependencies blocked. AC-002 retention/safety gates remain.
+Verification: 737 tests, Ruff and diff checks pass. No live report, provider
+refresh or Sleeper write occurred.
 
-The audit is NOT closed. AC-003–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
-track safety gates, cross-position optimization, pruning/report consistency,
-ranking caps, specialist scoring, formats, freshness, and performance.
-No further implementation milestone is authorized.
+The audit is NOT closed. AC-004–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
+track Trade decisions, ranking caps, specialist scoring, formats, freshness and performance.
+No next milestone is authorized.
 
 Historical evidence remains in `docs/WAIVER_ASSISTANT_TASKS.md`:
 

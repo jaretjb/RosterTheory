@@ -24,14 +24,13 @@ from roster_theory.waiver.evaluation import (
     WaiverEvaluation,
     WaiverEvaluationOptions,
     evaluate_waiver,
-    fresh_rank_dominates,
     reconcile_current_week_inactive_omissions,
 )
 from roster_theory.waiver.ww_evidence import WaiverWireEvidence
+from roster_theory.waiver.plans import ClaimBranchCheck, validate_claim_branch
 from roster_theory.waiver.policy import (
     WaiverDecisionPolicy,
     apply_waiver_policy,
-    emerging_role_signal_strength,
     evaluation_options_for_policy,
 )
 from roster_theory.waiver.priority import (
@@ -48,7 +47,7 @@ from roster_theory.waiver.snapshot import (
 
 SUPPORTED_POSITIONS = frozenset({"QB", "RB", "WR", "TE", "K", "DST", "DEF"})
 AFFIRMATIVE_LABELS = frozenset({"ADD NOW", "CLAIM", "ACQUIRE"})
-PRUNING_VERSION = "wa-026-partial-roster-coverage-v12"
+PRUNING_VERSION = "ac-003-exhaustive-joint-pairs-v13"
 LABEL_TIER = {"ADD NOW": 0, "CLAIM": 0, "ACQUIRE": 0, "WATCH": 1, "PASS": 2}
 
 
@@ -146,6 +145,9 @@ class WaiverSearch:
     warnings: tuple[str, ...]
     sleeper_write_performed: bool
     evidence_hash: str
+    coverage_status: str = "EXHAUSTIVE_ELIGIBLE"
+    budget_excluded_player_ids: tuple[str, ...] = ()
+    claim_branch_checks: tuple[ClaimBranchCheck, ...] = ()
 
 
 def _evaluation_sort_key(evaluation: WaiverEvaluation) -> tuple[object, ...]:
@@ -178,153 +180,35 @@ def _evaluation_sort_key(evaluation: WaiverEvaluation) -> tuple[object, ...]:
     )
 
 
-def _rank_projection_dominates(
-    add: PlayerValueInput,
-    drop: PlayerValueInput,
-    *,
-    same_position: bool,
-) -> bool:
-    """Protect a potential exact upgrade without bypassing decision gates."""
-    if not same_position:
-        return False
-    add_ros = (
-        add.selected_rest_of_season_position_rank
-        if add.selected_rest_of_season_position_rank is not None
-        else add.rest_of_season_position_rank
-    )
-    drop_ros = (
-        drop.selected_rest_of_season_position_rank
-        if drop.selected_rest_of_season_position_rank is not None
-        else drop.rest_of_season_position_rank
-    )
-    ranks = (
-        add.current_week_position_rank,
-        drop.current_week_position_rank,
-        add_ros,
-        drop_ros,
-    )
-    if any(rank is None for rank in ranks):
-        return False
-    assert add.current_week_position_rank is not None
-    assert drop.current_week_position_rank is not None
-    assert add_ros is not None
-    assert drop_ros is not None
-    return bool(
-        add.current_week_position_rank < drop.current_week_position_rank
-        and add_ros < drop_ros
-        and add.raw_projection >= drop.raw_projection
-    )
+
 
 
 def _claim_plan(
     evaluations: Sequence[WaiverEvaluation],
+    *, open_active_slots: int = 1,
 ) -> tuple[WaiverClaimRecommendation, ...]:
-    affirmative = tuple(
-        row
-        for row in evaluations
-        if row.decision_label in AFFIRMATIVE_LABELS
-        and row.candidates
-        and (row.candidates[0].same_position or row.candidates[0].drop_player_id is None)
-    )
-
-    def skill_key(row: WaiverEvaluation) -> tuple[object, ...]:
-        priority = row.waiver_priority
-        performance = priority.performance_score if priority else None
-        selected = row.candidates[0]
-        ww_rank = selected.ownership.waiver_wire_market_add_rank
-        return (
-            -float(performance if performance is not None else -1.0),
-            ww_rank if ww_rank is not None else 10_000,
-            selected.ownership.current_week_add_rank or 10_000,
-            selected.ownership.rest_of_season_add_rank or 10_000,
-            row.add_player_id,
-        )
-
-    skill_pool = sorted(
-        (row for row in affirmative if row.add_position in {"QB", "RB", "WR", "TE"}),
-        key=lambda row: (
-            -float(
-                row.waiver_priority.composite_score
-                if row.waiver_priority is not None
-                and row.waiver_priority.composite_score is not None
-                else -1.0
+    # The same pair ordering owns exact results, best move, and plan priority.
+    affirmative = tuple(sorted(
+        (row for row in evaluations if row.decision_label in AFFIRMATIVE_LABELS and row.candidates),
+        key=_evaluation_sort_key,
+    ))
+    groups = tuple(f"DROP:{row.selected_drop_player_id}" if row.selected_drop_player_id
+                   else "OPEN_SLOT" for row in affirmative)
+    return tuple(
+        WaiverClaimRecommendation(
+            priority=index, add_player_id=row.add_player_id,
+            drop_player_id=row.selected_drop_player_id, position=row.add_position,
+            decision_label=str(row.decision_label), claim_group=group,
+            mutually_exclusive_priorities=tuple(
+                other for other, other_group in enumerate(groups, 1)
+                if other != index and group == other_group
+                and (group != "OPEN_SLOT" or open_active_slots <= 1)
             ),
-            row.add_player_id,
-        ),
+            waiver_value=row.waiver_priority.composite_score if row.waiver_priority else None,
+            performance_adjustment=row.waiver_priority.performance_adjustment if row.waiver_priority else 0.0,
+        )
+        for index, (row, group) in enumerate(zip(affirmative, groups), 1)
     )
-    skill: list[WaiverEvaluation] = []
-    while skill_pool and len(skill) < 4:
-        leader = skill_pool[0]
-        leader_score = float(
-            leader.waiver_priority.composite_score
-            if leader.waiver_priority is not None
-            and leader.waiver_priority.composite_score is not None
-            else -1.0
-        )
-        band = tuple(
-            row
-            for row in skill_pool
-            if float(
-                row.waiver_priority.composite_score
-                if row.waiver_priority is not None
-                and row.waiver_priority.composite_score is not None
-                else -1.0
-            )
-            >= leader_score - 2.0
-        )
-        skill.extend(sorted(band, key=skill_key))
-        band_ids = {id(row) for row in band}
-        skill_pool = [row for row in skill_pool if id(row) not in band_ids]
-
-    def specialist_key(row: WaiverEvaluation) -> tuple[object, ...]:
-        selected = row.candidates[0]
-        return (
-            -(row.decision.priority_score if row.decision else -100.0),
-            selected.ownership.current_week_add_rank or 10_000,
-            row.add_player_id,
-        )
-
-    skill = skill[:4]
-    kickers = sorted(
-        (row for row in affirmative if row.add_position == "K"),
-        key=specialist_key,
-    )[:2]
-    defenses = sorted(
-        (row for row in affirmative if row.add_position == "DST"),
-        key=specialist_key,
-    )[:3]
-    selected_rows = tuple(skill + kickers + defenses)
-    groups = tuple(
-        (
-            f"DROP:{row.selected_drop_player_id}"
-            if row.selected_drop_player_id is not None
-            else f"OPEN_SLOT:{index}"
-        )
-        for index, row in enumerate(selected_rows, 1)
-    )
-    result: list[WaiverClaimRecommendation] = []
-    for priority_number, (row, group) in enumerate(zip(selected_rows, groups), 1):
-        evidence = row.waiver_priority
-        result.append(
-            WaiverClaimRecommendation(
-                priority=priority_number,
-                add_player_id=row.add_player_id,
-                drop_player_id=row.selected_drop_player_id,
-                position=row.add_position,
-                decision_label=str(row.decision_label),
-                claim_group=group,
-                mutually_exclusive_priorities=tuple(
-                    other_priority
-                    for other_priority, other_group in enumerate(groups, 1)
-                    if other_group == group and other_priority != priority_number
-                ),
-                waiver_value=(evidence.composite_score if evidence else None),
-                performance_adjustment=(
-                    evidence.performance_adjustment if evidence else 0.0
-                ),
-            )
-        )
-    return tuple(result)
 
 
 def _validate_search_inputs(
@@ -469,17 +353,9 @@ def _validate_search_inputs(
                 f"Waiver search projections duplicate {row.player_id}/W{row.week}"
             )
         projection_map[key] = row
-    skill_roster = {
-        player_id
-        for player_id in supported_roster
-        if {
-            "DST" if position.upper() == "DEF" else position.upper()
-            for position in player_by_id[player_id].positions
-        }.intersection({"QB", "RB", "WR", "TE"})
-    }
     roster_projection_keys = {
         (player_id, week.week)
-        for player_id in skill_roster
+        for player_id in supported_roster
         for week in ordered_weeks
     }
     missing_projections = tuple(sorted(roster_projection_keys - set(projection_map)))
@@ -629,9 +505,7 @@ def _validate_search_inputs(
             if drop_legality.get(player_id) is True
         }
         for player_id in tuple(eligible):
-            positions = set(player_by_id[player_id].positions)
-            category = positions & {"K", "DST", "DEF"} or {"QB", "RB", "WR", "TE"}
-            if not any(category.intersection(player_by_id[drop_id].positions) for drop_id in legal_drops):
+            if not legal_drops:
                 eligible.remove(player_id)
                 omissions.append(WaiverSearchOmission(
                     player_id, acquisition_by_id[player_id].state, "NO_PROVED_LEGAL_DROP"
@@ -709,6 +583,7 @@ def _notable_candidates(
     roster_ids = set(user_team.player_ids)
 
     omission_reasons = {
+        "EXACT_BUDGET_NOT_EVALUATED": ("NOT_EXACTLY_EVALUATED", "not evaluated within the explicit budget; move quality is unknown"),
         "NO_AUTHORITATIVE_VALUE": (
             "MISSING_EVIDENCE",
             "authoritative rest-of-season value is missing, so a safe add/drop "
@@ -919,9 +794,15 @@ def search_waiver_candidates(
     policy: WaiverDecisionPolicy,
     options: WaiverEvaluationOptions = WaiverEvaluationOptions(),
     enable_pruning: bool = True,
+    exact_candidate_budget: int | None = None,
     now: datetime | None = None,
 ) -> WaiverSearch:
     assert_current(snapshot, now=now)
+    if exact_candidate_budget is not None and (
+        isinstance(exact_candidate_budget, bool) or not isinstance(exact_candidate_budget, int)
+        or exact_candidate_budget < 1
+    ):
+        raise ValueError("Exact candidate budget must be a positive integer")
     projections = reconcile_current_week_inactive_omissions(snapshot, projections)
     if snapshot.league_key != policy.league_key:
         raise ValueError("Waiver search policy is for a different league")
@@ -960,15 +841,6 @@ def search_waiver_candidates(
         availability_source=availability_source,
     )
     acquisition_by_id = {row.player_id: row for row in snapshot.acquisitions}
-    player_by_id = {row.player_id: row for row in snapshot.players}
-    special_team_candidates = {
-        player_id
-        for player_id in eligible_ids
-        if {
-            "DST" if position.upper() == "DEF" else position.upper()
-            for position in player_by_id[player_id].positions
-        }.intersection({"K", "DST"})
-    }
     priority_by_id = (
         build_waiver_priority_scores(
             players=snapshot.players,
@@ -985,244 +857,28 @@ def search_waiver_candidates(
         if policy.priority_enabled
         else {}
     )
-    scored_priority_candidates = tuple(
-        sorted(
-            (
-                player_id
-                for player_id in eligible_ids
-                if player_id not in special_team_candidates
-                and priority_by_id.get(player_id) is not None
-                and priority_by_id[player_id].composite_score is not None
-            ),
-            key=lambda player_id: (
-                not bool(player_by_id[player_id].active),
-                str(player_by_id[player_id].injury_status or "").upper()
-                in {"IR", "PUP", "SUSP", "OUT"},
-                not news_fresh.get(player_id, False),
-                -float(priority_by_id[player_id].composite_score or 0.0),
-                player_id,
-            ),
-        )
-    )
-    if enable_pruning and scored_priority_candidates:
-        cutoff_index = min(
-            policy.priority_exact_candidate_count,
-            len(scored_priority_candidates),
-        ) - 1
-        cutoff_score = priority_by_id[
-            scored_priority_candidates[cutoff_index]
-        ].composite_score
-        priority_exact_candidates = {
-            player_id
-            for player_id in scored_priority_candidates
-            if (
-                priority_by_id[player_id].composite_score is not None
-                and priority_by_id[player_id].composite_score >= float(cutoff_score or 0.0)
-            )
-        }
-    else:
-        priority_exact_candidates = set(scored_priority_candidates)
-    priority_prunable_candidates = (
-        set(scored_priority_candidates) - priority_exact_candidates
-        if enable_pruning
-        else set()
-    )
-    skill_roster = {
-        player_id
-        for player_id in supported_roster
-        if {
-            "DST" if position.upper() == "DEF" else position.upper()
-            for position in player_by_id[player_id].positions
-        }.intersection({"QB", "RB", "WR", "TE"})
-    }
-    normalized_slots = tuple(slot.upper() for slot in snapshot.league.roster_positions)
-    roster_qb_ids = tuple(
-        player_id
-        for player_id in supported_roster
-        if "QB" in {position.upper() for position in player_by_id[player_id].positions}
-    )
-    current_week_row = ordered_weeks[0]
-    roster_qbs_all_bye = bool(roster_qb_ids) and all(
-        player_by_id[player_id].nfl_team in current_week_row.bye_teams
-        for player_id in roster_qb_ids
-    )
-    current_roster_qb_points = max(
-        (
-            projection_map[(player_id, current_week_row.week)].league_points
-            for player_id in roster_qb_ids
-            if player_by_id[player_id].nfl_team not in current_week_row.bye_teams
-        ),
-        default=0.0,
-    )
-    qb_hold_candidates = {
-        player_id
-        for player_id in eligible_ids
-        if normalized_slots.count("QB") == 1
-        and "SUPER_FLEX" not in normalized_slots
-        and "QB" in {position.upper() for position in player_by_id[player_id].positions}
-        and (
-            roster_qbs_all_bye
-            or projection_map[(player_id, current_week_row.week)].league_points
-            <= current_roster_qb_points
-        )
-    }
-    user_team = next(
-        team for team in snapshot.teams if team.roster_id == snapshot.user_roster_id
-    )
-    user_capacity = next(
-        row
-        for row in snapshot.roster_capacity
-        if row.roster_id == snapshot.user_roster_id
-    )
-    possible_skill_drops: tuple[str | None, ...] = (
-        (None,)
-        if user_capacity.open_active_slots > 0
-        else tuple(
-            sorted(
-                player_id
-                for player_id in user_team.player_ids
-                if player_id in skill_roster and drop_legality.get(player_id) is True
-                and player_id not in drop_evidence_exclusions
-            )
-        )
-    )
-    ownership_watch_possible_candidates = {
-        player_id
-        for player_id in eligible_ids
-        if player_id not in special_team_candidates
-        and any(
-            value_map[player_id].selected_value
-            - (value_map[drop_id].selected_value if drop_id is not None else 0.0)
-            >= policy.watch_selected_value_floor
-            and value_map[player_id].market_value
-            - (value_map[drop_id].market_value if drop_id is not None else 0.0)
-            >= policy.watch_market_value_floor
-            for drop_id in possible_skill_drops
-        )
-    }
-    rank_dominance_candidates = {
-        player_id
-        for player_id in eligible_ids
-        if player_id not in special_team_candidates
-        and any(
-            drop_id is not None
-            and fresh_rank_dominates(
-                value_map[player_id],
-                value_map[drop_id],
-                same_position=bool(
-                    {position.upper() for position in player_by_id[player_id].positions}
-                    & {position.upper() for position in player_by_id[drop_id].positions}
-                    & {"QB", "RB", "WR", "TE"}
-                ),
-            )
-            for drop_id in possible_skill_drops
-        )
-    }
-    rank_projection_dominance_candidates = {
-        player_id
-        for player_id in eligible_ids
-        if player_id not in special_team_candidates
-        and any(
-            drop_id is not None
-            and _rank_projection_dominates(
-                value_map[player_id],
-                value_map[drop_id],
-                same_position=bool(
-                    {
-                        position.upper()
-                        for position in player_by_id[player_id].positions
-                    }
-                    & {
-                        position.upper()
-                        for position in player_by_id[drop_id].positions
-                    }
-                    & {"QB", "RB", "WR", "TE"}
-                ),
-            )
-            and priority_by_id.get(player_id) is not None
-            and priority_by_id[player_id].composite_score is not None
-            and priority_by_id.get(drop_id) is not None
-            and priority_by_id[drop_id].composite_score is not None
-            and float(priority_by_id[player_id].composite_score or 0.0)
-            - float(priority_by_id[drop_id].composite_score or 0.0)
-            >= policy.priority_minimum_value_gain
-            for drop_id in possible_skill_drops
-        )
-    }
-    ownership_policy_prunable_candidates = (
-        {
-            player_id
-            for player_id in eligible_ids
-            if player_id not in special_team_candidates
-            and player_id not in ownership_watch_possible_candidates
-        }
-        if enable_pruning
-        else set()
-    )
-    non_lineup_priority_candidates = special_team_candidates | qb_hold_candidates
-    contingency_add_candidates = {
-        scenario.beneficiary_player_id
-        for scenario in contingencies
-        if scenario.beneficiary_player_id in eligible_ids
-    }
-    emerging_candidate_ids = {
-        row.player_id
-        for row in (emergence_evidence.players if emergence_evidence else ())
-        if row.player_id in eligible_ids
-        and row.classification != "EFFICIENCY_ONLY"
-        and emerging_role_signal_strength(row)
-        >= policy.emerging_minimum_role_signal_strength
-        * (1 - policy.emerging_near_threshold_fraction)
-    }
-    ownership_policy_prunable_candidates -= emerging_candidate_ids
-    ownership_policy_prunable_candidates -= rank_dominance_candidates
-    ownership_policy_prunable_candidates -= set(scored_priority_candidates)
-    must_exact_candidates = (
-        set(special_team_candidates)
-        | rank_dominance_candidates
-        | rank_projection_dominance_candidates
-        | priority_exact_candidates
-        | (
-            (set(qb_hold_candidates) | contingency_add_candidates | emerging_candidate_ids)
-            & ownership_watch_possible_candidates
-        )
-        | emerging_candidate_ids
-    )
-    # Must-exact safety proofs take precedence over the bounded acquisition
-    # score budget. Otherwise a same-position exact upgrade can be hidden by a
-    # crowded higher-scoring acquisition pool.
-    priority_prunable_candidates -= must_exact_candidates
-    effective_pruning = enable_pruning
+    # No add-only score or lineup bound proves dominance for the joint,
+    # multi-objective policy. Evaluate all eligible adds unless explicitly budgeted.
+    # enable_pruning is a compatibility argument only. No currently implemented
+    # bound proves dominance for every joint policy objective.
+    effective_pruning = False
     raw_bounds = _candidate_upper_bounds(
         snapshot,
         candidate_ids=eligible_ids,
-        roster_player_ids=skill_roster,
+        roster_player_ids=supported_roster,
         weeks=ordered_weeks,
         projections=projections,
         options=options,
     )
-    search_order = tuple(
-        sorted(
-            eligible_ids,
-            key=lambda player_id: (
-                player_id not in must_exact_candidates,
-                -float(
-                    priority_by_id[player_id].composite_score
-                    if priority_by_id.get(player_id) is not None
-                    and priority_by_id[player_id].composite_score is not None
-                    else -1.0
-                ),
-                -raw_bounds[player_id],
-                -value_map[player_id].selected_value,
-                -value_map[player_id].market_value,
-                player_id,
-            ),
-        )
-    )
-    if ownership_policy_prunable_candidates == set(eligible_ids) and search_order:
-        # Preserve one exact PASS as the ranked representative when every
-        # acquisition is below the necessary ownership floors.
-        ownership_policy_prunable_candidates.remove(search_order[0])
+    search_order = tuple(sorted(
+        eligible_ids,
+        key=lambda player_id: (
+            -float(priority_by_id[player_id].composite_score or 0.0)
+            if player_id in priority_by_id else 1.0,
+            -raw_bounds[player_id], player_id,
+        ),
+    ))
+    budget_excluded = search_order[exact_candidate_budget:] if exact_candidate_budget is not None else ()
     bounds = tuple(
         WaiverSearchCandidateBound(
             player_id=player_id,
@@ -1236,87 +892,9 @@ def search_waiver_candidates(
     pruned: list[WaiverSearchPruning] = []
     contingency_cache = {}
     evaluation_cache = {}
-    baseline_score: float | None = None
-    for index, bound in enumerate(bounds):
-        if bound.player_id in priority_prunable_candidates:
-            if baseline_score is None:
-                baseline_score = _baseline_score(
-                    snapshot,
-                    roster_player_ids=skill_roster,
-                    weeks=ordered_weeks,
-                    projections=projections,
-                    options=options,
-                )
-            pruned.append(
-                WaiverSearchPruning(
-                    player_id=bound.player_id,
-                    maximum_after_weighted_points=bound.maximum_after_weighted_points,
-                    incumbent_after_weighted_points=baseline_score,
-                    reason=(
-                        "WAIVER_VALUE_BELOW_EXACT_CUTOFF; a higher-valued active "
-                        "candidate faces the same legal skill-player drop pool"
-                    ),
-                )
-            )
+    for bound in bounds:
+        if bound.player_id in budget_excluded:
             continue
-        if bound.player_id in ownership_policy_prunable_candidates:
-            if baseline_score is None:
-                baseline_score = _baseline_score(
-                    snapshot,
-                    roster_player_ids=skill_roster,
-                    weeks=ordered_weeks,
-                    projections=projections,
-                    options=options,
-                )
-            pruned.append(
-                WaiverSearchPruning(
-                    player_id=bound.player_id,
-                    maximum_after_weighted_points=bound.maximum_after_weighted_points,
-                    incumbent_after_weighted_points=baseline_score,
-                    reason=(
-                        "OWNERSHIP_UPPER_BOUND_BELOW_WATCH_FLOORS; no legal drop "
-                        "can satisfy both necessary selected and market ownership gates"
-                    ),
-                )
-            )
-            continue
-        if (
-            effective_pruning
-            and bound.player_id not in must_exact_candidates
-            and exact
-        ):
-            ordinary_affirmative = tuple(
-                row
-                for row in exact
-                if row.add_player_id not in must_exact_candidates
-                and row.decision_label in AFFIRMATIVE_LABELS
-            )
-            incumbent = (
-                min(ordinary_affirmative, key=_evaluation_sort_key)
-                if ordinary_affirmative
-                else None
-            )
-            if incumbent is None:
-                pass
-            else:
-                incumbent_selected = incumbent.candidates[0]
-                if raw_bounds[bound.player_id] + 1e-9 < incumbent_selected.lineup.after_weighted_points:
-                    pruned.extend(
-                        WaiverSearchPruning(
-                            player_id=remaining.player_id,
-                            maximum_after_weighted_points=remaining.maximum_after_weighted_points,
-                            incumbent_after_weighted_points=(
-                                incumbent_selected.lineup.after_weighted_points
-                            ),
-                            reason=(
-                                "NO_DROP_LINEUP_BELOW_AFFIRMATIVE_INCUMBENT; the exact "
-                                "no-drop upper bound cannot reach the incumbent lineup score"
-                            ),
-                        )
-                        for remaining in bounds[index:]
-                        if remaining.player_id not in must_exact_candidates
-                    )
-                    break
         exact.append(
             apply_waiver_policy(
                 evaluate_waiver(
@@ -1346,24 +924,48 @@ def search_waiver_candidates(
         )
 
     ranked = tuple(sorted(exact, key=_evaluation_sort_key))
-    claim_plan = _claim_plan(ranked)
-    best = (
-        next(
-            row
-            for row in ranked
-            if row.add_player_id == claim_plan[0].add_player_id
-            and row.selected_drop_player_id == claim_plan[0].drop_player_id
-        )
-        if claim_plan and claim_plan[0].drop_player_id is not None
-        else ranked[0] if ranked else None
+    claim_plan = _claim_plan(ranked, open_active_slots=next(
+        row.open_active_slots for row in snapshot.roster_capacity
+        if row.roster_id == snapshot.user_roster_id))
+    def evaluate_branch_pair(branch: WaiverSnapshot, add: str, drop: str | None) -> WaiverEvaluation:
+        branch_priorities = build_waiver_priority_scores(
+            players=branch.players, values=values, waiver_wire_evidence=waiver_wire_evidence,
+            owner_by_player=dict(branch.owner_by_player), current_bye_teams=ordered_weeks[0].bye_teams,
+            weights=WaiverPriorityWeights(weekly=policy.priority_weekly_weight,
+                                         waiver=policy.priority_waiver_weight, ros=policy.priority_ros_weight),
+        ) if policy.priority_enabled else {}
+        return apply_waiver_policy(evaluate_waiver(
+            branch, add_player_id=add, drop_player_id=drop, weeks=ordered_weeks, projections=projections,
+            values=values, drop_legality=drop_legality, news_fresh=news_fresh,
+            contingencies=contingencies, waiver_wire_evidence=waiver_wire_evidence,
+            waiver_priorities=branch_priorities, ros_panel_evidence=ros_panel_evidence,
+            emergence_evidence=emergence_evidence, input_bundle_hash=input_bundle_hash,
+            availability_source=availability_source, options=options, now=now,
+            drop_evidence_exclusions=drop_evidence_exclusions,
+            roster_evidence_exclusions=roster_evidence_exclusions,
+        ), policy)
+    branch_context = InSeasonContext(
+        players=snapshot.players, roster_positions=snapshot.league.roster_positions,
+        weeks=ordered_weeks, unowned_player_ids=tuple(
+            row.player_id for row in snapshot.acquisitions
+            if row.owner_roster_id is None and row.state in ACQUIRABLE_STATES),
+        evaluation_positions=("QB", "RB", "WR", "TE", "K", "DST"),
+        current_week=snapshot.manifest.current_week,
     )
+    claim_branch_checks = validate_claim_branch(
+        snapshot, tuple(row for row in ranked if row.decision_label in AFFIRMATIVE_LABELS),
+        evaluate_pair=evaluate_branch_pair, context=branch_context,
+        matrix=build_weekly_projection_matrix(branch_context, projections),
+        roster_player_ids=supported_roster, options=options, policy=policy,
+    )
+    best = ranked[0] if ranked else None
     affirmative = best is not None and best.decision_label in AFFIRMATIVE_LABELS
     if best is not None:
         baseline = best.candidates[0].lineup.before_weighted_points
     else:
         baseline = _baseline_score(
             snapshot,
-            roster_player_ids=skill_roster,
+            roster_player_ids=supported_roster,
             weeks=ordered_weeks,
             projections=projections,
             options=options,
@@ -1377,6 +979,8 @@ def search_waiver_candidates(
             else "No exactly evaluated move passed every affirmative Waiver gate"
         ),
     )
+    omissions = (*omissions, *(WaiverSearchOmission(pid, acquisition_by_id[pid].state, "EXACT_BUDGET_NOT_EVALUATED")
+                              for pid in budget_excluded))
     notable_candidates = _notable_candidates(
         snapshot,
         omissions=omissions,
@@ -1394,13 +998,11 @@ def search_waiver_candidates(
             "omissions": omissions,
             "notable_candidates": notable_candidates,
             "claim_plan": claim_plan,
+            "claim_branch_checks": claim_branch_checks,
             "pruning_version": PRUNING_VERSION,
             "contingencies": contingencies,
-            "emerging_candidate_ids": tuple(sorted(emerging_candidate_ids)),
-            "priority_exact_candidate_ids": tuple(sorted(priority_exact_candidates)),
-            "priority_prunable_candidate_ids": tuple(
-                sorted(priority_prunable_candidates)
-            ),
+            "budget_excluded_player_ids": budget_excluded,
+            "exact_candidate_budget": exact_candidate_budget,
             "waiver_priority": priority_by_id,
             "ros_panel_evidence": ros_panel_evidence,
         }
@@ -1418,8 +1020,7 @@ def search_waiver_candidates(
     )
     warnings = {
         *snapshot.warnings,
-        "Search pruning uses an exact no-drop lineup upper bound; every omitted "
-        "bound and exact-evaluation count are preserved",
+        "All eligible adds are evaluated against all supported legal drops unless an explicit budget is supplied; no add-only dominance is assumed",
         "No FAAB bid or claim-success probability was generated",
     }
     if emergence_evidence is None:
@@ -1430,40 +1031,10 @@ def search_waiver_candidates(
             warnings.add(
                 "Role and volume emergence evidence is incomplete and fails closed"
             )
-    if pruned:
+    if budget_excluded:
         warnings.add(
-            f"{len(pruned)} eligible candidate(s) were pruned by audited Waiver "
-            "Value, ownership, or lineup bounds"
-        )
-    if enable_pruning and non_lineup_priority_candidates:
-        warnings.add(
-            "QB-hold and current-week-weighted K/DST candidates were evaluated "
-            "exactly before ordinary skill-player pruning"
-        )
-    if enable_pruning and contingency_add_candidates:
-        warnings.add(
-            "Acquirable contingency beneficiaries were evaluated exactly before "
-            "ordinary skill-player pruning"
-        )
-    if enable_pruning and emerging_candidate_ids:
-        warnings.add(
-            "Potential affirmative or WATCH emergence candidates were evaluated "
-            "exactly before ordinary pruning, including every legal drop"
-        )
-    if enable_pruning and priority_exact_candidates:
-        warnings.add(
-            f"The top {len(priority_exact_candidates)} candidates by calculable "
-            "Waiver Value were evaluated exactly"
-        )
-    if priority_prunable_candidates:
-        warnings.add(
-            f"{len(priority_prunable_candidates)} lower Waiver Value candidate(s) "
-            "were safely pruned behind higher-valued candidates facing the same drop pool"
-        )
-    if ownership_policy_prunable_candidates:
-        warnings.add(
-            f"{len(ownership_policy_prunable_candidates)} skill-player candidate(s) "
-            "were proved below both necessary WATCH ownership floors"
+            f"Budget limited: {len(exact)}/{len(eligible_ids)} adds evaluated; "
+            f"{len(budget_excluded)} unevaluated. Global best/no-action conclusion is unproved."
         )
     missing_board_roster_ids = tuple(
         sorted(
@@ -1498,13 +1069,13 @@ def search_waiver_candidates(
         warnings.add(
             f"{len(roster_evidence_exclusions)} roster player(s) with incomplete "
             "weekly projections were omitted from lineup calculations; affirmative "
-            "skill-player labels remain blocked"
+            "labels depending on those positions remain blocked"
         )
     base = WaiverSearch(
-        schema_version=10,
-        evaluation_schema_version=15,
+        schema_version=11,
+        evaluation_schema_version=16,
         product="WAIVER ASSISTANT",
-        operation="COMPLETE WAIVER SEARCH",
+        operation="BUDGET-LIMITED WAIVER SEARCH" if budget_excluded else "COMPLETE WAIVER SEARCH",
         league_key=snapshot.league_key,
         manifest_id=snapshot.manifest.analysis_id,
         current_week=snapshot.manifest.current_week,
@@ -1546,6 +1117,9 @@ def search_waiver_candidates(
         warnings=tuple(sorted(warnings)),
         sleeper_write_performed=False,
         evidence_hash="",
+        coverage_status="BUDGET_LIMITED" if budget_excluded else "EXHAUSTIVE_ELIGIBLE",
+        budget_excluded_player_ids=tuple(budget_excluded),
+        claim_branch_checks=claim_branch_checks,
     )
     assert_current(snapshot, now=now)
     return replace(base, evidence_hash=stable_hash(asdict(base)))
@@ -1557,7 +1131,7 @@ def save_waiver_search(search: WaiverSearch, path: str | Path) -> Path:
 
 def load_waiver_search(path: str | Path) -> dict[str, object]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
-    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}:
+    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}:
         raise ValueError("Unsupported Waiver search-evidence schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Search evidence must be Waiver-scoped")
