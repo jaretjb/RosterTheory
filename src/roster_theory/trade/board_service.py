@@ -17,6 +17,12 @@ from roster_theory.core.errors import (
 )
 from roster_theory.core.identity import reconcile_identities
 from roster_theory.core.models import Projection, RankObservation
+from roster_theory.core.projections import (
+    currently_inactive,
+    projection_coverage_issue,
+    projection_is_complete,
+    reconcile_current_inactive_omissions,
+)
 from roster_theory.core.replacement import positional_waiver_baselines
 from roster_theory.core.scoring import STAT_ALIASES, score_stats
 from roster_theory.fantasypros import FantasyProsClient
@@ -780,10 +786,13 @@ def _canonical_projections(
     bye_by_team: Mapping[str, int],
     sleeper_players: Mapping[str, Any],
     allowed_positions: Sequence[str] = tuple(POSITION_MINIMUMS),
+    *,
+    current_week: int | None = None,
 ) -> tuple[tuple[Projection, ...], dict[str, str], dict[str, tuple[str, ...]]]:
     by_player_week: dict[tuple[str, int], Projection] = {}
     candidate_positions: dict[str, str] = {}
     weeks = tuple(int(dataset.week or 0) for dataset in datasets)
+    current_week = current_week if current_week is not None else min(weeks, default=None)
     for dataset in datasets:
         identity_by_id = {
             identity.fantasypros_id: identity for identity in dataset.identities
@@ -794,6 +803,10 @@ def _canonical_projections(
             position = identity.position if identity is not None else ""
             position = "DST" if position == "DEF" else position
             if position in set(allowed_positions) and dataset.week is not None:
+                if (player_id, dataset.week) in by_player_week:
+                    raise CoverageIncomplete(
+                        f"Duplicate canonical projection for {player_id} Week {dataset.week}"
+                    )
                 candidate_positions[player_id] = position
                 by_player_week[(player_id, dataset.week)] = replace(
                     projection, player_id=player_id
@@ -827,11 +840,9 @@ def _canonical_projections(
                 )
             else:
                 missing_weeks.append(week)
-        if missing_weeks and player_id not in required_positions:
-            continue
         if missing_weeks:
             warning_map[player_id] = tuple(
-                f"FantasyPros omitted non-bye Week {week}; explicit zero retained"
+                f"FantasyPros omitted non-bye Week {week}; projection unavailable"
                 for week in missing_weeks
             )
             rows.extend(
@@ -849,13 +860,9 @@ def _canonical_projections(
         result.extend(rows)
         complete_positions[player_id] = position
     absent_required = sorted(set(required_positions) - set(complete_positions))
-    known_inactive = {"IR", "PUP", "SUSP", "OUT"}
     for player_id in tuple(absent_required):
         player = sleeper_players.get(player_id)
-        if player is None or (
-            player.active is not False
-            and str(player.injury_status or "").upper() not in known_inactive
-        ):
+        if player is None or not currently_inactive(player):
             continue
         position = required_positions[player_id]
         result.extend(
@@ -866,21 +873,21 @@ def _canonical_projections(
                 raw_stats=(),
                 league_points=0.0,
                 source=(
-                    f"Sleeper {player.injury_status} status"
-                    if player.injury_status
-                    else "Sleeper inactive status"
+                    "Audited NFL bye" if bye_by_team.get(str(player.nfl_team)) == week
+                    else f"Sleeper {player.injury_status or 'inactive'} status"
+                    if week == current_week else "FantasyPros source omission"
                 ),
-                coverage_status="known_inactive_zero",
+                coverage_status=(
+                    "verified_bye_zero" if bye_by_team.get(str(player.nfl_team)) == week
+                    else "known_inactive_zero" if week == current_week else "source_omission_zero"
+                ),
             )
             for week in weeks
         )
         complete_positions[player_id] = position
         warning_map[player_id] = (
-            (
-                f"No weekly projection; explicit zero retained for Sleeper {player.injury_status} status"
-                if player.injury_status
-                else "No weekly projection; explicit zero retained for Sleeper inactive status"
-            ),
+            f"Sleeper {player.injury_status or 'inactive'} status applies only to Week {current_week}; "
+            "missing future projections do not establish absence",
         )
     absent_required = sorted(set(required_positions) - set(complete_positions))
     if absent_required:
@@ -888,7 +895,15 @@ def _canonical_projections(
             "Required ranked players have no FantasyPros projection identity: "
             + ", ".join(absent_required)
         )
-    return tuple(result), complete_positions, warning_map
+    normalized = reconcile_current_inactive_omissions(
+        tuple(sleeper_players.values()), current_week, tuple(result)
+    ) if current_week is not None else tuple(result)
+    for row in normalized:
+        issue = projection_coverage_issue(row, current_week=current_week)
+        if issue is not None:
+            warning_map[row.player_id] = (*warning_map.get(row.player_id, ()),
+                                          f"Week {row.week}: {issue}")
+    return normalized, complete_positions, warning_map
 
 
 def _build_provider_projection_curves(
@@ -897,6 +912,7 @@ def _build_provider_projection_curves(
     *,
     required_counts: Mapping[str, int],
     expected_weeks: Sequence[int],
+    current_week: int | None = None,
 ):
     """Build rank-slot curves from the provider distribution, not board identities.
 
@@ -911,6 +927,7 @@ def _build_provider_projection_curves(
         distribution_positions,
         required_counts=required_counts,
         expected_weeks=expected_weeks,
+        current_week=current_week,
     )
 
 
@@ -1281,6 +1298,7 @@ def refresh_value_boards(
         dict(schedule.bye_weeks),
         player_by_id,
         ranking_positions,
+        current_week=snapshot.manifest.current_week,
     )
     weeks = tuple(week.week for week in snapshot.weeks)
     curves = _build_provider_projection_curves(
@@ -1288,6 +1306,7 @@ def refresh_value_boards(
         distribution_positions,
         required_counts=required_counts,
         expected_weeks=weeks,
+        current_week=snapshot.manifest.current_week,
     )
     raw_points = {
         player_id: sum(
@@ -1427,7 +1446,9 @@ def refresh_value_boards(
                 ),
                 projected_points=(
                     current_projection[player_id].league_points
-                    if player_id in current_projection
+                    if player_id in current_projection and projection_is_complete(
+                        current_projection[player_id], current_week=snapshot.manifest.current_week
+                    )
                     else None
                 ),
                 matchup_adjustment=0.0,

@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from roster_theory.waiver.evaluation import ContingencyScenarioInput, evaluate_waiver
-from roster_theory.waiver.evaluation import PlayerValueInput
+from roster_theory.waiver.evaluation import PlayerValueInput, WaiverEvaluationOptions
 from roster_theory.core.models import Projection
 from roster_theory.core.errors import RosterIllegal
 from roster_theory.inseason.evaluation import InSeasonWeek
@@ -368,6 +368,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         add_injury_status=None,
         league_key="league_alpha",
         policy_path=POLICY_PATH,
+        allow_partial_schedule=False,
     ):
         snapshot = waiver_snapshot(
                 add_state=state,
@@ -387,6 +388,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
             drop_legality=legality(),
             news_fresh={"add": news_fresh},
             now=NOW,
+            options=WaiverEvaluationOptions(allow_partial_schedule=allow_partial_schedule),
         )
         return apply_waiver_policy(unclassified, load_waiver_policy(policy_path))
 
@@ -859,13 +861,17 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         cases = (
             self.evaluate(news_fresh=False),
             self.evaluate(value_rows=partial_values),
-            self.evaluate(projection_rows=partial_projections),
             self.evaluate(add_injury_status="OUT"),
         )
         for result in cases:
             with self.subTest(warnings=result.warnings):
                 self.assertEqual(result.decision_label, "WATCH")
                 self.assertNotIn(result.decision_label, {"ADD NOW", "CLAIM"})
+        partial = self.evaluate(
+            projection_rows=partial_projections, allow_partial_schedule=True
+        )
+        self.assertFalse(partial.projection_inputs_complete)
+        self.assertNotIn(partial.decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
 
     def test_evidence_hash_changes_with_policy_and_replay_fields_are_populated(self):
         result = self.evaluate()
