@@ -8,6 +8,7 @@ from typing import Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, RosterIllegal
 from roster_theory.core.models import Projection
+from roster_theory.core.projections import projection_is_complete
 from roster_theory.core.provenance import stable_hash
 from roster_theory.inseason.evaluation import (
     InSeasonContext,
@@ -24,7 +25,6 @@ from roster_theory.waiver.evaluation import (
     WaiverEvaluationOptions,
     evaluate_waiver,
     fresh_rank_dominates,
-    projection_coverage_is_complete,
     reconcile_current_week_inactive_omissions,
 )
 from roster_theory.waiver.ww_evidence import WaiverWireEvidence
@@ -485,7 +485,9 @@ def _validate_search_inputs(
             key
             for key in roster_projection_keys
             if key in projection_map
-            if not projection_coverage_is_complete(projection_map[key].coverage_status)
+            if not projection_is_complete(
+                projection_map[key], current_week=snapshot.manifest.current_week
+            )
         )
     )
     roster_projection_exclusions = {
@@ -562,7 +564,9 @@ def _validate_search_inputs(
         if special_positions and (
             not incumbent_special_keys.issubset(projection_map)
             or any(
-                not projection_coverage_is_complete(projection_map[key].coverage_status)
+                not projection_is_complete(
+                    projection_map[key], current_week=snapshot.manifest.current_week
+                )
                 for key in incumbent_special_keys
                 if key in projection_map
             )
@@ -584,7 +588,9 @@ def _validate_search_inputs(
             )
             continue
         if any(
-            not projection_coverage_is_complete(projection_map[key].coverage_status)
+            not projection_is_complete(
+                projection_map[key], current_week=snapshot.manifest.current_week
+            )
             for key in expected
         ):
             omissions.append(
@@ -644,6 +650,7 @@ def _candidate_upper_bounds(
         unowned_player_ids=tuple(sorted(candidate_ids)),
         evaluation_positions=("QB", "RB", "WR", "TE", "K", "DST"),
         current_status_week_only=True,
+        current_week=snapshot.manifest.current_week,
     )
     matrix = build_weekly_projection_matrix(context, projections)
     return {
@@ -874,6 +881,7 @@ def _baseline_score(
         unowned_player_ids=(),
         evaluation_positions=("QB", "RB", "WR", "TE", "K", "DST"),
         current_status_week_only=True,
+        current_week=snapshot.manifest.current_week,
     )
     matrix = build_weekly_projection_matrix(context, projections)
     return weighted_lineup_score(context, matrix, roster_player_ids, options)

@@ -6,12 +6,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from roster_theory.core.models import Projection
+from roster_theory.core.projections import projection_is_complete
 from roster_theory.core.scoring import score_stats
 from roster_theory.sleeper import SleeperClient, resolve_league_policy_path
 from roster_theory.waiver.evaluation import (
     ContingencyScenarioInput,
     PlayerValueInput,
-    projection_coverage_is_complete,
     save_waiver_evaluation_inputs,
 )
 from roster_theory.waiver.expert_panel import WaiverRosPanelSelector
@@ -178,6 +178,9 @@ def load_contingency_inputs(
 ) -> tuple[ContingencyScenarioInput, ...]:
     if path is None:
         return ()
+    current_week = getattr(getattr(snapshot, "manifest", None), "current_week", None)
+    if current_week is None:
+        current_week = min((week.week for week in snapshot.weeks), default=None)
     value = json.loads(Path(path).read_text(encoding="utf-8"))
     if int(value.get("schema_version") or 0) != 1:
         raise ValueError("Unsupported Waiver contingency-audit schema")
@@ -237,11 +240,11 @@ def load_contingency_inputs(
                     ),
                     coverage_status=(
                         "complete"
-                        if projection_coverage_is_complete(
-                            beneficiary_projection.coverage_status
+                        if projection_is_complete(
+                            beneficiary_projection, current_week=current_week
                         )
-                        and projection_coverage_is_complete(
-                            teammate_projection.coverage_status
+                        and projection_is_complete(
+                            teammate_projection, current_week=current_week
                         )
                         else "partial"
                     ),

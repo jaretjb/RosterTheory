@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from math import sqrt
+from math import isfinite, sqrt
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.isotonic import MonotoneCurve, fit_nonincreasing_curve
 from roster_theory.core.models import Projection, RankObservation
+from roster_theory.core.projections import projection_coverage_issue
 from roster_theory.core.provenance import DataStamp, stable_hash
 from roster_theory.providers.cache import atomic_write_json
 
@@ -42,6 +43,7 @@ class ProjectionCurve:
     raw_player_ranks: tuple[tuple[str, int], ...]
     source_mode: str
     weeks: tuple[int, ...]
+    excluded_players: tuple[tuple[str, str], ...] = ()
 
     def points_for_rank(self, rank: int) -> float:
         values = dict(self.slot_points)
@@ -268,37 +270,59 @@ def build_projection_curves(
     *,
     required_counts: Mapping[str, int],
     expected_weeks: Sequence[int] = (),
+    current_week: int | None = None,
 ) -> tuple[ProjectionCurve, ...]:
     by_player: dict[str, list[Projection]] = {}
+    current_week = current_week if current_week is not None else min(expected_weeks, default=None)
     for projection in projections:
         by_player.setdefault(projection.player_id, []).append(projection)
     curves: list[ProjectionCurve] = []
     for position, required_count in sorted(required_counts.items()):
         candidates: list[tuple[str, float]] = []
         source_modes: set[str] = set()
+        excluded: list[tuple[str, str]] = []
         for player_id, player_position in player_positions.items():
             if player_position != position:
                 continue
             rows = by_player.get(player_id, [])
             if not rows:
+                excluded.append((player_id, "Missing projection rows"))
+                continue
+            issues = tuple(
+                issue for row in rows
+                if (issue := projection_coverage_issue(
+                    row, current_week=current_week
+                )) is not None
+            )
+            if issues:
+                excluded.append((player_id, "; ".join(sorted(set(issues)))))
                 continue
             horizons = {row.horizon for row in rows}
             if horizons == {"ROS"}:
                 if len(rows) != 1:
                     raise CoverageIncomplete(f"Duplicate direct ROS projection for {player_id}")
-                source_modes.add("DIRECT-ROS")
+                source_mode = "DIRECT-ROS"
             elif horizons == {"WEEKLY"}:
                 weeks = {row.week for row in rows}
+                if len(weeks) != len(rows):
+                    raise CoverageIncomplete(f"Duplicate weekly projection for {player_id}")
                 if expected_weeks and weeks != set(expected_weeks):
+                    excluded.append((player_id, "Missing expected weekly projections"))
                     continue
-                source_modes.add("SUMMED-WEEKLY")
+                source_mode = "SUMMED-WEEKLY"
             else:
                 raise CoverageIncomplete(f"Mixed projection horizons for {player_id}")
-            candidates.append((player_id, sum(row.league_points for row in rows)))
+            total = sum(row.league_points for row in rows)
+            if not isfinite(total):
+                excluded.append((player_id, "Nonfinite projection horizon total"))
+                continue
+            source_modes.add(source_mode)
+            candidates.append((player_id, total))
         if len(candidates) < required_count:
             raise CoverageIncomplete(
                 f"{position} projection distribution has {len(candidates)} players; "
-                f"requires {required_count}"
+                f"requires {required_count}; excluded: "
+                + "; ".join(f"{player_id}: {reason}" for player_id, reason in sorted(excluded))
             )
         if len(source_modes) != 1:
             raise CoverageIncomplete("A projection curve cannot mix direct ROS and weekly sums")
@@ -315,6 +339,7 @@ def build_projection_curves(
                 raw_player_ranks=tuple(sorted(raw_ranks)),
                 source_mode=next(iter(source_modes)),
                 weeks=tuple(sorted(expected_weeks)),
+                excluded_players=tuple(sorted(excluded)),
             )
         )
     return tuple(curves)
