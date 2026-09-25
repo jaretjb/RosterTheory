@@ -459,7 +459,7 @@ class WaiverEvaluationTests(unittest.TestCase):
                 drop="Bench Receiver",
                 weeks=weeks(),
                 projections=tuple(
-                    row for row in projections() if not (row.player_id == "add" and row.week == 2)
+                    row for row in projections() if not (row.player_id == "add" and row.week == 3)
                 ),
                 values=values(),
                 drop_legality=legality(),

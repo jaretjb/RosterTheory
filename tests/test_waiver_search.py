@@ -775,7 +775,7 @@ class WaiverSearchTests(unittest.TestCase):
 
     def test_verified_bye_zero_counts_as_complete_projection_coverage(self):
         projection_rows = tuple(
-            replace(row, coverage_status="verified_bye_zero")
+            replace(row, coverage_status="verified_bye_zero", league_points=0.0)
             if row.player_id == "add" and row.week == 2
             else row
             for row in complete_projections()

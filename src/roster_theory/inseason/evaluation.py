@@ -8,6 +8,10 @@ from typing import Iterable, Mapping, Protocol, Sequence
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.lineup import LineupPlayer, LineupResult, optimize_lineup
 from roster_theory.core.models import Player, Projection
+from roster_theory.core.projections import (
+    currently_inactive,
+    projection_coverage_issue,
+)
 
 
 SKILL_POSITIONS = frozenset({"QB", "RB", "WR", "TE"})
@@ -15,7 +19,6 @@ STARTABLE_SKILL_SLOTS = frozenset(
     {"QB", "RB", "WR", "TE", "FLEX", "WRRB_FLEX", "REC_FLEX", "SUPER_FLEX"}
 )
 DEFAULT_EVALUATION_POSITIONS = ("QB", "RB", "WR", "TE")
-KNOWN_INACTIVE = frozenset({"IR", "PUP", "SUSP", "OUT"})
 
 
 class ImpactOptions(Protocol):
@@ -39,7 +42,13 @@ class InSeasonContext:
     weeks: tuple[InSeasonWeek, ...]
     unowned_player_ids: tuple[str, ...]
     evaluation_positions: tuple[str, ...] = DEFAULT_EVALUATION_POSITIONS
-    current_status_week_only: bool = False
+    current_status_week_only: bool = True
+    current_week: int | None = None
+    allow_scenario_projections: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.current_status_week_only:
+            raise ValueError("Current player status cannot establish absence in future weeks")
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +59,7 @@ class ProjectionCell:
     availability: str
     source: str | None
     warnings: tuple[str, ...] = ()
+    coverage_status: str = "complete"
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,6 +201,10 @@ def build_weekly_projection_matrix(
     cells: list[ProjectionCell] = []
     warnings: list[str] = []
     evaluation_positions = set(context.evaluation_positions)
+    current_week = (
+        context.current_week if context.current_week is not None
+        else min((week.week for week in context.weeks), default=None)
+    )
     for player in context.players:
         normalized_positions = {
             "DST" if position.upper() == "DEF" else position.upper()
@@ -201,37 +215,49 @@ def build_weekly_projection_matrix(
         for week in context.weeks:
             projection = by_key.get((player.player_id, week.week))
             cell_warnings: list[str] = []
-            if projection is None:
-                points = None
-                source = None
-                availability = "MISSING"
-                cell_warnings.append("Missing weekly projection")
-                warnings.append(f"{player.player_id} Week {week.week}: missing projection")
-            elif player.nfl_team in week.bye_teams:
+            coverage_status = projection.coverage_status if projection else "missing"
+            source = projection.source if projection else None
+            issue = (
+                projection_coverage_issue(
+                    projection, current_week=current_week,
+                    allow_scenario=context.allow_scenario_projections,
+                ) if projection else "Missing weekly projection"
+            )
+            if player.nfl_team in week.bye_teams:
                 points = 0.0
-                source = projection.source
+                source = "Audited NFL bye"
                 availability = "BYE"
+                coverage_status = "verified_bye_zero"
             elif (
-                (not context.current_status_week_only or week.week == context.weeks[0].week)
-                and (not player.active or str(player.injury_status or "").upper() in KNOWN_INACTIVE)
+                week.week == current_week and currently_inactive(player)
             ):
                 points = 0.0
-                source = projection.source
+                source = f"Sleeper {player.injury_status or 'inactive'} status"
                 availability = "INACTIVE"
+                coverage_status = "known_inactive_zero"
                 cell_warnings.append(
                     f"Current status: {player.injury_status or 'inactive player directory row'}"
                 )
+            elif issue is not None:
+                points = None
+                availability = "MISSING"
+                cell_warnings.append(issue)
+                warnings.append(f"{player.player_id} Week {week.week}: missing projection ({issue})")
             else:
                 points = float(projection.league_points)
-                source = projection.source
-                availability = "ACTIVE"
-                if player.injury_status:
+                status = projection.coverage_status.casefold()
+                availability = (
+                    "BYE" if status == "verified_bye_zero"
+                    else "INACTIVE" if status in {
+                        "known_inactive_zero", "verified_inactive_zero", "scenario_inactive_zero"
+                    } else "ACTIVE"
+                )
+                if player.injury_status or player.active is False:
                     cell_warnings.append(
-                        f"Current status: {player.injury_status}"
+                        f"Current status: {player.injury_status or 'inactive player directory row'}"
                         + (
                             "; future availability is unverified"
-                            if context.current_status_week_only
-                            and week.week != context.weeks[0].week
+                            if week.week != current_week and availability == "ACTIVE"
                             else ""
                         )
                     )
@@ -243,6 +269,7 @@ def build_weekly_projection_matrix(
                     availability=availability,
                     source=source,
                     warnings=tuple(cell_warnings),
+                    coverage_status=coverage_status,
                 )
             )
     ordered = tuple(sorted(cells, key=lambda row: (row.player_id, row.week)))

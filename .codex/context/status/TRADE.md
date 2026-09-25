@@ -1,6 +1,20 @@
 # Trade Assistant current status
 
-Updated: September 21, 2026 (America/Los_Angeles)
+Updated: September 25, 2026 (America/Los_Angeles)
+
+Current handoff: AC-001 audit cleanup is implemented and tested, pending PR
+review. Current injury status no longer erases future supplied projections, and
+source omissions remain missing evidence rather than complete active zeroes.
+Provider normalization and rank-slot curves use the same provenance contract.
+All 696 tests and Ruff pass; no live provider call or Sleeper write occurred.
+Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
+
+The audit remains open. AC-002–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
+track scoped missing-player recovery, verdict/secondary-move consistency,
+format/freshness/provenance support, and integration/performance work. AC-002
+(issue #8) is next; no further implementation milestone is active.
+TA-1312 ROS-panel resilience was previously completed on September 23, as
+recorded in `ACTIVE_MILESTONE.md`; the older status below is historical.
 
 Stopping point: TA-1309 Phase 13 read-only gate is complete. TA-1301–TA-1309
 are complete; TA-1310 retains empirical rolling-origin calibration after
