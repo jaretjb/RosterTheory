@@ -229,7 +229,7 @@ class WaiverPriorityTests(unittest.TestCase):
             owner_by_player={"owned": "1"},
         )["add"]
         self.assertEqual(score.performance_adjustment, 6.0)
-        self.assertAlmostEqual(score.composite_score, score.base_score + 6.0)
+        self.assertAlmostEqual(score.composite_score, min(100.0, score.base_score + 6.0))
 
 
 if __name__ == "__main__":

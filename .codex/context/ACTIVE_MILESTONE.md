@@ -1,17 +1,19 @@
 # Active milestone
 
-AC-004 — Consistent Trade decisions and secondary moves (issue #10) is implemented,
-PR #18 awaits review/merge. Authorized by the request to merge PR #17 and start #10.
-Load only AC-004 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
-Implement common entered/search decision axes and verdicts, gate-aware required
-secondary moves with retention protection, and truthful provisional/bounded
-coverage. Preserve AC-002 safety; no Waiver policy or calibration changes.
-Verification: 746 tests, Ruff and diff checks pass. Stop at the tested PR handoff.
+AC-005 — Explicit ranking caps and specialist performance policy (issue #11) is
+implemented; PR #19 awaits review/merge. Authorized by the request to merge PR #18
+and start #11. No next milestone is authorized.
+Load only AC-005 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
+Implement weekly ranking caps independent of replacement normalization, truthful
+specialist projection/performance paths, scale/sample-aware universal K/DST
+production influence, and finite/override validation. Preserve prior safety gates.
+No historical calibration claim or cross-league result transfer is authorized.
+Add regressions, run the full suite and Ruff, and stop at a tested PR handoff.
 
 AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
 all CI checks. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
-AC-002/#8 and AC-003/#9 merged in PRs #16 and #17 with all checks passing.
-Baseline: 737 tests and Ruff pass. AC-005–AC-008 remain planned; the audit is open.
+AC-002/#8 through AC-004/#10 merged in PRs #16–#18 with all checks passing.
+Baseline: 746 tests and Ruff pass. AC-006–AC-008 remain planned; the audit is open.
 All league actions remain read-only.
 
 WA-027 — League-scored specialist performance weighting completed September

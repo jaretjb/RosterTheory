@@ -36,6 +36,7 @@ from roster_theory.waiver.policy import (
 from roster_theory.waiver.priority import (
     WaiverPriorityWeights,
     build_waiver_priority_scores,
+    weekly_rank_eligible,
 )
 from roster_theory.waiver.snapshot import (
     ACQUIRABLE_STATES,
@@ -168,7 +169,8 @@ def _evaluation_sort_key(evaluation: WaiverEvaluation) -> tuple[object, ...]:
         -priority_score,
         -acquisition_priority,
         -selected.lineup.after_weighted_points,
-        selected.ownership.current_week_add_rank or 10_000,
+        (selected.ownership.current_week_add_rank
+         if weekly_rank_eligible(selected.ownership.current_week_add_rank, evaluation.add_position) else 10_000),
         selected.ownership.rest_of_season_add_rank or 10_000,
         -selected.ownership.selected_delta,
         -selected.ownership.market_delta,
@@ -651,8 +653,8 @@ def _notable_candidates(
                 ):
                     continue
                 if (
-                    value.current_week_position_rank is not None
-                    and roster_value.current_week_position_rank is not None
+                    weekly_rank_eligible(value.current_week_position_rank, position)
+                    and weekly_rank_eligible(roster_value.current_week_position_rank, position)
                     and value.current_week_position_rank
                     < roster_value.current_week_position_rank
                 ):
@@ -1073,7 +1075,7 @@ def search_waiver_candidates(
         )
     base = WaiverSearch(
         schema_version=11,
-        evaluation_schema_version=16,
+        evaluation_schema_version=17,
         product="WAIVER ASSISTANT",
         operation="BUDGET-LIMITED WAIVER SEARCH" if budget_excluded else "COMPLETE WAIVER SEARCH",
         league_key=snapshot.league_key,
