@@ -1,7 +1,7 @@
 # AC-002 — Candidate-scoped safety and transaction legality
 
 Issue: [#8](https://github.com/jaretjb/RosterTheory/issues/8). Implemented September
-25, 2026; tested PR handoff, pending review/merge. PR link recorded in the tracker.
+25, 2026; tested handoff in [PR #16](https://github.com/jaretjb/RosterTheory/pull/16), pending review/merge.
 Findings: W3, W5, T3, D1. AC-001/#7 and prerequisite PR #6 are merged.
 
 ## Behavior

@@ -13,7 +13,7 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 | Milestone | Issue | State |
 | --- | --- | --- |
 | AC-001 | [#7](https://github.com/jaretjb/RosterTheory/issues/7) | Merged in [PR #15](https://github.com/jaretjb/RosterTheory/pull/15) |
-| AC-002 | [#8](https://github.com/jaretjb/RosterTheory/issues/8) | Implemented; tested PR handoff |
+| AC-002 | [#8](https://github.com/jaretjb/RosterTheory/issues/8) | Implemented in [PR #16](https://github.com/jaretjb/RosterTheory/pull/16); pending review/merge |
 | AC-003 | [#9](https://github.com/jaretjb/RosterTheory/issues/9) | Planned |
 | AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Planned |
 | AC-005 | [#11](https://github.com/jaretjb/RosterTheory/issues/11) | Planned |
@@ -42,7 +42,8 @@ subset. Full suite and Ruff must pass. No live data is required for this repair.
 
 ## AC-002 — Candidate-scoped safety and transaction legality
 
-Status: IMPLEMENTED, pending PR review/merge. Findings: W3, W5, T3, D1.
+Status: IMPLEMENTED in [PR #16](https://github.com/jaretjb/RosterTheory/pull/16),
+pending review/merge. Findings: W3, W5, T3, D1.
 Depends on AC-001 (merged). Evidence:
 `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_002.md` (722 tests and Ruff).
 
