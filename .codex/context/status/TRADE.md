@@ -11,12 +11,14 @@ bypass entered gates. Required secondary moves prioritize feasible whole-package
 outcomes, protect injured positive ownership value, and retain value on lineup
 ties. Received-asset drops are unsafe. Missing evidence stays locally disclosed;
 bounded secondary combinations are not claimed exhaustive. ECR-only pricing is
-visibly provisional. Verification: 746 tests, Ruff and diff checks pass.
+visibly provisional. Verification: 776 tests, Ruff and diff checks pass.
 No live report, provider refresh or Sleeper write occurred.
 
-The audit remains open. AC-005–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
-track ranking/scoring, formats, freshness, provenance, integration and performance.
-AC-005 is authorized separately on the Waiver track; no further Trade implementation is authorized.
+AC-005 merged in PR #19. AC-006/#12 is implemented; PR handoff pending.
+Format mapping, custom-scoring disclosures, premium raw-stat scoring and season-aware
+resources are covered by `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_006.md`.
+The audit remains open: AC-007–AC-008 cover freshness and integration/performance.
+No next milestone is authorized.
 
 Prior work:
 

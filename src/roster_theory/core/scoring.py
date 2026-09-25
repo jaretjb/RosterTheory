@@ -52,6 +52,8 @@ STAT_ALIASES: dict[str, tuple[str, ...]] = {
     "xpmiss": ("xpmiss",),
 }
 
+POSITION_RECEPTION_BONUSES = {"bonus_rec_rb": "RB", "bonus_rec_wr": "WR", "bonus_rec_te": "TE"}
+
 
 def _number(value: Any) -> float | None:
     if value in (None, "", "-"):
@@ -75,12 +77,24 @@ class ScoringResult:
 
 
 def score_stats(
-    stats: Mapping[str, Any], scoring: Mapping[str, Any]
+    stats: Mapping[str, Any], scoring: Mapping[str, Any], *, position: str | None = None
 ) -> ScoringResult:
     """Score supplied stats and report every non-zero unsupported setting."""
     total = 0.0
     used: list[str] = []
     supported = set(STAT_ALIASES)
+    if position and position.upper() in {"QB", "RB", "WR", "TE", "K", "DST", "DEF"}:
+        supported.update(POSITION_RECEPTION_BONUSES)
+        receptions = next((_number(stats.get(alias)) for alias in STAT_ALIASES["rec"]
+                           if _number(stats.get(alias)) is not None), None)
+        for setting, primary in POSITION_RECEPTION_BONUSES.items():
+            if position.upper() == primary and receptions is None and (_number(scoring.get(setting)) or 0.0):
+                supported.discard(setting)
+            if position.upper() == primary and receptions is not None:
+                multiplier = _number(scoring.get(setting)) or 0.0
+                total += multiplier * receptions
+                if multiplier:
+                    used.append(setting)
     for setting, aliases in STAT_ALIASES.items():
         multiplier = _number(scoring.get(setting)) or 0.0
         if multiplier == 0.0:
