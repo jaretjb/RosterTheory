@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from roster_theory.providers.formats import validate_provider_scope
+
 import json
 import re
 import time
@@ -967,6 +969,7 @@ def refresh_waiver_wire_evidence(
     datasets: dict[str, RankingDataset] = {}
     for name, expert_id in definitions:
         record = records[name]
+        validate_provider_scope(record["payload"], season=season, scoring=config.scoring)
         dataset = normalize_rankings(
             record["payload"],
             requested_horizon="WAIVER",
