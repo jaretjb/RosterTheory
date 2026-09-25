@@ -35,6 +35,8 @@ from roster_theory.waiver.priority import (
     build_waiver_priority_scores,
 )
 from roster_theory.waiver.search import (
+    AFFIRMATIVE_LABELS,
+    _evaluation_sort_key,
     WaiverSearch,
     save_waiver_search,
     search_waiver_candidates,
@@ -305,6 +307,7 @@ def search_waivers(
     client: SleeperClient | None = None,
     now: datetime | None = None,
     enable_pruning: bool = True,
+    exact_candidate_budget: int | None = None,
 ) -> WaiverSearchResult:
     input_check_time = now or datetime.now(timezone.utc)
     input_path = Path(inputs_path)
@@ -337,6 +340,7 @@ def search_waivers(
         availability_source=inputs.availability_source,
         policy=policy,
         enable_pruning=enable_pruning,
+        exact_candidate_budget=exact_candidate_budget,
         # Evaluate the immutable bundle and refreshed league snapshot at the
         # point when they passed the admission gate. Exhaustive search may run
         # for several minutes, so individual candidates must not acquire
@@ -367,7 +371,7 @@ def waiver_search_report(result: WaiverSearchResult) -> dict[str, Any]:
 def waiver_search_action_summary(result: WaiverSearchResult) -> str:
     search = result.search
     if search.recommended_action == "NO ACTION" or search.best_add_player_id is None:
-        return "NO ACTION"
+        return "NO ACTION AMONG EVALUATED MOVES" if search.budget_excluded_player_ids else "NO ACTION"
     names = {
         player.player_id: player.name for player in result.refresh.snapshot.players
     }
@@ -377,7 +381,8 @@ def waiver_search_action_summary(result: WaiverSearchResult) -> str:
         else "open roster slot"
     )
     return (
-        f"{search.best_decision_label}: add "
+        ("AMONG EVALUATED MOVES: " if search.budget_excluded_player_ids else "")
+        + f"{search.best_decision_label}: add "
         f"{names.get(search.best_add_player_id, search.best_add_player_id)}; drop {drop}"
     )
 
@@ -426,16 +431,9 @@ def _special_team_lines(
             for row in evaluations
             if row.add_position == position and row.candidates
         ),
-        key=lambda row: (
-            row.candidates[0].ownership.current_week_add_rank or 10_000,
-            -(
-                row.candidates[0].dst_streaming.current_week_advantage
-                if position == "DST" and row.candidates[0].dst_streaming.applicable
-                else row.candidates[0].current_week_delta
-            ),
-            row.add_player_id,
-        ),
-    )[:limit]
+        key=lambda row: (row.decision_label not in AFFIRMATIVE_LABELS, _evaluation_sort_key(row)),
+    )
+    ranked = [row for index, row in enumerate(ranked) if index < limit or row.decision_label in AFFIRMATIVE_LABELS]
     lines: list[str] = []
     for evaluation in ranked:
         selected = evaluation.candidates[0]
@@ -474,7 +472,7 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
             " | alternatives "
             + ", ".join(f"#{number}" for number in claim.mutually_exclusive_priorities)
             if claim.mutually_exclusive_priorities
-            else " | independent"
+            else " | combine only in a validated branch"
         )
         plan_lines.append(
             f"{claim.priority}. {claim.position} {add_name} -> drop {drop_name}"
@@ -527,7 +525,15 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
         ]
 
     if plan_lines:
-        lines = ["CLAIM PLAN", *plan_lines, "", *lines]
+        lines = ["CLAIM PLAN - ranked single-move options", *plan_lines, "", *lines]
+        lines.extend(("", "CONDITIONAL CLAIM BRANCH CHECKS"))
+        for branch in search.claim_branch_checks:
+            sequence = " then ".join(f"#{priority}" for priority in branch.priorities)
+            lines.append(f"- {sequence}: {'VALIDATED' if branch.accepted else 'DO NOT COMBINE'} | {branch.reason}")
+        lines.append("Only the listed successful prefixes are validated. Other outcomes/combinations require a new report; claims were not submitted.")
+    if search.budget_excluded_player_ids:
+        lines = [f"BUDGET LIMITED: {len(search.exact_evaluations)}/{len(search.eligible_candidate_ids)} adds evaluated; best overall move is unproved.",
+                 "Not evaluated: " + ", ".join(names.get(pid, pid) for pid in search.budget_excluded_player_ids), *lines]
 
     dst_lines = _special_team_lines(search.exact_evaluations, names, "DST")
     if dst_lines:
@@ -547,6 +553,9 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
                 rank_details.append(f"ROS {candidate.position}{candidate.rest_of_season_position_rank}")
             team = f" {candidate.nfl_team}" if candidate.nfl_team else ""
             reason = (
+                "not exactly evaluated; move quality unknown"
+                if candidate.category == "NOT_EXACTLY_EVALUATED"
+                else
                 "incomplete value coverage; monitor only"
                 if candidate.category == "MISSING_EVIDENCE"
                 else "not enough of an upgrade after accounting for the drop"
