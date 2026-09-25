@@ -12,7 +12,7 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 
 | Milestone | Issue | State |
 | --- | --- | --- |
-| AC-001 | [#7](https://github.com/jaretjb/RosterTheory/issues/7) | Implemented; tested, pending PR review |
+| AC-001 | [#7](https://github.com/jaretjb/RosterTheory/issues/7) | Implemented; [PR #15](https://github.com/jaretjb/RosterTheory/pull/15), pending review |
 | AC-002 | [#8](https://github.com/jaretjb/RosterTheory/issues/8) | Planned |
 | AC-003 | [#9](https://github.com/jaretjb/RosterTheory/issues/9) | Planned |
 | AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Planned |
