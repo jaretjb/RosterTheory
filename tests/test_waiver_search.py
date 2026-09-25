@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from roster_theory.cli import build_parser, command_waiver_search
-from roster_theory.core.errors import CoverageIncomplete, StaleData
+from roster_theory.core.errors import StaleData
 from roster_theory.core.models import Projection
 from roster_theory.core.provenance import stable_hash
 from roster_theory.inseason.evaluation import InSeasonContext, build_weekly_projection_matrix
@@ -128,6 +128,7 @@ def search(
     contingencies=(),
     role_evidence=None,
     waiver_wire_evidence=None,
+    ros_panel_evidence=None,
 ):
     return search_waiver_candidates(
         snapshot or complete_search_snapshot(),
@@ -138,6 +139,7 @@ def search(
         news_fresh=news(),
         contingencies=contingencies,
         waiver_wire_evidence=waiver_wire_evidence,
+        ros_panel_evidence=ros_panel_evidence,
         emergence_evidence=role_evidence,
         input_bundle_hash="controlled-bundle-hash",
         availability_source="controlled fixture",
@@ -911,7 +913,7 @@ class WaiverSearchTests(unittest.TestCase):
         ))
         self.assertFalse(search(snapshot=snapshot, projection_rows=projection_rows).sleeper_write_performed)
 
-    def test_healthy_and_future_week_source_omissions_still_fail_closed(self):
+    def test_healthy_and_future_week_source_omissions_return_partial_analysis(self):
         snapshot = complete_search_snapshot()
         injured = replace(
             snapshot,
@@ -929,8 +931,25 @@ class WaiverSearchTests(unittest.TestCase):
                 for row in complete_projections()
             )
             with self.subTest(week=week):
-                with self.assertRaisesRegex(CoverageIncomplete, f"wr/W{week}"):
-                    search(snapshot=selected_snapshot, projection_rows=projection_rows)
+                result = search(
+                    snapshot=selected_snapshot,
+                    projection_rows=projection_rows,
+                )
+                self.assertTrue(result.exact_evaluations)
+                self.assertEqual(result.recommended_action, "NO ACTION")
+                self.assertTrue(
+                    any(
+                        row.player_id == "wr"
+                        and row.reason == "ROSTER_PROJECTION_INCOMPLETE"
+                        for row in result.omissions
+                    )
+                )
+                self.assertTrue(
+                    all(
+                        not evaluation.projection_inputs_complete
+                        for evaluation in result.exact_evaluations
+                    )
+                )
 
     def test_safe_pruning_retains_the_same_best_move_as_exhaustive_search(self):
         projection_rows = complete_projections(prunable=True)
@@ -1146,6 +1165,79 @@ class WaiverSearchTests(unittest.TestCase):
                 policy=load_waiver_policy(POLICY_PATH),
                 now=NOW + timedelta(hours=1),
             )
+
+    def test_missing_roster_value_is_reported_and_only_that_drop_is_quarantined(self):
+        result = search(
+            value_rows=tuple(
+                row for row in complete_values() if row.player_id != "bench"
+            )
+        )
+
+        self.assertTrue(result.exact_evaluations)
+        self.assertTrue(
+            any(
+                row.player_id == "bench" and row.reason == "ROSTER_VALUE_UNAVAILABLE"
+                for row in result.omissions
+            )
+        )
+        self.assertTrue(
+            all(
+                evaluation.selected_drop_player_id != "bench"
+                for evaluation in result.exact_evaluations
+            )
+        )
+        self.assertTrue(
+            any("quarantined from automatic drop" in row for row in result.warnings)
+        )
+
+    def test_uncovered_league_roster_player_is_visible_without_stopping_search(self):
+        result = search(
+            value_rows=tuple(
+                row for row in complete_values() if row.player_id != "other"
+            ),
+        )
+
+        self.assertTrue(result.exact_evaluations)
+        self.assertTrue(
+            any(
+                "other" in warning
+                and "unrelated waiver alternatives remained eligible" in warning
+                for warning in result.warnings
+            )
+        )
+        self.assertTrue(
+            any(
+                row.player_id == "other" and row.reason == "ROSTER_VALUE_UNAVAILABLE"
+                for row in result.omissions
+            )
+        )
+
+    def test_missing_roster_projection_returns_partial_analysis_instead_of_failing(self):
+        result = search(
+            projection_rows=tuple(
+                row
+                for row in complete_projections()
+                if not (row.player_id == "bench" and row.week == 2)
+            )
+        )
+
+        self.assertTrue(result.exact_evaluations)
+        self.assertTrue(
+            any(
+                row.player_id == "bench"
+                and row.reason == "ROSTER_PROJECTION_INCOMPLETE"
+                for row in result.omissions
+            )
+        )
+        self.assertTrue(
+            all(
+                evaluation.selected_drop_player_id != "bench"
+                and not evaluation.projection_inputs_complete
+                for evaluation in result.exact_evaluations
+            )
+        )
+        self.assertEqual(result.recommended_action, "NO ACTION")
+        self.assertNotIn(result.best_decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
 
     def test_saved_search_replays_and_rejects_tampering(self):
         result = search()

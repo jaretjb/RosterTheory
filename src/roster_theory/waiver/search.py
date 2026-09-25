@@ -48,7 +48,7 @@ from roster_theory.waiver.snapshot import (
 
 SUPPORTED_POSITIONS = frozenset({"QB", "RB", "WR", "TE", "K", "DST", "DEF"})
 AFFIRMATIVE_LABELS = frozenset({"ADD NOW", "CLAIM", "ACQUIRE"})
-PRUNING_VERSION = "wa-026-universal-retention-pruning-v11"
+PRUNING_VERSION = "wa-026-partial-roster-coverage-v12"
 LABEL_TIER = {"ADD NOW": 0, "CLAIM": 0, "ACQUIRE": 0, "WATCH": 1, "PASS": 2}
 
 
@@ -343,6 +343,8 @@ def _validate_search_inputs(
     dict[str, PlayerValueInput],
     dict[tuple[str, int], Projection],
     set[str],
+    dict[str, str],
+    dict[str, str],
 ]:
     if not snapshot.completeness.snapshot_complete:
         failed = tuple(
@@ -416,22 +418,43 @@ def _validate_search_inputs(
     value_map = {row.player_id: row for row in values}
     if len(value_map) != len(values):
         raise CoverageIncomplete("Waiver search values contain duplicate player IDs")
-    missing_values = tuple(sorted(supported_roster - set(value_map)))
-    if missing_values:
-        raise CoverageIncomplete(
-            "Waiver search values miss user-roster player(s): " + ", ".join(missing_values)
+    missing_league_rostered_values = tuple(
+        sorted(set(dict(snapshot.owner_by_player)) - set(value_map))
+    )
+    omissions.extend(
+        WaiverSearchOmission(
+            player_id,
+            acquisition_by_id[player_id].state,
+            "ROSTER_VALUE_UNAVAILABLE",
         )
+        for player_id in missing_league_rostered_values
+    )
+    missing_values = tuple(sorted(supported_roster - set(value_map)))
     partial_values = tuple(
         sorted(
             player_id
             for player_id in supported_roster
+            if player_id in value_map
             if value_map[player_id].coverage_status.casefold() != "complete"
         )
     )
-    if partial_values:
-        raise CoverageIncomplete(
-            "Waiver search value coverage is incomplete for: " + ", ".join(partial_values)
+    drop_evidence_exclusions = {
+        player_id: "INCOMPLETE_VALUE_EVIDENCE"
+        for player_id in (*missing_values, *partial_values)
+    }
+    omissions.extend(
+        WaiverSearchOmission(
+            player_id,
+            acquisition_by_id[player_id].state,
+            (
+                "ROSTER_VALUE_UNAVAILABLE"
+                if player_id in missing_values
+                else "ROSTER_VALUE_INCOMPLETE"
+            ),
         )
+        for player_id in (*missing_values, *partial_values)
+        if player_id not in missing_league_rostered_values
+    )
 
     projection_map: dict[tuple[str, int], Projection] = {}
     for row in projections:
@@ -457,23 +480,31 @@ def _validate_search_inputs(
         for week in ordered_weeks
     }
     missing_projections = tuple(sorted(roster_projection_keys - set(projection_map)))
-    if missing_projections:
-        raise CoverageIncomplete(
-            "Waiver search projections miss user-roster player-weeks: "
-            + ", ".join(f"{player_id}/W{week}" for player_id, week in missing_projections)
-        )
     partial_projections = tuple(
         sorted(
             key
             for key in roster_projection_keys
+            if key in projection_map
             if not projection_coverage_is_complete(projection_map[key].coverage_status)
         )
     )
-    if partial_projections:
-        raise CoverageIncomplete(
-            "Waiver search projection coverage is incomplete for: "
-            + ", ".join(f"{player_id}/W{week}" for player_id, week in partial_projections)
+    roster_projection_exclusions = {
+        player_id
+        for player_id, _week in (*missing_projections, *partial_projections)
+    }
+    roster_evidence_exclusions = {
+        player_id: "INCOMPLETE_PROJECTION_EVIDENCE"
+        for player_id in roster_projection_exclusions
+    }
+    drop_evidence_exclusions.update(roster_evidence_exclusions)
+    omissions.extend(
+        WaiverSearchOmission(
+            player_id,
+            acquisition_by_id[player_id].state,
+            "ROSTER_PROJECTION_INCOMPLETE",
         )
+        for player_id in sorted(roster_projection_exclusions)
+    )
 
     eligible: list[str] = []
     for player_id in sorted(acquirable):
@@ -575,7 +606,7 @@ def _validate_search_inputs(
         unknown_legality = tuple(
             sorted(
                 player_id
-                for player_id in supported_roster
+                for player_id in supported_roster - set(drop_evidence_exclusions)
                 if not isinstance(drop_legality.get(player_id), bool)
             )
         )
@@ -589,7 +620,9 @@ def _validate_search_inputs(
         tuple(sorted(omissions, key=lambda row: (row.reason, row.player_id))),
         value_map,
         projection_map,
-        supported_roster,
+        supported_roster - set(roster_evidence_exclusions),
+        drop_evidence_exclusions,
+        roster_evidence_exclusions,
     )
 
 
@@ -891,6 +924,8 @@ def search_waiver_candidates(
         value_map,
         projection_map,
         supported_roster,
+        drop_evidence_exclusions,
+        roster_evidence_exclusions,
     ) = _validate_search_inputs(
         snapshot,
         weeks=ordered_weeks,
@@ -1024,6 +1059,7 @@ def search_waiver_candidates(
                 player_id
                 for player_id in user_team.player_ids
                 if player_id in skill_roster and drop_legality.get(player_id) is True
+                and player_id not in drop_evidence_exclusions
             )
         )
     )
@@ -1279,6 +1315,8 @@ def search_waiver_candidates(
                     now=now,
                     contingency_cache=contingency_cache,
                     evaluation_cache=evaluation_cache,
+                    drop_evidence_exclusions=drop_evidence_exclusions,
+                    roster_evidence_exclusions=roster_evidence_exclusions,
                 ),
                 policy,
             )
@@ -1403,6 +1441,41 @@ def search_waiver_candidates(
         warnings.add(
             f"{len(ownership_policy_prunable_candidates)} skill-player candidate(s) "
             "were proved below both necessary WATCH ownership floors"
+        )
+    missing_board_roster_ids = tuple(
+        sorted(
+            str(player_id)
+            for player_id in (
+                (ros_panel_evidence or {}).get("missing_rostered_player_ids") or ()
+            )
+        )
+    )
+    if missing_board_roster_ids:
+        warnings.add(
+            "Active value-board rankings omitted rostered league player(s): "
+            + ", ".join(missing_board_roster_ids)
+            + "; only alternatives involving an uncovered user-roster player "
+            "are quarantined"
+        )
+    missing_league_rostered_values = tuple(
+        sorted(set(dict(snapshot.owner_by_player)) - set(value_map))
+    )
+    if missing_league_rostered_values:
+        warnings.add(
+            "Value evidence is unavailable for rostered league player(s): "
+            + ", ".join(missing_league_rostered_values)
+            + "; unrelated waiver alternatives remained eligible"
+        )
+    if drop_evidence_exclusions:
+        warnings.add(
+            f"{len(drop_evidence_exclusions)} roster player(s) with incomplete "
+            "evidence were quarantined from automatic drop selection"
+        )
+    if roster_evidence_exclusions:
+        warnings.add(
+            f"{len(roster_evidence_exclusions)} roster player(s) with incomplete "
+            "weekly projections were omitted from lineup calculations; affirmative "
+            "skill-player labels remain blocked"
         )
     base = WaiverSearch(
         schema_version=10,

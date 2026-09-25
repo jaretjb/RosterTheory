@@ -9,11 +9,13 @@ overrides remain league-local. Exact-budget pruning yields to fresh
 same-position weekly/ROS/projection dominance, with bounded-versus-exhaustive
 decision and drop equivalence covered by regression tests.
 
-The fresh League Beta read-only proof selected J.K. Dobbins for Rachaad White. Kyle
-Pitts improved projected lineup output over Oronde Gadsden but failed the
-retention-safe value gate, 60.1 to 68.4. The fresh League Alpha attempt failed
-closed on unrelated missing coverage for rostered skill player `12508`; it was
-not bypassed. Ruff and all 668 tests pass. No Sleeper write occurred. Full
+The fresh League Beta read-only proof selected J.K. Dobbins for Rachaad White.
+Kyle Pitts improved projected lineup output over Oronde Gadsden but failed the
+retention-safe value gate, 60.1 to 68.4. The coverage-isolation amendment now
+records rostered player `12508` as `ROSTER_VALUE_UNAVAILABLE` while completing
+League Alpha and keeping unrelated alternatives eligible. The result was an
+ACQUIRE recommendation with a different legal drop; no Sleeper write occurred.
+Trade retains strict all-roster coverage. Ruff and all 673 tests pass. Full
 acceptance evidence is in the WA-026 row of `docs/WAIVER_ASSISTANT_TASKS.md`.
 
 Trade TA-1312 — ROS expert-panel resilience completed September 23, 2026

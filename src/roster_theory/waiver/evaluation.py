@@ -1252,6 +1252,8 @@ def evaluate_waiver(
         tuple[str, frozenset[str]], PlayerContingencyEvidence
     ] | None = None,
     evaluation_cache: dict[str, Any] | None = None,
+    drop_evidence_exclusions: Mapping[str, str] | None = None,
+    roster_evidence_exclusions: Mapping[str, str] | None = None,
 ) -> WaiverEvaluation:
     shared_cache = evaluation_cache if evaluation_cache is not None else {}
     priority_by_id = dict(waiver_priorities or {})
@@ -1346,6 +1348,13 @@ def evaluate_waiver(
         if player_id in player_by_id
         and _normalized_positions(player_by_id[player_id]).intersection(WAIVER_POSITIONS)
     }
+    roster_evidence_exclusion_map = dict(roster_evidence_exclusions or {})
+    roster_evidence_excluded = {
+        player_id
+        for player_id in active_supported_roster
+        if player_id in roster_evidence_exclusion_map
+    }
+    active_supported_roster -= roster_evidence_excluded
     add_drop_category = (
         frozenset({add_position})
         if add_position in SPECIAL_TEAM_POSITIONS
@@ -1364,6 +1373,22 @@ def evaluate_waiver(
     exclusions.extend(
         DropExclusion(player_id, "OUT_OF_SCOPE_POSITION")
         for player_id in sorted(active_roster - active_supported_roster)
+        if player_id not in roster_evidence_excluded
+    )
+    exclusions.extend(
+        DropExclusion(player_id, roster_evidence_exclusion_map[player_id])
+        for player_id in sorted(roster_evidence_excluded)
+    )
+    drop_evidence_exclusion_map = dict(drop_evidence_exclusions or {})
+    drop_evidence_excluded = {
+        player_id
+        for player_id in droppable_roster
+        if player_id in drop_evidence_exclusion_map
+    }
+    droppable_roster -= drop_evidence_excluded
+    exclusions.extend(
+        DropExclusion(player_id, drop_evidence_exclusion_map[player_id])
+        for player_id in sorted(drop_evidence_excluded)
     )
 
     requested_drop_id: str | None = None
@@ -1439,7 +1464,7 @@ def evaluate_waiver(
             "Weekly projections miss evaluated player-weeks: "
             + ", ".join(f"{player_id}/W{week}" for player_id, week in missing_projection_weeks)
         )
-    projection_inputs_complete = not missing_projection_weeks and all(
+    projection_inputs_complete = not roster_evidence_excluded and not missing_projection_weeks and all(
         projection_coverage_is_complete(
             projection_by_key[(player_id, week.week)].coverage_status
         )
@@ -1736,6 +1761,12 @@ def evaluate_waiver(
             "add": add_player.player_id,
             "drop_ids": drop_ids,
             "drop_legality": tuple(sorted(drop_legality.items())),
+            "drop_evidence_exclusions": tuple(
+                sorted(drop_evidence_exclusion_map.items())
+            ),
+            "roster_evidence_exclusions": tuple(
+                sorted(roster_evidence_exclusion_map.items())
+            ),
             "exclusions": exclusions,
         }
     )
@@ -1834,6 +1865,18 @@ def evaluate_waiver(
         warnings.append("Selected or alternative ownership-value evidence is partial")
     if not projection_inputs_complete:
         warnings.append("Evaluated weekly projection evidence is partial")
+    if drop_evidence_excluded:
+        warnings.append(
+            "Roster players with incomplete value or projection evidence were "
+            "excluded from automatic drop selection: "
+            + ", ".join(sorted(drop_evidence_excluded))
+        )
+    if roster_evidence_excluded:
+        warnings.append(
+            "Roster players with incomplete weekly projections were omitted from "
+            "the lineup calculation: "
+            + ", ".join(sorted(roster_evidence_excluded))
+        )
     holding_omissions = tuple(
         sorted(
             {
