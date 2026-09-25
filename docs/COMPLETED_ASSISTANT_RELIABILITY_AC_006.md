@@ -1,6 +1,7 @@
 # AC-006 — Supported scoring formats and season portability
 
-Implemented September 25, 2026 for issue #12; PR handoff pending.
+Implemented September 25, 2026 for issue #12 in
+[PR #21](https://github.com/jaretjb/RosterTheory/pull/21); GitHub records its merge state.
 AC-007 and AC-008 remain open. This is not closure of the full reliability audit.
 
 ## Verified provider capability

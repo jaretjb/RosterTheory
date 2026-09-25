@@ -4,7 +4,7 @@ Updated: September 25, 2026 (America/Los_Angeles)
 
 AC-001/#7 through AC-005/#11 merged in PRs #15–#19.
 PR #20 reconciled #11's completion records; issue #11 is closed.
-AC-006/#12 is implemented; tested PR handoff pending.
+AC-006/#12 is implemented in PR #21; consult GitHub for its review/merge state.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_006.md`.
 
 League reception scoring maps explicitly to STD/HALF/PPR. Unsupported formats
