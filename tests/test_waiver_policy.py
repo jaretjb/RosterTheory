@@ -62,8 +62,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         self.assertEqual(policy.priority_weekly_weight, 0.50)
         self.assertEqual(policy.priority_waiver_weight, 0.30)
         self.assertEqual(policy.priority_ros_weight, 0.20)
-        self.assertEqual(policy.kicker_season_points_weight, 0.0)
-        self.assertEqual(policy.dst_season_points_weight, 0.0)
+        self.assertEqual(policy.kicker_season_points_weight, 0.75)
+        self.assertEqual(policy.dst_season_points_weight, 0.40)
 
     def test_three_signal_value_owns_add_drop_comparison_when_enabled(self):
         def priority(player_id, score):
@@ -896,8 +896,11 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         target_season_points=22.0,
         incumbent_season_rank=10,
         target_season_rank=8,
+        policy_path=POLICY_PATH,
     ):
         snapshot = waiver_snapshot()
+        policy = load_waiver_policy(policy_path)
+        snapshot = replace(snapshot, league_key=policy.league_key)
         roster_position = "DEF" if position == "DST" else position
         incumbent_id = position.lower()
         add_id = f"add_{position.lower()}"
@@ -973,6 +976,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 current_week_position_rank=10,
                 rest_of_season_position_rank=10,
                 season_points=incumbent_season_points,
+                season_sample_size=8,
+                performance_as_of=NOW,
                 season_position_rank=incumbent_season_rank,
             ),
             PlayerValueInput(
@@ -983,6 +988,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 current_week_position_rank=current_rank,
                 rest_of_season_position_rank=ros_rank,
                 season_points=target_season_points,
+                season_sample_size=8,
+                performance_as_of=NOW,
                 season_position_rank=target_season_rank,
             ),
             *(
@@ -1013,7 +1020,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
             news_fresh={add_id: True},
             now=NOW,
         )
-        return apply_waiver_policy(evaluated, load_waiver_policy(POLICY_PATH))
+        return apply_waiver_policy(evaluated, policy)
 
     def test_kicker_and_ordinary_dst_use_current_week_streaming_path(self):
         for position in ("K", "DST"):
@@ -1036,7 +1043,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
             "DST", current_delta=-1.0, future_delta=1.0, ros_rank=4
         )
         self.assertEqual(elite.decision_label, "ADD NOW")
-        self.assertEqual(elite.decision.decision_path, "DST_ROLLING_STREAM")
+        self.assertEqual(elite.decision.decision_path, "DST_RANK_PERFORMANCE")
         self.assertFalse(elite.decision.elite_dst_exception)
         self.assertEqual(ordinary.decision_label, "ADD NOW")
 

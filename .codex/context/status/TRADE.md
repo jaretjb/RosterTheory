@@ -3,7 +3,7 @@
 Updated: September 25, 2026 (America/Los_Angeles)
 
 AC-001/#7, AC-002/#8 and AC-003/#9 are merged (PRs #15–#17).
-AC-004/#10 is implemented; PR #18 awaits review/merge.
+AC-004/#10 merged in PR #18; all 20 checks passed and issue #10 is closed.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_004.md`.
 Entered and target-search packages share verdicts and intrinsic/partner/legality/
 confidence axes. Search-only strategy/market filters are explicit and cannot
@@ -16,7 +16,7 @@ No live report, provider refresh or Sleeper write occurred.
 
 The audit remains open. AC-005–AC-008 in `docs/ASSISTANT_RELIABILITY_TASKS.md`
 track ranking/scoring, formats, freshness, provenance, integration and performance.
-Stop at the tested AC-004 PR handoff; no next milestone is authorized.
+AC-005 is authorized separately on the Waiver track; no further Trade implementation is authorized.
 
 Prior work:
 
