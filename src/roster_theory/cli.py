@@ -603,6 +603,7 @@ def command_waiver_search(args: argparse.Namespace) -> None:
         with interactive_progress("Searching the Waiver wire", machine_output=args.json):
             result = search_waivers(
                 args.league,
+                exact_candidate_budget=getattr(args, "exact_candidate_budget", None),
                 inputs_path=inputs_path,
                 output_path=args.save_evidence,
                 player_cache_path=args.player_cache,
@@ -2537,6 +2538,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     waiver_search.add_argument("--snapshot", help="Replay saved search evidence")
     waiver_search.add_argument("--save-evidence")
+    waiver_search.add_argument(
+        "--exact-candidate-budget", type=int,
+        help="Explicit add-evaluation limit; omitted adds are unevaluated, not pruned. Default: exhaustive eligible search.",
+    )
     waiver_search.add_argument("--json", action="store_true")
     waiver_search.set_defaults(func=command_waiver_search)
 

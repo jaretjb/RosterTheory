@@ -130,6 +130,7 @@ def search(
     waiver_wire_evidence=None,
     ros_panel_evidence=None,
     drop_legality=None,
+    exact_candidate_budget=None,
 ):
     return search_waiver_candidates(
         snapshot or complete_search_snapshot(),
@@ -146,6 +147,7 @@ def search(
         availability_source="controlled fixture",
         policy=replace(load_waiver_policy(POLICY_PATH), priority_enabled=False),
         enable_pruning=enable_pruning,
+        exact_candidate_budget=exact_candidate_budget,
         now=NOW,
     )
 
@@ -255,12 +257,8 @@ class WaiverSearchTests(unittest.TestCase):
         )
         self.assertEqual(result.exact_evaluations[0].add_player_id, "add")
         self.assertNotIn("add", {row.player_id for row in result.pruned_candidates})
-        self.assertTrue(
-            any(
-                row.reason.startswith("WAIVER_VALUE_BELOW_EXACT_CUTOFF")
-                for row in result.pruned_candidates
-            )
-        )
+        self.assertFalse(result.pruned_candidates)
+        self.assertEqual(len(result.exact_evaluations), len(result.eligible_candidate_ids))
 
     def test_waiver_value_budget_does_not_prune_exact_rank_dominance(self):
         rank_by_id = {
@@ -459,9 +457,9 @@ class WaiverSearchTests(unittest.TestCase):
             strongest_uncertainty="Committee successor is unresolved",
         )
         result = search(enable_pruning=True, contingencies=(scenario,))
-        self.assertTrue(result.pruning_enabled)
+        self.assertFalse(result.pruning_enabled)
         self.assertTrue(
-            any("contingency beneficiaries" in row for row in result.warnings)
+            any("All eligible adds" in row for row in result.warnings)
         )
         evaluated = next(
             row for row in result.exact_evaluations if row.add_player_id == "fa_rb"
@@ -521,11 +519,11 @@ class WaiverSearchTests(unittest.TestCase):
         self.assertIn("fa_k", result.eligible_candidate_ids)
         self.assertEqual(result.best_add_player_id, "fa_k")
         self.assertEqual(result.best_decision_label, "ADD NOW")
-        self.assertTrue(result.pruning_enabled)
+        self.assertFalse(result.pruning_enabled)
         self.assertTrue(
             any(row.add_player_id == "fa_k" for row in result.exact_evaluations)
         )
-        self.assertTrue(any("K/DST" in warning for warning in result.warnings))
+        self.assertEqual(result.coverage_status, "EXHAUSTIVE_ELIGIBLE")
 
     def test_search_omits_special_team_without_authoritative_weekly_rank(self):
         result = self.special_team_search(current_rank=None)
@@ -700,8 +698,8 @@ class WaiverSearchTests(unittest.TestCase):
 
     def test_exhaustive_search_covers_every_skill_position_and_legal_drop(self):
         result = search()
-        self.assertEqual(result.schema_version, 10)
-        self.assertEqual(result.evaluation_schema_version, 15)
+        self.assertEqual(result.schema_version, 11)
+        self.assertEqual(result.evaluation_schema_version, 16)
         self.assertEqual(
             set(result.eligible_candidate_ids), {"add", "fa_rb", "fa_wr", "fa_te"}
         )
@@ -841,7 +839,7 @@ class WaiverSearchTests(unittest.TestCase):
         self.assertNotIn("policy:", report.lower())
         self.assertNotIn("pruning", report.lower())
 
-    def test_ranked_but_pruned_candidate_has_roster_comparison(self):
+    def test_budget_excluded_candidate_has_roster_comparison_not_quality_verdict(self):
         value_rows = tuple(
             replace(
                 row,
@@ -856,11 +854,11 @@ class WaiverSearchTests(unittest.TestCase):
             else row
             for row in complete_values()
         )
-        result = search(enable_pruning=True, value_rows=value_rows)
+        result = search(exact_candidate_budget=1, value_rows=value_rows)
         notable = next(
             row for row in result.notable_candidates if row.player_id == "fa_wr"
         )
-        self.assertEqual(notable.category, "BELOW_THRESHOLD")
+        self.assertEqual(notable.category, "NOT_EXACTLY_EVALUATED")
         self.assertIn("ahead of Roster Receiver WR47", notable.roster_comparison)
         report = format_waiver_search(
             SimpleNamespace(
@@ -872,7 +870,7 @@ class WaiverSearchTests(unittest.TestCase):
         self.assertIn("OTHER PLAYERS TO WATCH", report)
         self.assertIn("Free Receiver", report)
         self.assertIn("WR III", report)
-        self.assertIn("not enough of an upgrade", report)
+        self.assertIn("move quality unknown", report)
 
     def test_current_week_ir_roster_omission_is_reconciled_from_fresh_snapshot(self):
         snapshot = complete_search_snapshot()
@@ -959,7 +957,7 @@ class WaiverSearchTests(unittest.TestCase):
         self.assertEqual(pruned.best_add_player_id, exhaustive.best_add_player_id)
         self.assertEqual(pruned.best_drop_player_id, exhaustive.best_drop_player_id)
         self.assertEqual(pruned.best_decision_label, exhaustive.best_decision_label)
-        self.assertLess(len(pruned.exact_evaluations), len(exhaustive.exact_evaluations))
+        self.assertEqual(len(pruned.exact_evaluations), len(exhaustive.exact_evaluations))
         self.assertEqual(
             len(pruned.exact_evaluations) + len(pruned.pruned_candidates),
             len(pruned.eligible_candidate_ids),
@@ -1059,17 +1057,12 @@ class WaiverSearchTests(unittest.TestCase):
         self.assertEqual(pruned.recommended_action, exhaustive.recommended_action)
         self.assertEqual(pruned.best_add_player_id, exhaustive.best_add_player_id)
         self.assertEqual(pruned.best_drop_player_id, exhaustive.best_drop_player_id)
-        self.assertGreater(len(pruned.pruned_candidates), 0)
+        self.assertFalse(pruned.pruned_candidates)
         self.assertEqual(
             len(pruned.exact_evaluations) + len(pruned.pruned_candidates),
             len(pruned.eligible_candidate_ids),
         )
-        self.assertTrue(
-            any(
-                "OWNERSHIP_UPPER_BOUND_BELOW_WATCH_FLOORS" in row.reason
-                for row in pruned.pruned_candidates
-            )
-        )
+        self.assertEqual(pruned.coverage_status, "EXHAUSTIVE_ELIGIBLE")
 
     def test_one_qb_candidates_are_exact_before_ordinary_pruning(self):
         projection_rows = tuple(
@@ -1077,7 +1070,7 @@ class WaiverSearchTests(unittest.TestCase):
             for row in complete_projections()
         )
         result = search(enable_pruning=True, projection_rows=projection_rows)
-        self.assertTrue(result.pruning_enabled)
+        self.assertFalse(result.pruning_enabled)
         self.assertTrue(
             any(row.add_player_id == "add" for row in result.exact_evaluations)
         )
@@ -1085,7 +1078,7 @@ class WaiverSearchTests(unittest.TestCase):
             len(result.exact_evaluations) + len(result.pruned_candidates),
             len(result.eligible_candidate_ids),
         )
-        self.assertTrue(any("QB-hold" in warning for warning in result.warnings))
+        self.assertEqual(result.coverage_status, "EXHAUSTIVE_ELIGIBLE")
 
     def test_open_slot_uses_no_drop_and_passes_select_no_action(self):
         open_result = search(snapshot=complete_search_snapshot(open_slot=True))
