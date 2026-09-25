@@ -1,6 +1,7 @@
 # AC-001 — Weekly availability and projection provenance
 
 September 25, 2026. Issue: https://github.com/jaretjb/RosterTheory/issues/7.
+Pull request: https://github.com/jaretjb/RosterTheory/pull/15 (stacked on PR #6).
 Implementation is tested on `codex/assistant-audit-data-integrity`, based on the
 existing Waiver fixes in PR #6. Not a claim that the entire audit is resolved.
 

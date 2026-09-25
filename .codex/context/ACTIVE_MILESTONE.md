@@ -1,7 +1,7 @@
 # Active milestone
 
 AC-001 — Weekly availability and projection provenance is at a tested handoff,
-pending pull-request review. Authorized September 25, 2026 by the user's request
+pending review in PR #15 (stacked on PR #6). Authorized September 25, 2026 by the user's request
 to resolve the Waiver/Trade audit. All 696 tests and Ruff pass; no live provider
 operation or Sleeper write occurred. Evidence:
 `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
