@@ -999,3 +999,48 @@ instead of terminating the run. The fresh League Alpha search completed as
 DEGRADED, recorded player `12508` and two coverage warnings, retained unrelated
 alternatives, and returned an ACQUIRE result with a different legal drop. All
 673 tests and Ruff pass. No Sleeper write occurred.
+
+## WA-027 — League-scored specialist performance weighting
+
+Status: completed September 25, 2026
+
+Depends on: WA-023 and WA-025
+
+Goal: make K and DST fallback decisions respect actual points already scored
+under the league's scoring, with a substantially larger season-points weight
+for K than DST.
+
+Context: load Waiver requirements sections 3.1–3.3 and 4–6 and Waiver design
+sections Architecture, Data flow, and Fail-closed boundaries.
+
+Acceptance:
+
+- Preserve add and drop season-point totals in exact specialist evidence; never
+  substitute ranks for missing league-scored totals or invent performance.
+- When projections do not independently clear the specialist streaming gate,
+  require the weekly/season/recent/ROS fallback evidence to clear one explicit
+  score. A favorable rank in isolation must not bypass a negative overall
+  specialist case.
+- Add configurable K and DST season-point weights, with K materially higher.
+  Calibrate only the current league policy from its report; do not transfer
+  those numeric settings to another league without separate evidence.
+- Regress the productive-incumbent shapes represented by Evan McPherson and
+  Cincinnati versus Detroit using player-agnostic controlled fixtures.
+- Preserve WA-023 rolling DST projection behavior, existing skill-player
+  behavior, deterministic evidence, and read-only Sleeper boundaries.
+- Run focused tests, Ruff, the full suite, and a fresh 4th & 20 read-only search
+  before completion.
+
+Completion proof: exact specialist evidence now carries add/drop season points
+and recent points per game. A rank-supported fallback must clear one combined
+score; configured season-point evidence cannot be missing. The current league
+uses a `2.0` K season-point weight and a smaller `0.5` DST weight. Other league
+policies retain neutral defaults unless separately calibrated.
+
+The fresh read-only search changed both disputed results. Tyler Loop (17 season
+points) and Eddy Pineiro (15) are WATCH alternatives behind Evan McPherson
+(31), not claims. Detroit (6) is WATCH behind Cincinnati (21), with a negative
+four-week streaming edge, and is absent from the claim plan. San Francisco and
+New England remain the two affirmative DST alternatives. The operational
+league policy matches the validated override, all 676 tests and Ruff pass, and
+no Sleeper write occurred.

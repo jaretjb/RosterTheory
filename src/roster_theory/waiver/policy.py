@@ -76,6 +76,8 @@ class WaiverDecisionPolicy:
     watch_maximum_depth_loss: float
     watch_maximum_downside_increase: float
     special_teams_current_week_weight: float
+    kicker_season_points_weight: float
+    dst_season_points_weight: float
     kicker_current_week_gain_floor: float
     dst_current_week_gain_floor: float
     special_teams_watch_current_week_gain_floor: float
@@ -193,9 +195,13 @@ def load_waiver_policy(
             + ", ".join(missing_special)
         )
     special_numeric = {name: float(special[name]) for name in special_required}
+    kicker_season_points_weight = float(special.get("kicker_season_points_weight", 0.0))
+    dst_season_points_weight = float(special.get("dst_season_points_weight", 0.0))
     elite_cutoff = int(special_numeric["elite_dst_ros_rank_cutoff"])
     if special_numeric["current_week_weight"] <= 1:
         raise ValueError("Special-team current-week weight must be above 1")
+    if kicker_season_points_weight < 0 or dst_season_points_weight < 0:
+        raise ValueError("Special-team season-points weights must be nonnegative")
     if elite_cutoff < 1 or elite_cutoff != special_numeric["elite_dst_ros_rank_cutoff"]:
         raise ValueError("Elite DST cutoff must be a positive integer")
     if special_numeric["elite_dst_maximum_current_week_loss"] < 0:
@@ -371,6 +377,8 @@ def load_waiver_policy(
         priority_watch_value_gain=priority_watch_value_gain,
         priority_exact_candidate_count=priority_exact_candidate_count,
         special_teams_current_week_weight=special_numeric["current_week_weight"],
+        kicker_season_points_weight=kicker_season_points_weight,
+        dst_season_points_weight=dst_season_points_weight,
         kicker_current_week_gain_floor=special_numeric[
             "kicker_current_week_gain_floor"
         ],
@@ -1453,6 +1461,15 @@ def _assess_special_team_candidate(
         and ownership.rest_of_season_add_rank
         < ownership.rest_of_season_drop_rank
     )
+    season_points_complete = (
+        ownership.season_add_points is not None
+        and ownership.season_drop_points is not None
+    )
+    season_points_weight = (
+        policy.kicker_season_points_weight
+        if evaluation.add_position == "K"
+        else policy.dst_season_points_weight
+    )
     rank_fallback_complete = weekly_rank_complete and any(
         rank_value is not None
         for rank_value in (
@@ -1460,7 +1477,7 @@ def _assess_special_team_candidate(
             ownership.recent_add_rank,
             ownership.rest_of_season_add_rank,
         )
-    )
+    ) and (season_points_weight == 0.0 or season_points_complete)
     evidence_complete = (
         evaluation.material_news_fresh
         and evaluation.value_inputs_complete
@@ -1480,7 +1497,7 @@ def _assess_special_team_candidate(
     )
     dst_streaming = selected.dst_streaming
     if evaluation.add_position == "K":
-        rank_stream_pass = bool(
+        rank_stream_support = bool(
             selected.same_position
             and (
                 (
@@ -1492,7 +1509,7 @@ def _assess_special_team_candidate(
             )
         )
     else:
-        rank_stream_pass = bool(
+        rank_stream_support = bool(
             selected.same_position
             and (
                 (
@@ -1512,6 +1529,57 @@ def _assess_special_team_candidate(
                 )
             )
         )
+    def rank_advantage(add_rank: int | None, drop_rank: int | None) -> float:
+        if add_rank is None or drop_rank is None:
+            return 0.0
+        return float(drop_rank - add_rank)
+
+    weekly_advantage = rank_advantage(
+        ownership.current_week_add_rank,
+        ownership.current_week_drop_rank,
+    )
+    season_advantage = rank_advantage(
+        ownership.season_add_rank,
+        ownership.season_drop_rank,
+    )
+    recent_advantage = rank_advantage(
+        ownership.recent_add_rank,
+        ownership.recent_drop_rank,
+    )
+    ros_advantage = rank_advantage(
+        ownership.rest_of_season_add_rank,
+        ownership.rest_of_season_drop_rank,
+    )
+    season_points_advantage = (
+        float(ownership.season_add_points - ownership.season_drop_points)
+        if season_points_complete
+        else 0.0
+    )
+    if evaluation.add_position == "K":
+        rank_priority_score = round(
+            5.0 * weekly_advantage
+            + season_advantage
+            + 0.5 * recent_advantage
+            + 0.25 * ros_advantage
+            + season_points_weight * season_points_advantage
+            + (15.0 if ownership.season_add_rank == 1 else 0.0),
+            3,
+        )
+    else:
+        rank_priority_score = round(
+            3.0 * weekly_advantage
+            + season_advantage
+            + 0.5 * recent_advantage
+            + 0.5 * ros_advantage
+            + season_points_weight * season_points_advantage
+            + 2.0 * selected.current_week_delta,
+            3,
+        )
+    rank_stream_pass = bool(
+        rank_stream_support
+        and rank_fallback_complete
+        and rank_priority_score >= 0.0
+    )
     if evaluation.add_position == "DST":
         projection_stream_pass = (
             dst_streaming.applicable
@@ -1549,9 +1617,9 @@ def _assess_special_team_candidate(
             True,
             stream_pass,
             (
-                "DST must improve by discriminating projections or weekly/season/recent/ROS rank"
+                "DST must improve by discriminating projections or a nonnegative weighted weekly/season-points/recent/ROS fallback score"
                 if evaluation.add_position == "DST"
-                else "K must improve by discriminating projections or weekly/season/recent rank"
+                else "K must improve by discriminating projections or a nonnegative weighted weekly/season-points/recent/ROS fallback score"
             ),
         ),
     )
@@ -1601,36 +1669,7 @@ def _assess_special_team_candidate(
         decision_path = "SPECIAL_TEAM_WEEKLY_FAILURE"
         first_failed = next(gate for gate in gates if not gate.passed)
         strongest_uncertainty = first_failed.explanation
-    def rank_advantage(add_rank: int | None, drop_rank: int | None) -> float:
-        if add_rank is None or drop_rank is None:
-            return 0.0
-        return float(drop_rank - add_rank)
-
-    weekly_advantage = rank_advantage(
-        ownership.current_week_add_rank,
-        ownership.current_week_drop_rank,
-    )
-    season_advantage = rank_advantage(
-        ownership.season_add_rank,
-        ownership.season_drop_rank,
-    )
-    recent_advantage = rank_advantage(
-        ownership.recent_add_rank,
-        ownership.recent_drop_rank,
-    )
-    ros_advantage = rank_advantage(
-        ownership.rest_of_season_add_rank,
-        ownership.rest_of_season_drop_rank,
-    )
     if evaluation.add_position == "K":
-        rank_priority_score = round(
-            5.0 * weekly_advantage
-            + season_advantage
-            + 0.5 * recent_advantage
-            + 0.25 * ros_advantage
-            + (15.0 if ownership.season_add_rank == 1 else 0.0),
-            3,
-        )
         residual = selected.lineup.weighted_delta - selected.current_week_delta
         projection_priority_score = round(
             policy.special_teams_current_week_weight * selected.current_week_delta
@@ -1638,14 +1677,6 @@ def _assess_special_team_candidate(
             3,
         )
     else:
-        rank_priority_score = round(
-            3.0 * weekly_advantage
-            + season_advantage
-            + 0.5 * recent_advantage
-            + 0.5 * ros_advantage
-            + 2.0 * selected.current_week_delta,
-            3,
-        )
         projection_priority_score = dst_streaming.weighted_advantage
     priority_score = max(rank_priority_score, projection_priority_score)
     decision = WaiverDecisionAssessment(

@@ -402,7 +402,8 @@ def _uncalibrated_policy(artifact: str, league_key: str, season: int) -> dict[st
                     "current_week_weight", "kicker_current_week_gain_floor",
                     "dst_current_week_gain_floor", "watch_current_week_gain_floor",
                     "elite_dst_ros_rank_cutoff", "elite_dst_maximum_current_week_loss",
-                    "elite_dst_weighted_lineup_floor",
+                    "elite_dst_weighted_lineup_floor", "kicker_season_points_weight",
+                    "dst_season_points_weight",
                 )
             },
             "qb_holding": {

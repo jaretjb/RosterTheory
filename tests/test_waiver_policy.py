@@ -62,6 +62,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         self.assertEqual(policy.priority_weekly_weight, 0.50)
         self.assertEqual(policy.priority_waiver_weight, 0.30)
         self.assertEqual(policy.priority_ros_weight, 0.20)
+        self.assertEqual(policy.kicker_season_points_weight, 0.0)
+        self.assertEqual(policy.dst_season_points_weight, 0.0)
 
     def test_three_signal_value_owns_add_drop_comparison_when_enabled(self):
         def priority(player_id, score):
@@ -884,6 +886,10 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         drop_name=None,
         weekly_deltas=None,
         streamer_points=None,
+        incumbent_season_points=20.0,
+        target_season_points=22.0,
+        incumbent_season_rank=10,
+        target_season_rank=8,
     ):
         snapshot = waiver_snapshot()
         roster_position = "DEF" if position == "DST" else position
@@ -960,6 +966,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 24.0,
                 current_week_position_rank=10,
                 rest_of_season_position_rank=10,
+                season_points=incumbent_season_points,
+                season_position_rank=incumbent_season_rank,
             ),
             PlayerValueInput(
                 add_id,
@@ -968,6 +976,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 24.0 + current_delta + 2 * future_delta,
                 current_week_position_rank=current_rank,
                 rest_of_season_position_rank=ros_rank,
+                season_points=target_season_points,
+                season_position_rank=target_season_rank,
             ),
             *(
                 (
@@ -978,6 +988,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                         sum(streamer_points),
                         current_week_position_rank=4,
                         rest_of_season_position_rank=12,
+                        season_points=21.0,
+                        season_position_rank=9,
                     ),
                 )
                 if streamer_points is not None
@@ -1035,6 +1047,48 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         self.assertEqual(evidence.horizon_weights, (1.0, 0.5, 0.25))
         self.assertLess(evidence.weighted_advantage, 0.0)
         self.assertEqual(evidence.weeks[1].baseline_player_id, "stream_dst")
+
+    def test_kicker_rank_fallback_protects_high_scoring_incumbent(self):
+        result = self.special_team_evaluation(
+            "K",
+            current_delta=0.0,
+            current_rank=4,
+            ros_rank=11,
+            incumbent_season_points=31.0,
+            target_season_points=17.0,
+            incumbent_season_rank=1,
+            target_season_rank=8,
+        )
+        self.assertEqual(result.decision_label, "WATCH")
+        self.assertEqual(result.candidates[0].ownership.season_add_points, 17.0)
+        self.assertEqual(result.candidates[0].ownership.season_drop_points, 31.0)
+        self.assertLessEqual(result.decision.priority_score, 0.0)
+
+    def test_dst_rank_fallback_gives_season_points_smaller_material_weight(self):
+        result = self.special_team_evaluation(
+            "DST",
+            current_delta=1.43,
+            weekly_deltas=(1.43, -4.0, -4.0),
+            current_rank=10,
+            ros_rank=18,
+            incumbent_season_points=21.0,
+            target_season_points=6.0,
+            incumbent_season_rank=3,
+            target_season_rank=20,
+        )
+        self.assertEqual(result.decision_label, "WATCH")
+        self.assertLess(result.candidates[0].dst_streaming.weighted_advantage, 0.0)
+        self.assertLess(result.decision.priority_score, 0.0)
+
+    def test_weighted_specialist_fallback_requires_season_point_totals(self):
+        result = self.special_team_evaluation(
+            "K",
+            current_delta=0.0,
+            incumbent_season_points=None,
+            target_season_points=None,
+        )
+        self.assertEqual(result.decision_label, "WATCH")
+        self.assertFalse(result.decision.gates[2].passed)
 
     def test_special_team_missing_weekly_rank_is_never_affirmative(self):
         result = self.special_team_evaluation(
