@@ -280,7 +280,7 @@ def run_target_workflow(
     output_path: str | Path | None = None,
     csv_path: str | Path | None = None,
     expert_pool_path: str | Path | None = None,
-    cache_dir: str | Path = "data/cache/trade/fantasypros/2026",
+    cache_dir: str | Path | None = None,
     budget_path: str | Path = "data/cache/trade/fantasypros/daily_budget.json",
     market_import_path: str | Path | None = None,
     performance_history_path: str | Path | None = None,

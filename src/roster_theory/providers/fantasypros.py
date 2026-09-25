@@ -8,7 +8,8 @@ from typing import Any, Mapping
 from roster_theory.core.models import Projection, RankObservation
 from roster_theory.core.errors import ProviderCapabilityMissing
 from roster_theory.core.provenance import DataStamp, stable_hash
-from roster_theory.core.scoring import score_stats
+from roster_theory.core.scoring import POSITION_RECEPTION_BONUSES, score_stats
+from roster_theory.providers.formats import ranking_format, validate_provider_scope
 from roster_theory.fantasypros import FantasyProsClient
 
 
@@ -228,6 +229,7 @@ def normalize_projections(
     *,
     horizon: str,
     league_points: Mapping[str, float] | None = None,
+    coverage_by_player: Mapping[str, str] | None = None,
     captured_at: datetime | None = None,
     endpoint: str = "/projections",
     parameters: Mapping[str, Any] | None = None,
@@ -262,7 +264,8 @@ def normalize_projections(
                 raw_stats=numeric_stats,
                 league_points=float((league_points or {}).get(identity.fantasypros_id, 0.0)),
                 source="FantasyPros consensus",
-                coverage_status="complete" if numeric_stats else "missing_stats",
+                coverage_status=(coverage_by_player or {}).get(identity.fantasypros_id,
+                                  "complete" if numeric_stats else "missing_stats"),
             )
         )
     return ProjectionDataset(
@@ -343,6 +346,8 @@ class FantasyProsAdapter:
     ) -> RankingDataset:
         normalized_horizon = _canonical_ranking_horizon(horizon)
         params: dict[str, Any] = {"position": position, "scoring": scoring}
+        if scoring not in {"STD", "HALF", "PPR"}:
+            raise ProviderCapabilityMissing("Unsupported FantasyPros ranking format: " + scoring)
         if normalized_horizon == "ROS":
             params["type"] = "ROS"
         elif normalized_horizon == "WEEKLY":
@@ -360,6 +365,7 @@ class FantasyProsAdapter:
         else:
             params["experts"] = "show"
         value = self.client.consensus_rankings(season, **params)
+        validate_provider_scope(value, season=season, scoring=scoring)
         dataset = normalize_rankings(
             value,
             requested_horizon=normalized_horizon,
@@ -382,17 +388,22 @@ class FantasyProsAdapter:
         position: str,
         scoring_settings: Mapping[str, Any],
     ) -> ProjectionDataset:
-        params = {"position": position, "scoring": "HALF", "week": week}
+        scoring_code = ranking_format(scoring_settings).scoring
+        params = {"position": position, "scoring": scoring_code, "week": week}
         value = self.client.projections(season, **params)
-        points = {
-            str(row.get("fpid")): score_stats(row.get("stats") or {}, scoring_settings).points
+        validate_provider_scope(value, season=season, scoring=scoring_code)
+        scored = {
+            str(row.get("fpid")): score_stats(row.get("stats") or {}, scoring_settings,
+                                             position=row.get("position_id"))
             for row in value.get("players") or []
             if isinstance(row, Mapping) and row.get("fpid") is not None
         }
         dataset = normalize_projections(
             value,
             horizon="WEEKLY",
-            league_points=points,
+            league_points={pid: row.points for pid, row in scored.items()},
+            coverage_by_player={pid: "missing_position_reception_stats" for pid, row in scored.items()
+                                if set(row.unsupported_settings) & set(POSITION_RECEPTION_BONUSES)},
             endpoint=f"/nfl/{season}/projections",
             parameters=params,
         )

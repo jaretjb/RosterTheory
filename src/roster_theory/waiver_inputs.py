@@ -11,6 +11,7 @@ from roster_theory.core.models import Projection
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.projections import projection_is_complete
 from roster_theory.core.scoring import score_stats
+from roster_theory.providers.formats import ranking_format
 from roster_theory.sleeper import SleeperClient, resolve_league_policy_path
 from roster_theory.waiver.evaluation import (
     ContingencyScenarioInput,
@@ -146,7 +147,7 @@ def _performance_evidence(
         week: client.weekly_stats(season, week) for week in completed_weeks
     }
     season_points = {
-        player_id: score_stats(row, scoring).points
+        player_id: score_stats(row, scoring, position=next(iter(players[player_id].positions), None)).points
         for player_id, row in season_rows.items()
         if player_id in players
     }
@@ -169,7 +170,7 @@ def _performance_evidence(
         recent_samples[player_id] = (len(rows) if all(_game_count(row.get("gp")) == 1 for row in rows)
                                      else None)
         recent_points[player_id] = round(
-            sum(score_stats(row, scoring).points for row in rows) / len(rows), 3
+            sum(score_stats(row, scoring, position=player.positions[0]).points for row in rows) / len(rows), 3
         )
         opportunity_values = tuple(
             value for row in rows if (value := _opportunities(row, position)) is not None
@@ -338,10 +339,17 @@ def build_waiver_inputs(
             explicit_path=policy_path,
         )
     )
+    waiver_state = refresh_waiver_snapshot(league_key, config_path=config).snapshot
+    format_evidence = ranking_format(dict(waiver_state.league.scoring), getattr(waiver_state.league, "roster_positions", ()))
+    ww_config = load_waiver_wire_config(
+        resolve_league_policy_path(league_key, "waiver_wire", config_path=config,
+                                  explicit_path=waiver_wire_policy_path), league_key=league_key,
+    )
+    if ww_config.scoring != format_evidence.scoring:
+        raise ValueError("Waiver Wire configuration scoring does not match league format " + format_evidence.scoring)
     board = refresh_value_boards(
         league_key,
         config_path=config,
-        cache_dir="data/cache/waiver/fantasypros/2026",
         budget_path="data/cache/trade/fantasypros/daily_budget.json",
         include_special_teams=True,
         weekly_ranking_max_age=timedelta(hours=2),
@@ -351,19 +359,11 @@ def build_waiver_inputs(
         require_all_rostered_market_coverage=False,
     )
     snapshot = board.refresh.snapshot
-    waiver_state = refresh_waiver_snapshot(
-        league_key, config_path=config
-    ).snapshot
+    if (snapshot.league.season != waiver_state.league.season
+            or snapshot.league.scoring != waiver_state.league.scoring):
+        raise CoverageIncomplete("Waiver snapshot and value-board league season/scoring differ")
     waiver_wire_refresh = refresh_waiver_wire_evidence(
-        config=load_waiver_wire_config(
-            resolve_league_policy_path(
-                league_key,
-                "waiver_wire",
-                config_path=config,
-                explicit_path=waiver_wire_policy_path,
-            ),
-            league_key=league_key,
-        ),
+        config=ww_config,
         season=waiver_state.league.season,
         week=waiver_state.manifest.current_week,
         players=board.refresh.snapshot.players,
@@ -475,6 +475,7 @@ def build_waiver_inputs(
             warnings=tuple(
                 sorted(
                     {
+                        *format_evidence.warnings,
                         *(selected[player_id].warnings if player_id in skill_ids else ()),
                         *(market[player_id].warnings if player_id in skill_ids else ()),
                         *(

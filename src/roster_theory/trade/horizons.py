@@ -350,6 +350,7 @@ def load_draft_anchor(
     *,
     updated_at: str,
     scope: str = "skills_half_ppr",
+    scoring: str | None = None,
 ) -> tuple[tuple[RankObservation, ...], tuple[RankObservation, ...]]:
     def optional_float(value: str | None) -> float | None:
         return float(value) if value not in (None, "") else None
@@ -359,6 +360,8 @@ def load_draft_anchor(
     selected: list[RankObservation] = []
     market: list[RankObservation] = []
     for row in rows:
+        if scoring is not None and str(row.get("scoring") or "").upper() != scoring:
+            raise CoverageIncomplete("Draft anchor scoring does not match the league ranking format")
         sleeper_id = str(row.get("sleeper_id") or "").strip()
         fantasypros_id = str(row.get("fantasypros_id") or "").strip()
         player_id = sleeper_id or (f"fp:{fantasypros_id}" if fantasypros_id else "")
@@ -379,7 +382,7 @@ def load_draft_anchor(
                 position=position,
                 position_rank=float(row["weighted_position_rank"]),
                 overall_rank=optional_float(row.get("weighted_overall_rank")),
-                scoring=str(row.get("scoring") or "HALF"),
+                scoring=str(row.get("scoring") or "") or None,
                 updated_at=updated_at,
             )
         )
@@ -392,7 +395,7 @@ def load_draft_anchor(
                 position=position,
                 position_rank=float(row["ecr"]),
                 overall_rank=optional_float(row.get("overall_ecr")),
-                scoring=str(row.get("scoring") or "HALF"),
+                scoring=str(row.get("scoring") or "") or None,
                 updated_at=updated_at,
             )
         )
