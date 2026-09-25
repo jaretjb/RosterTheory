@@ -70,7 +70,7 @@ CSV_FIELDS = (
     "trade_price_percentile", "trade_price", "trade_price_change_7d",
     "user_standalone_lineup_gain", "performance_signal", "performance_samples",
     "performance_point_residual", "offer_count", "send_player_ids",
-    "receive_player_ids", "intrinsic_outcome", "market_status",
+    "receive_player_ids", "intrinsic_outcome", "market_status", "package_verdict", "recommendation_status",
     "market_price_delta", "market_premium", "premium_sensitivity", "user_lineup_delta",
     "user_depth_delta", "partner_lineup_delta", "partner_depth_delta",
     "user_add", "partner_drop",
@@ -206,6 +206,8 @@ def _csv_rows(result: TargetWorkflowResult) -> tuple[dict[str, Any], ...]:
                 "send_player_ids": ";".join(row.sent_player_ids),
                 "receive_player_ids": ";".join(row.received_player_ids),
                 "intrinsic_outcome": row.intrinsic_outcome,
+                "package_verdict": row.evaluation.decision_label,
+                "recommendation_status": "PROVISIONAL_MARKET" if row.market_fairness.mode == "ECR-PROXY" else "SCREENED_OPPORTUNITY",
                 "market_status": row.market_fairness.status,
                 "market_price_delta": row.market_fairness.user_price_delta,
                 "market_premium": row.market_fairness.consolidation_premium_value,
@@ -545,6 +547,12 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
                         f"depth {offer.partner_depth_delta:+.2f}; "
                         f"market gap {offer.market_fairness.user_price_delta:+.2f}"
                     )
+                    lines.append(
+                        f"      Shared exact package verdict: {offer.evaluation.decision_label}; "
+                        "target strategy and market screens are additional filters."
+                    )
+                    if offer.market_fairness.mode == "ECR-PROXY":
+                        lines.append("      PROVISIONAL MARKET: ECR proxy is not direct trade-chart fairness.")
                     impact = offer.evaluation.team_impacts[0]
                     risk = offer.evaluation.risk_impacts[0]
                     lines.append(
