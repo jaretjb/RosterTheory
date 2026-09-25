@@ -3,9 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import datetime, timedelta, timezone
+from dataclasses import asdict
 from pathlib import Path
+from typing import Any, Mapping, Sequence
 
 from roster_theory.core.models import Projection
+from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.projections import projection_is_complete
 from roster_theory.core.scoring import score_stats
 from roster_theory.sleeper import SleeperClient, resolve_league_policy_path
@@ -17,6 +20,9 @@ from roster_theory.waiver.evaluation import (
 from roster_theory.waiver.expert_panel import WaiverRosPanelSelector
 from roster_theory.trade.board_service import refresh_value_boards
 from roster_theory.waiver.policy import load_waiver_policy
+from roster_theory.waiver.legality import DropLegality, assess_drop_legality, sleeper_drop_rules
+from roster_theory.waiver.snapshot import WaiverSnapshot
+from roster_theory.trade.schedule import ScheduleConfig, load_schedule
 from roster_theory.waiver.service import refresh_waiver_snapshot
 from roster_theory.waiver.ww_evidence import (
     load_waiver_wire_config,
@@ -26,6 +32,30 @@ from roster_theory.waiver.ww_evidence import (
 
 SUPPORTED_POSITIONS = frozenset({"QB", "RB", "WR", "TE", "K", "DST", "DEF"})
 SPECIAL_TEAM_POSITIONS = frozenset({"K", "DST", "DEF"})
+
+
+def build_drop_legality_evidence(
+    snapshot: WaiverSnapshot, schedule: ScheduleConfig,
+    matchups: Sequence[Mapping[str, Any]], player_ids: set[str], *, now: datetime,
+) -> dict[str, DropLegality]:
+    matchup = next((row for row in matchups if str(row.get("roster_id")) == snapshot.user_roster_id), {})
+    starters = {str(pid) for pid in matchup.get("starters") or ()}
+    players = {row.player_id: row for row in snapshot.players}
+    rules = sleeper_drop_rules(dict(snapshot.league.platform_settings))
+    games = schedule.games
+    if schedule.source == "nflverse nflverse-data schedules release":
+        # Compatibility with audited schedule artifacts created before zone metadata.
+        games = tuple({"gametime_zone": "US/Eastern", **game} for game in games)
+    return {
+        pid: assess_drop_legality(
+            nfl_team=players[pid].nfl_team,
+            starter=pid in starters if "starters" in matchup else None,
+            week=snapshot.manifest.current_week, games=games,
+            bye_week=dict(schedule.bye_weeks).get(str(players[pid].nfl_team)),
+            now=now, **rules,
+        ) if pid in players else DropLegality(None, "PLAYER_IDENTITY_UNAVAILABLE")
+        for pid in sorted(player_ids)
+    }
 
 
 def _waiver_position(player: object) -> str | None:
@@ -471,26 +501,19 @@ def build_waiver_inputs(
     matchups = sleeper.league_matchups(
         waiver_state.league.league_id, waiver_state.manifest.current_week
     )
-    user_matchup = next(
-        row
-        for row in matchups
-        if str(row.get("roster_id")) == waiver_state.user_roster_id
+    schedule = load_schedule(board.refresh.schedule_path, expected_season=waiver_state.league.season)
+    captured_at = datetime.now(timezone.utc)
+    drop_rules = sleeper_drop_rules(dict(waiver_state.league.platform_settings))
+    if drop_rules["league_moves_locked"] is None:
+        raise CoverageIncomplete("League move-lock setting unavailable; transaction legality is unproved")
+    legality_evidence = build_drop_legality_evidence(
+        waiver_state, schedule, matchups, active_supported_ids, now=captured_at,
     )
-    starters = {str(player_id) for player_id in user_matchup.get("starters") or ()}
-    points = {
-        str(player_id): float(value or 0.0)
-        for player_id, value in (user_matchup.get("players_points") or {}).items()
-    }
-    proved_locked = {
-        player_id
-        for player_id in active_supported_ids.intersection(starters)
-        if points.get(player_id, 0.0) != 0.0
-    }
+    proved_locked = {pid for pid, row in legality_evidence.items() if row.legal is False}
     ros_panel_evidence = {
         **dict(board.expert_pool_evidence or {}),
         "missing_rostered_player_ids": list(board.missing_rostered_player_ids),
     }
-    captured_at = datetime.now(timezone.utc)
     save_waiver_evaluation_inputs(
         output_path,
         league_key=league_key,
@@ -502,7 +525,7 @@ def build_waiver_inputs(
         ),
         availability_by_player={},
         drop_legality={
-            player_id: player_id not in proved_locked
+            player_id: legality_evidence[player_id].legal
             for player_id in sorted(active_supported_ids)
         },
         weeks=snapshot.weeks,
@@ -512,6 +535,7 @@ def build_waiver_inputs(
         contingencies=contingencies,
         waiver_wire_evidence=waiver_wire_refresh.evidence,
         ros_panel_evidence=ros_panel_evidence,
+        drop_legality_evidence={pid: asdict(row) for pid, row in legality_evidence.items()},
     )
     return {
         "operation": "WAIVER LIVE INPUT BUILD",
@@ -532,6 +556,9 @@ def build_waiver_inputs(
             board.missing_rostered_player_ids
         ),
         "proved_locked_user_players": sorted(proved_locked),
+        "unknown_drop_legality_players": [pid for pid, row in legality_evidence.items() if row.legal is None],
+        "drop_legality_evidence": {pid: asdict(row) for pid, row in legality_evidence.items()},
+        "drop_rules": drop_rules,
         "fantasypros_calls": (
             board.call_plan.fantasypros_calls
             + waiver_wire_refresh.call_plan.fantasypros_calls

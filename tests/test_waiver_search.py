@@ -129,13 +129,14 @@ def search(
     role_evidence=None,
     waiver_wire_evidence=None,
     ros_panel_evidence=None,
+    drop_legality=None,
 ):
     return search_waiver_candidates(
         snapshot or complete_search_snapshot(),
         weeks=weeks(),
         projections=projection_rows or complete_projections(),
         values=value_rows or complete_values(),
-        drop_legality=legality(),
+        drop_legality=legality() if drop_legality is None else drop_legality,
         news_fresh=news(),
         contingencies=contingencies,
         waiver_wire_evidence=waiver_wire_evidence,

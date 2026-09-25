@@ -390,6 +390,10 @@ def run_target_workflow(
             "evidence_status": policy.status,
             "basis": policy.basis,
         },
+        "value_coverage": {
+            "included_players": len(refresh.selected_final.players),
+            "excluded_players": list(refresh.selected_final.excluded_players),
+        },
         "performance_history": (
             {
                 "path": str(performance_history.path),
@@ -452,6 +456,17 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
         f"Market: {result.targets.pricing_mode}; targets are WATCH until an exact partner-credible offer passes.",
         f"Feedback template: {result.feedback_path} (optional; never overwritten)",
     ]
+    if result.targets.coverage_counts:
+        lines.append("Coverage: " + "; ".join(f"{key}={value}" for key, value in result.targets.coverage_counts))
+    for row in result.targets.roster_exclusions:
+        lines.append(f"Excluded roster {row.roster_id}: {row.reason}; " + ", ".join(
+            f"{names.get(pid, pid)}/W{week}" for pid, week in row.missing_player_weeks
+        ))
+    missing_values = result.board_refresh.selected_final.excluded_players
+    if missing_values:
+        lines.append(f"Value coverage exclusions ({len(missing_values)}): " + "; ".join(
+            f"{names.get(pid, pid)}: {reason}" for pid, reason in missing_values
+        ))
     if result.performance_history:
         history = result.performance_history
         lines.append(

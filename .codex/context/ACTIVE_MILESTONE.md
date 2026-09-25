@@ -1,15 +1,15 @@
 # Active milestone
 
-AC-001 — Weekly availability and projection provenance is at a tested handoff,
-pending review in PR #15 (stacked on PR #6). Authorized September 25, 2026 by the user's request
-to resolve the Waiver/Trade audit. All 696 tests and Ruff pass; no live provider
-operation or Sleeper write occurred. Evidence:
-`docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
+AC-002 — Candidate-scoped safety and transaction legality (issue #8) is implemented
+and at tested PR handoff. Only review/validation corrections for AC-002 remain
+authorized; do not start another product milestone without user authorization.
+Read only AC-002 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`
+and `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_002.md` when continuing its review.
+722 tests and Ruff pass. No live recommendation run or Sleeper write occurred.
 
-No further implementation milestone is active. AC-002 (issue #8) is next:
-candidate-scoped safety and transaction legality. Activate only its section of
-`docs/ASSISTANT_RELIABILITY_TASKS.md` before continuing. AC-002–AC-008 remain
-open; AC-001 does not resolve the whole audit.
+AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
+all CI checks. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
+AC-003–AC-008 remain planned; the overall audit is not closed.
 
 WA-027 — League-scored specialist performance weighting completed September
 25, 2026 (America/Los_Angeles). K and DST exact evidence now preserves actual
