@@ -2032,7 +2032,7 @@ def _add_target_workflow_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--ecr-proxy", action="store_true", help="Use explicit ECR-PROXY mode")
     parser.add_argument("--expert-pool")
     parser.add_argument(
-        "--fantasypros-cache", default="data/cache/trade/fantasypros/2026"
+        "--fantasypros-cache", default=None
     )
     parser.add_argument(
         "--budget", default="data/cache/trade/fantasypros/daily_budget.json"
@@ -2555,7 +2555,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     trade_values.add_argument(
         "--fantasypros-cache",
-        default="data/cache/trade/fantasypros/2026",
+        default=None,
     )
     trade_values.add_argument(
         "--budget",
@@ -2600,7 +2600,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     trade_evaluate.add_argument(
         "--fantasypros-cache",
-        default="data/cache/trade/fantasypros/2026",
+        default=None,
     )
     trade_evaluate.add_argument(
         "--budget",
@@ -2628,7 +2628,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     trade_diagnose.add_argument(
         "--fantasypros-cache",
-        default="data/cache/trade/fantasypros/2026",
+        default=None,
     )
     trade_diagnose.add_argument(
         "--budget",
@@ -2646,7 +2646,7 @@ def build_parser() -> argparse.ArgumentParser:
     trade_gaps.add_argument("--csv")
     trade_gaps.add_argument("--expert-pool")
     trade_gaps.add_argument(
-        "--fantasypros-cache", default="data/cache/trade/fantasypros/2026"
+        "--fantasypros-cache", default=None
     )
     trade_gaps.add_argument(
         "--budget", default="data/cache/trade/fantasypros/daily_budget.json"
@@ -2687,7 +2687,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     trade_compare.add_argument("--expert-pool")
     trade_compare.add_argument(
-        "--fantasypros-cache", default="data/cache/trade/fantasypros/2026"
+        "--fantasypros-cache", default=None
     )
     trade_compare.add_argument(
         "--budget", default="data/cache/trade/fantasypros/daily_budget.json"

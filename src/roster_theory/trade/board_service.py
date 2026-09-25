@@ -24,7 +24,8 @@ from roster_theory.core.projections import (
     reconcile_current_inactive_omissions,
 )
 from roster_theory.core.replacement import positional_waiver_baselines
-from roster_theory.core.scoring import STAT_ALIASES, score_stats
+from roster_theory.core.scoring import STAT_ALIASES, POSITION_RECEPTION_BONUSES, score_stats
+from roster_theory.providers.formats import RankingFormat, ranking_format, validate_provider_scope
 from roster_theory.fantasypros import FantasyProsClient
 from roster_theory.providers.cache import (
     DailyRequestBudget,
@@ -149,8 +150,9 @@ def classify_trade_scoring(
     classified = {
         setting for setting, _ in (*out_of_scope, *projection_limited)
     }
-    supported = tuple(sorted(nonzero.intersection(STAT_ALIASES) - classified))
-    unsupported = tuple(sorted(nonzero - set(STAT_ALIASES) - classified))
+    supported_keys = set(STAT_ALIASES) | set(POSITION_RECEPTION_BONUSES)
+    supported = tuple(sorted(nonzero.intersection(supported_keys) - classified))
+    unsupported = tuple(sorted(nonzero - supported_keys - classified))
     return TradeScoringCapability(
         supported_skill_settings=supported,
         out_of_scope_settings=out_of_scope,
@@ -207,6 +209,7 @@ class BoardRefreshResult:
     expert_pool_evidence: Mapping[str, Any] | None = None
     current_experts: tuple[CurrentExpert, ...] = ()
     missing_rostered_player_ids: tuple[str, ...] = ()
+    ranking_format: RankingFormat | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -236,7 +239,7 @@ def _ros_market_is_complete(datasets: Sequence[RankingDataset]) -> bool:
 
 
 def load_expert_pool(
-    path: str | Path = "data/manual/fantasypros/inseason_expert_pool_2026.csv",
+    path: str | Path,
 ) -> tuple[ExpertPoolMember, ...]:
     with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
         rows = tuple(csv.DictReader(handle))
@@ -290,15 +293,18 @@ def resolve_draft_anchor(
     *,
     path: str | Path | None = None,
     updated_at: str | None = None,
+    season: int | None = None,
 ) -> tuple[Path, str]:
+    if path is None and season is None:
+        raise ValueError("Season is required when resolving a default Draft anchor")
     target = Path(
-        path or Path("data/exports/league_boards_2026") / f"{league_key}_board.csv"
+        path or Path(f"data/exports/league_boards_{season}") / f"{league_key}_board.csv"
     )
     if not target.exists():
         raise CoverageIncomplete(
             f"Week 1 Draft anchor is missing for league {league_key}: {target}"
         )
-    if path is not None and updated_at is not None:
+    if path is not None and updated_at is not None and season is None:
         return target, updated_at
 
     metadata_path = target.with_name(f"{league_key}_metadata.json")
@@ -316,6 +322,8 @@ def resolve_draft_anchor(
         raise CoverageIncomplete("Week 1 Draft anchor metadata has the wrong league key")
     if str(metadata.get("league_id") or "") != league_id:
         raise CoverageIncomplete("Week 1 Draft anchor metadata has the wrong league ID")
+    if season is not None and str(metadata.get("season")) != str(season):
+        raise CoverageIncomplete("Week 1 Draft anchor metadata has the wrong or missing season")
     source_time = updated_at or str(metadata.get("generated_at") or "")
     if not source_time:
         raise CoverageIncomplete("Week 1 Draft anchor metadata has no generated timestamp")
@@ -339,6 +347,7 @@ def _input_calls(
     weekly_ranking_max_age: timedelta = timedelta(hours=12),
     ros_ranking_max_age: timedelta = timedelta(hours=24),
     ros_experts_max_age: timedelta = timedelta(hours=12),
+    scoring: str = "HALF",
 ) -> tuple[CallPlan, dict[str, Path], dict[str, dict[str, Any]]]:
     calls: list[PlannedCall] = []
     paths: dict[str, Path] = {}
@@ -349,7 +358,7 @@ def _input_calls(
             (
                 f"rankings_{position.lower()}",
                 f"/nfl/{season}/consensus-rankings",
-                {"position": position, "scoring": "HALF", "week": week, "experts": "show"},
+                {"position": position, "scoring": scoring, "week": week, "experts": "show"},
                 weekly_ranking_max_age,
             )
         )
@@ -366,7 +375,7 @@ def _input_calls(
                     f"/nfl/{season}/consensus-rankings",
                     {
                         "position": position,
-                        "scoring": "HALF",
+                        "scoring": scoring,
                         "type": "ROS",
                         "experts": "show",
                     },
@@ -395,7 +404,7 @@ def _input_calls(
             (
                 f"projections_{projection_week}",
                 f"/nfl/{season}/projections",
-                {"position": "ALL", "scoring": "HALF", "week": projection_week},
+                {"position": "ALL", "scoring": scoring, "week": projection_week},
                 timedelta(hours=12),
             )
         )
@@ -429,6 +438,8 @@ def _fetch_value_inputs(
     ros_experts_max_age: timedelta = timedelta(hours=12),
 ) -> ValueInputs:
     snapshot = snapshot_result.snapshot
+    format_evidence = ranking_format(dict(snapshot.league.scoring), getattr(snapshot.league, "roster_positions", ()))
+    scoring_code = format_evidence.scoring
     now = datetime.now(timezone.utc)
     budget = _read_budget(budget_path)
     weeks = tuple(week.week for week in snapshot.weeks)
@@ -443,6 +454,7 @@ def _fetch_value_inputs(
         weekly_ranking_max_age,
         ros_ranking_max_age,
         ros_experts_max_age,
+        scoring=scoring_code,
     )
     if plan.fantasypros_calls:
         budget.reserve(plan.fantasypros_calls)
@@ -474,13 +486,14 @@ def _fetch_value_inputs(
     for position in ranking_positions:
         name = f"rankings_{position.lower()}"
         record = values[name]
+        validate_provider_scope(record["payload"], season=snapshot.league.season, scoring=scoring_code)
         dataset = normalize_rankings(
             record["payload"],
             requested_horizon="WEEKLY",
             board_source="market",
             captured_at=datetime.fromisoformat(record["captured_at"]),
             endpoint=f"/nfl/{snapshot.league.season}/consensus-rankings",
-            parameters={"position": position, "scoring": "HALF", "week": snapshot.manifest.current_week, "experts": "show"},
+            parameters={"position": position, "scoring": scoring_code, "week": snapshot.manifest.current_week, "experts": "show"},
         )
         if dataset.horizon != "WEEKLY" or dataset.week != snapshot.manifest.current_week:
             raise CoverageIncomplete("FantasyPros rankings did not return the active weekly horizon")
@@ -499,6 +512,7 @@ def _fetch_value_inputs(
         for position in ros_positions:
             name = f"ros_rankings_{position.lower()}"
             record = values[name]
+            validate_provider_scope(record["payload"], season=snapshot.league.season, scoring=scoring_code)
             dataset = normalize_rankings(
                 record["payload"],
                 requested_horizon="ROS",
@@ -507,7 +521,7 @@ def _fetch_value_inputs(
                 endpoint=f"/nfl/{snapshot.league.season}/consensus-rankings",
                 parameters={
                     "position": position,
-                    "scoring": "HALF",
+                    "scoring": scoring_code,
                     "type": "ROS",
                     "experts": "show",
                 },
@@ -525,19 +539,24 @@ def _fetch_value_inputs(
         name = f"projections_{week}"
         record = values[name]
         payload = record["payload"]
+        validate_provider_scope(payload, season=snapshot.league.season, scoring=scoring_code)
         points: dict[str, float] = {}
+        premium_coverage: dict[str, str] = {}
         for row in payload.get("players") or ():
             if not isinstance(row, Mapping) or row.get("fpid") is None:
                 continue
-            scored = score_stats(row.get("stats") or {}, scoring)
+            scored = score_stats(row.get("stats") or {}, scoring, position=row.get("position_id"))
             points[str(row["fpid"])] = scored.points
+            if set(scored.unsupported_settings) & set(POSITION_RECEPTION_BONUSES):
+                premium_coverage[str(row["fpid"])] = "missing_position_reception_stats"
         dataset = normalize_projections(
             payload,
             horizon="WEEKLY",
             league_points=points,
+            coverage_by_player=premium_coverage,
             captured_at=datetime.fromisoformat(record["captured_at"]),
             endpoint=f"/nfl/{snapshot.league.season}/projections",
-            parameters={"position": "ALL", "scoring": "HALF", "week": week},
+            parameters={"position": "ALL", "scoring": scoring_code, "week": week},
         )
         if dataset.week != week:
             raise CoverageIncomplete(f"FantasyPros projection response did not match Week {week}")
@@ -668,7 +687,7 @@ def _normalize_nfl_team(value: str | None) -> str:
 
 
 def load_inseason_identity_overrides(
-    path: str | Path = "config/inseason_identity_overrides_2026.csv",
+    path: str | Path,
 ) -> dict[str, str]:
     target = Path(path)
     if not target.exists():
@@ -1004,13 +1023,13 @@ def refresh_value_boards(
     *,
     config_path: str | Path | None = None,
     expert_pool_path: str | Path | None = None,
-    cache_dir: str | Path = "data/cache/trade/fantasypros/2026",
+    cache_dir: str | Path | None = None,
     budget_path: str | Path = "data/cache/trade/fantasypros/daily_budget.json",
     output_path: str | Path | None = None,
     fantasypros_client: FantasyProsClient | None = None,
     draft_anchor_path: str | Path | None = None,
     draft_anchor_updated_at: str | None = None,
-    identity_override_path: str | Path = "config/inseason_identity_overrides_2026.csv",
+    identity_override_path: str | Path | None = None,
     include_special_teams: bool = False,
     weekly_ranking_max_age: timedelta = timedelta(hours=12),
     ros_ranking_max_age: timedelta = timedelta(hours=24),
@@ -1030,6 +1049,9 @@ def refresh_value_boards(
     )
     snapshot = refresh.snapshot
     scoring_capability = validate_trade_scoring(snapshot.league.scoring)
+    format_evidence = ranking_format(dict(snapshot.league.scoring), getattr(snapshot.league, "roster_positions", ()))
+    cache_dir = Path(cache_dir) if cache_dir is not None else Path(f"data/cache/trade/fantasypros/{snapshot.league.season}")
+    identity_override_path = identity_override_path or f"config/inseason_identity_overrides_{snapshot.league.season}.csv"
     ranking_positions = (
         (*POSITION_MINIMUMS, *SPECIAL_TEAM_POSITIONS)
         if include_special_teams
@@ -1157,15 +1179,18 @@ def refresh_value_boards(
     if not stage.usable:
         raise CoverageIncomplete("; ".join(stage.reasons))
 
-    resolved_anchor_path, resolved_anchor_updated_at = resolve_draft_anchor(
-        league_key,
-        snapshot.league.league_id,
-        path=draft_anchor_path,
-        updated_at=draft_anchor_updated_at,
-    )
-    draft_selected, draft_market = load_draft_anchor(
-        resolved_anchor_path, updated_at=resolved_anchor_updated_at
-    )
+    resolved_anchor_path, resolved_anchor_updated_at = None, None
+    draft_selected, draft_market = (), ()
+    if stage.mode != "ROS":
+        resolved_anchor_path, resolved_anchor_updated_at = resolve_draft_anchor(
+            league_key, snapshot.league.league_id, season=snapshot.league.season,
+            path=draft_anchor_path, updated_at=draft_anchor_updated_at,
+        )
+        draft_selected, draft_market = load_draft_anchor(
+            resolved_anchor_path, updated_at=resolved_anchor_updated_at,
+            scope={"STD": "skills_standard", "HALF": "skills_half_ppr", "PPR": "skills_ppr"}[format_evidence.scoring],
+            scoring=format_evidence.scoring,
+        )
     known_ids = {player.player_id for player in snapshot.players}
     draft_selected = tuple(
         row
@@ -1315,6 +1340,11 @@ def refresh_value_boards(
         expected_weeks=weeks,
         current_week=snapshot.manifest.current_week,
     )
+    if format_evidence.warnings:
+        projection_warnings = {
+            player_id: (*projection_warnings.get(player_id, ()), *format_evidence.warnings)
+            for player_id in positions
+        }
     raw_points = {pid: points for curve in curves for pid, points in curve.raw_player_points
                   if pid in positions}
     baselines = positional_waiver_baselines(
@@ -1556,6 +1586,7 @@ def refresh_value_boards(
         gaps=gaps,
         manifest_id=snapshot.manifest.analysis_id,
         warnings=(
+            *format_evidence.warnings,
             f"{stage.mode} owns long-term value; CURRENT_SIGNAL remains separate",
             "CURRENT_SIGNAL weekly ranks/projections remain separate and do not change ownership value",
             "Valuation gaps are signals, not trade recommendations or opponent preferences",
@@ -1569,11 +1600,12 @@ def refresh_value_boards(
                 asdict(row) for row in freshness_exclusions
             ],
             "scoring_capability": asdict(scoring_capability),
+            "ranking_format": asdict(format_evidence),
             "missing_rostered_player_ids": list(missing_rostered_player_ids),
             "draft_anchor": {
                 "league_key": league_key,
                 "league_id": snapshot.league.league_id,
-                "path": str(resolved_anchor_path),
+                "path": str(resolved_anchor_path) if resolved_anchor_path else None,
                 "updated_at": resolved_anchor_updated_at,
             },
             "blend_enabled": False,
@@ -1600,6 +1632,7 @@ def refresh_value_boards(
         expert_pool_evidence=dict(pool_resolution.evidence),
         current_experts=inputs.current_experts,
         missing_rostered_player_ids=missing_rostered_player_ids,
+        ranking_format=format_evidence,
     )
 
 
@@ -1610,6 +1643,7 @@ def board_refresh_report(result: BoardRefreshResult) -> dict[str, Any]:
     }
     owner_by_player = dict(result.refresh.snapshot.owner_by_player)
     return {
+        "ranking_format": asdict(result.ranking_format) if getattr(result, "ranking_format", None) else None,
         "product": "TRADE ASSISTANT",
         "operation": "VALUE BOARD REFRESH",
         "league": result.refresh.snapshot.league_key,

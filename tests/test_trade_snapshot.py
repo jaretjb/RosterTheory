@@ -328,6 +328,7 @@ class FantasyProsAdapterTests(unittest.TestCase):
             def consensus_rankings(self, _season, **_params):
                 return {
                     "year": "2026",
+                    "scoring": _params["scoring"],
                     "week": "0",
                     "ranking_type_name": "draft",
                     "fallback_for": "ROS",
@@ -337,6 +338,7 @@ class FantasyProsAdapterTests(unittest.TestCase):
             def projections(self, _season, **params):
                 return {
                     "season": "2026",
+                    "scoring": params["scoring"],
                     "week": str(params["week"]),
                     "players": [
                         {"fpid": 10, "name": "Runner", "position_id": "RB", "stats": {"rush_yds": 80}}
@@ -359,6 +361,7 @@ class FantasyProsAdapterTests(unittest.TestCase):
                 calls.append(params)
                 return {
                     "year": "2026",
+                    "scoring": params["scoring"],
                     "week": "2",
                     "ranking_type_name": "WW",
                     "players": [],
