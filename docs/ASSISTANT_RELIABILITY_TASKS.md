@@ -15,7 +15,7 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 | AC-001 | [#7](https://github.com/jaretjb/RosterTheory/issues/7) | Merged in [PR #15](https://github.com/jaretjb/RosterTheory/pull/15) |
 | AC-002 | [#8](https://github.com/jaretjb/RosterTheory/issues/8) | Merged in [PR #16](https://github.com/jaretjb/RosterTheory/pull/16) |
 | AC-003 | [#9](https://github.com/jaretjb/RosterTheory/issues/9) | Merged in [PR #17](https://github.com/jaretjb/RosterTheory/pull/17) |
-| AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Implemented; [PR #18](https://github.com/jaretjb/RosterTheory/pull/18) awaits review/merge |
+| AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Merged in [PR #18](https://github.com/jaretjb/RosterTheory/pull/18) |
 | AC-005 | [#11](https://github.com/jaretjb/RosterTheory/issues/11) | Planned |
 | AC-006 | [#12](https://github.com/jaretjb/RosterTheory/issues/12) | Planned |
 | AC-007 | [#13](https://github.com/jaretjb/RosterTheory/issues/13) | Planned |
@@ -76,8 +76,8 @@ multiple claims whose independent gains cannot safely be combined.
 
 ## AC-004 — Consistent Trade decisions and secondary moves
 
-Status: IMPLEMENTED; [PR #18](https://github.com/jaretjb/RosterTheory/pull/18)
-awaits review/merge. Findings: T4, T5. Depends on AC-002 (merged).
+Status: MERGED in [PR #18](https://github.com/jaretjb/RosterTheory/pull/18).
+Findings: T4, T5. Depends on AC-002 (merged).
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_004.md`.
 Verification: 746 tests, Ruff and diff checks pass. No live report/provider refresh.
 
@@ -92,7 +92,8 @@ moves, and bounded-search disclosure. Waiver-specific policy must not leak here.
 
 ## AC-005 — Explicit ranking caps and specialist performance policy
 
-Status: PLANNED. Findings: W6, W8, W9, D4. Depends on AC-003.
+Status: implemented; PR handoff pending. Findings: W6, W8, W9, D4.
+Depends on AC-003 (merged). Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md`.
 
 Implement the requested RB/WR top-50 weekly evidence cutoff independently of
 replacement normalization; document lower positional caps. Separate specialist

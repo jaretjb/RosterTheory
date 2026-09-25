@@ -116,13 +116,16 @@ def _rank_by_position(
         position = _waiver_position(player) if player is not None else None
         if position is not None:
             grouped.setdefault(position, []).append((player_id, value))
-    return {
-        player_id: rank
-        for rows in grouped.values()
-        for rank, (player_id, _value) in enumerate(
-            sorted(rows, key=lambda item: (-item[1], item[0])), 1
-        )
-    }
+    result = {}
+    for rows in grouped.values():
+        previous = None
+        rank = 0
+        for index, (player_id, value) in enumerate(sorted(rows, key=lambda item: -item[1]), 1):
+            if value != previous:
+                rank = index
+            result[player_id] = rank
+            previous = value
+    return result
 
 
 def _performance_evidence(
@@ -132,7 +135,9 @@ def _performance_evidence(
     current_week: int,
     players: dict[str, object],
     scoring: dict[str, float],
+    as_of: datetime | None = None,
 ) -> tuple[dict[str, dict[str, object]], tuple[int, ...]]:
+    as_of = as_of or datetime.now(timezone.utc)
     completed_weeks = tuple(
         range(max(1, current_week - 2), current_week)
     )
@@ -148,7 +153,7 @@ def _performance_evidence(
     recent_points: dict[str, float] = {}
     recent_opportunities: dict[str, float] = {}
     recent_yards: dict[str, float] = {}
-    recent_samples: dict[str, int] = {}
+    recent_samples: dict[str, int | None] = {}
     for player_id, player in players.items():
         position = _waiver_position(player)
         if position is None:
@@ -157,10 +162,12 @@ def _performance_evidence(
             weekly_rows[week][player_id]
             for week in completed_weeks
             if player_id in weekly_rows[week]
+            and weekly_rows[week][player_id].get("gp") != 0
         )
         if not rows:
             continue
-        recent_samples[player_id] = len(rows)
+        recent_samples[player_id] = (len(rows) if all(_game_count(row.get("gp")) == 1 for row in rows)
+                                     else None)
         recent_points[player_id] = round(
             sum(score_stats(row, scoring).points for row in rows) / len(rows), 3
         )
@@ -185,6 +192,8 @@ def _performance_evidence(
             player_id: {
                 "season_points": season_points.get(player_id),
                 "season_position_rank": season_ranks.get(player_id),
+                "season_sample_size": _game_count(season_rows.get(player_id, {}).get("gp")),
+                "performance_as_of": as_of,
                 "recent_points_per_game": recent_points.get(player_id),
                 "recent_position_rank": recent_ranks.get(player_id),
                 "recent_opportunities_per_game": recent_opportunities.get(player_id),
@@ -197,6 +206,12 @@ def _performance_evidence(
         },
         completed_weeks,
     )
+
+
+def _game_count(value: object) -> int | None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0 and value < 100 and int(value) == value:
+        return int(value)
+    return None
 
 
 def load_contingency_inputs(
@@ -439,6 +454,9 @@ def build_waiver_inputs(
             normalization_basis="LEAGUE_POSITIONAL_VORP",
             long_term_value_horizon=board.stage.mode,
             season_points=performance[player_id]["season_points"],
+            season_sample_size=performance[player_id]["season_sample_size"],
+            recent_sample_size=performance[player_id]["recent_sample_size"],
+            performance_as_of=performance[player_id]["performance_as_of"],
             season_position_rank=performance[player_id]["season_position_rank"],
             recent_points_per_game=performance[player_id]["recent_points_per_game"],
             recent_position_rank=performance[player_id]["recent_position_rank"],
