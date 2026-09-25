@@ -93,6 +93,8 @@ def normalize_schedule(
                 "home_team": _team(row.get("home_team")),
                 "gameday": str(row.get("gameday") or ""),
                 "gametime": str(row.get("gametime") or ""),
+                # https://nflreadr.nflverse.com/articles/dictionary_schedules.html
+                "gametime_zone": "US/Eastern",
             }
         )
     if not selected_season_rows:
