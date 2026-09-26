@@ -110,6 +110,36 @@ def _projection_response_scope_issues(response: Mapping[str, Any], season: int) 
     return issues
 
 
+def _draft_ranking_scope_issues(
+    response: Mapping[str, Any], season: int, position: str, scoring: str,
+) -> list[str]:
+    expected = {
+        "year": str(season), "week": "0", "position_id": position,
+        "scoring": scoring,
+    }
+    issues = []
+    for field, wanted in expected.items():
+        declared = response.get(field)
+        if declared in (None, ""):
+            issues.append(f"missing_{field}")
+        elif str(declared).strip().upper() != wanted:
+            issues.append(f"{field}_mismatch")
+    ranking_type = response.get("ranking_type_name")
+    if ranking_type in (None, ""):
+        issues.append("missing_ranking_type_name")
+    elif str(ranking_type).strip().upper() not in {"DRAFT", "PRESEASON"}:
+        issues.append("ranking_type_mismatch")
+    if response.get("fallback_for") not in (None, ""):
+        issues.append("fallback_response")
+    if "players" not in response:
+        issues.append("missing_players_field")
+    elif not isinstance(response["players"], list):
+        issues.append("invalid_players_shape")
+    elif any(not isinstance(player, Mapping) for player in response["players"]):
+        issues.append("invalid_player_shape")
+    return issues
+
+
 def build_fantasypros_board(
     client: FantasyProsClient,
     *,
@@ -220,15 +250,34 @@ def build_fantasypros_board(
     sleeper_by_name = _sleeper_name_index(sleeper_players)
 
     rows: list[dict[str, Any]] = []
+    ranking_sources: list[dict[str, Any]] = []
+    ranking_issues: list[dict[str, Any]] = []
     accuracy_for_board: dict[str, AccuracyRecord] = {}
     returned_counts = {expert_id: 0 for expert_id, _ in selected}
     for expert_id, record in selected:
         accuracy_for_board[normalize_name(record.expert_name)] = record
     for position in ("QB", "RB", "WR", "TE"):
-        ecr_response = client.consensus_rankings(season, position=position, scoring=scoring)
+        ecr_response = client.consensus_rankings(
+            season, position=position, scoring=scoring, type="DRAFT", week=0,
+        )
+        ecr_scope_issues = _draft_ranking_scope_issues(ecr_response, season, position, scoring)
+        ranking_sources.append({
+            "position": position, "source": "ecr", "expert_id": None,
+            "declared_year": ecr_response.get("year"),
+            "declared_week": ecr_response.get("week"),
+            "declared_position": ecr_response.get("position_id"),
+            "declared_scoring": ecr_response.get("scoring"),
+            "declared_ranking_type": ecr_response.get("ranking_type_name"),
+            "fallback_for": ecr_response.get("fallback_for"),
+            "scope_issues": ecr_scope_issues,
+        })
+        if ecr_scope_issues:
+            ranking_issues.append({
+                "position": position, "source": "ecr", "reason": ";".join(ecr_scope_issues),
+            })
         ecr_by_id = {
             str(player.get("player_id")): player.get("rank_ecr")
-            for player in ecr_response.get("players", [])
+            for player in (ecr_response.get("players", []) if not ecr_scope_issues else [])
             if player.get("player_id") is not None
         }
         for expert_id, record in selected:
@@ -236,8 +285,27 @@ def build_fantasypros_board(
                 season,
                 position=position,
                 scoring=scoring,
+                type="DRAFT",
+                week=0,
                 filters=_single_expert_filter(expert_id),
             )
+            scope_issues = _draft_ranking_scope_issues(response, season, position, scoring)
+            ranking_sources.append({
+                "position": position, "source": "expert", "expert_id": expert_id,
+                "declared_year": response.get("year"),
+                "declared_week": response.get("week"),
+                "declared_position": response.get("position_id"),
+                "declared_scoring": response.get("scoring"),
+                "declared_ranking_type": response.get("ranking_type_name"),
+                "fallback_for": response.get("fallback_for"),
+                "scope_issues": scope_issues,
+            })
+            if scope_issues:
+                ranking_issues.append({
+                    "position": position, "source": "expert", "expert_id": expert_id,
+                    "reason": ";".join(scope_issues),
+                })
+                continue
             returned_counts[expert_id] += len(response.get("players", []))
             for player in response.get("players", []):
                 player_id = str(player.get("player_id"))
@@ -288,6 +356,7 @@ def build_fantasypros_board(
     baselines = starter_baselines(projected_board, roster_positions, team_count)
     board = add_vbd(board, baselines) if baselines else board
     checks = {
+        "draft_ranking_sources_verified": not ranking_issues,
         "premium_api": expert_response.get("public_api_limited") is False,
         "multi_year_accuracy": weight_source == "multi_year_2021_2025",
         "at_least_five_current_experts": sum(count > 0 for count in returned_counts.values()) >= 5,
@@ -318,5 +387,7 @@ def build_fantasypros_board(
             "projection_rule_support": assessment.support,
             "projection_sources": projection_sources,
             "projection_issues": projection_issues,
+            "ranking_sources": ranking_sources,
+            "ranking_issues": ranking_issues,
         },
     )

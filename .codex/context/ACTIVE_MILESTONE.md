@@ -1,6 +1,28 @@
 # Active milestone
 
-## MA-002j - Draft API projection scoring evidence
+## MA-002k - Draft API ranking-source scope
+
+Authorized by the user's September 26 request to continue after merging PR #44.
+Implement a bounded #30 follow-up: explicitly request preseason Draft rankings,
+verify each FantasyPros ranking response declares the requested season, week zero,
+scoring format, position and draft ranking type, and exclude unverified or
+mismatched ranking rows from the board. Report source-level scope evidence and
+keep independently valid expert/position responses usable. Requirements MR-02,
+MR-06, MR-09 and MR-10; architecture sections 3.1 and 5.
+
+Allowed: Draft API ranking import, additive board metadata, synthetic regressions
+and focused evidence. No paid-provider calls, league writes, expert-weight changes,
+projection-scoring changes, manual import, or Trade/Waiver behavior changes.
+Keep unknown source declarations incomplete rather than inferring them from
+request parameters. Gates: wrong and missing declarations, partial-source
+preservation, existing Draft reference, full suite/Ruff/context/privacy/CI.
+Stop at a tested PR against main; #30 and MA-002 remain open.
+
+Implementation complete: 913 tests pass with unchanged reference goldens;
+Ruff, compilation, context routing and tracked-tree privacy gates pass.
+Evidence: `docs/MODULAR_DRAFT_RANKING_SCOPE.md`. CI/review remain the merge gate.
+
+## Previous MA-002j - Draft API projection scoring evidence (merged PR #44)
 
 Authorized by the user's September 26 request to continue after merging PR #43.
 Implement a bounded #30 follow-up for the FantasyPros preseason API board:

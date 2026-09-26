@@ -29,10 +29,12 @@ class FantasyProsImportTests(unittest.TestCase):
 
 
 class SyntheticDraftClient:
-    def __init__(self, ranked, projected, *, scope_by_position=None):
+    def __init__(self, ranked, projected, *, scope_by_position=None, ranking_scope_by_source=None):
         self.ranked = ranked
         self.projected = projected
         self.scope_by_position = scope_by_position or {}
+        self.ranking_scope_by_source = ranking_scope_by_source or {}
+        self.ranking_requests = []
 
     def ranking_experts(self, season, **params):
         return {"experts": [
@@ -50,7 +52,14 @@ class SyntheticDraftClient:
                 **self.scope_by_position.get(position, {})}
 
     def consensus_rankings(self, season, **params):
-        return {"players": self.ranked.get(params["position"], [])}
+        self.ranking_requests.append(params)
+        source = params.get("filters") or "ecr"
+        return {
+            "year": str(season), "week": "0", "position_id": params["position"],
+            "scoring": params["scoring"], "ranking_type_name": "DRAFT",
+            "players": self.ranked.get(params["position"], []),
+            **self.ranking_scope_by_source.get((params["position"], source), {}),
+        }
 
 
 def draft_board(client, scoring):
@@ -140,9 +149,10 @@ class DraftApiScoringTests(unittest.TestCase):
 
         class SparseExperts(SyntheticDraftClient):
             def consensus_rankings(self, season, **params):
+                response = super().consensus_rankings(season, **params)
                 if params.get("filters") not in (None, "1:1"):
-                    return {"players": []}
-                return super().consensus_rankings(season, **params)
+                    response["players"] = []
+                return response
 
         sparse = draft_board(SparseExperts(ranked, projected), {"rec": 0.5})
         self.assertFalse(sparse.metadata["checks"]["at_least_five_current_experts"])
@@ -154,6 +164,62 @@ class DraftApiScoringTests(unittest.TestCase):
         missing_top = draft_board(client, {"rec": 0.5})
         self.assertLess(missing_top.metadata["top_180_projection_coverage"], 0.90)
         self.assertFalse(missing_top.metadata["draft_ready"])
+
+
+class DraftRankingScopeTests(unittest.TestCase):
+    def test_wrong_horizon_and_fallback_are_excluded_without_losing_valid_positions(self):
+        ranked = {
+            "QB": [{"player_id": "qb", "player_name": "A Passer",
+                    "player_position_id": "QB", "rank_ecr": 1}],
+            "RB": [{"player_id": "rb", "player_name": "A Runner",
+                    "player_position_id": "RB", "rank_ecr": 1}],
+        }
+        client = SyntheticDraftClient(ranked, {}, ranking_scope_by_source={
+            ("QB", "ecr"): {"ranking_type_name": "ROS"},
+            ("QB", "1:1"): {"ranking_type_name": "WW"},
+            ("QB", "2:2"): {"fallback_for": "DRAFT"},
+        })
+        board = draft_board(client, {"rec": 0.5})
+        players = {row["fantasypros_id"]: row for row in board.players}
+        self.assertEqual(players["qb"]["expert_count"], 3)
+        self.assertIsNone(players["qb"]["ecr"])
+        self.assertEqual(players["rb"]["expert_count"], 5)
+        self.assertFalse(board.metadata["checks"]["draft_ranking_sources_verified"])
+        self.assertFalse(board.metadata["draft_ready"])
+        self.assertTrue(all(request["type"] == "DRAFT" and request["week"] == 0
+                            for request in client.ranking_requests))
+        self.assertEqual(len(board.metadata["ranking_issues"]), 3)
+
+    def test_missing_and_mismatched_source_declarations_remain_incomplete(self):
+        ranked = {"QB": [{"player_id": "qb", "player_name": "A Passer",
+                          "player_position_id": "QB", "rank_ecr": 1}]}
+        client = SyntheticDraftClient(ranked, {}, ranking_scope_by_source={
+            ("QB", "ecr"): {"year": "2025", "week": "3", "scoring": "PPR",
+                            "position_id": "RB", "ranking_type_name": None},
+            ("QB", "1:1"): {"year": None, "week": None, "scoring": None,
+                            "position_id": None, "ranking_type_name": None},
+        })
+        board = draft_board(client, {"rec": 0.5})
+        reasons = [item["reason"] for item in board.metadata["ranking_issues"]]
+        self.assertTrue(any("year_mismatch" in reason and "week_mismatch" in reason
+                            and "scoring_mismatch" in reason and "position_id_mismatch" in reason
+                            and "missing_ranking_type_name" in reason for reason in reasons))
+        self.assertTrue(any("missing_year" in reason and "missing_week" in reason
+                            and "missing_scoring" in reason and "missing_position_id" in reason
+                            for reason in reasons))
+        self.assertEqual(board.players[0]["expert_count"], 4)
+        self.assertFalse(board.metadata["draft_ready"])
+
+    def test_malformed_ranking_rows_do_not_crash_or_enter_board(self):
+        client = SyntheticDraftClient({"QB": [None]}, {}, ranking_scope_by_source={
+            ("QB", "ecr"): {"players": []},
+        })
+        board = draft_board(client, {"rec": 0.5})
+        self.assertEqual(board.players, [])
+        self.assertIn("invalid_player_shape", [
+            issue["reason"] for issue in board.metadata["ranking_issues"]
+        ])
+        self.assertFalse(board.metadata["draft_ready"])
 
 
 if __name__ == "__main__":

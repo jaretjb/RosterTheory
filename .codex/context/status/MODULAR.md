@@ -2,13 +2,18 @@
 
 Updated: September 26, 2026 (America/Los_Angeles)
 
-PR #43 merged Draft manual projection scoring. MA-002j addresses the API board:
+PR #44 merged Draft API scoring. MA-002k verifies ranking-source declarations.
+Mismatched or unknown responses supply no ranks or ECR; valid sources remain.
+Evidence: `docs/MODULAR_DRAFT_RANKING_SCOPE.md`; CI/review remain the gate.
+All 913 local tests pass with unchanged reference goldens.
+
+MA-002j addressed the API board:
 only complete league-scored preseason projections enter points and baselines.
 Source-scope, identity and stat gaps remain visible; expert ordering is
 independent. Import readiness now checks top-board scoring coverage rather
 than treating premium tier alone as sufficient. Evidence:
 `docs/MODULAR_DRAFT_API_SCORING.md`; CI/review remain the merge gate.
-All 910 local tests pass, including unchanged reference goldens.
+The MA-002j handoff passed 910 local tests, including unchanged reference goldens.
 
 PRs #37–#40 merged scoring/decision coverage, membership, Draft position-limit
 admission and operation capacity. Missing independent players no longer veto Trade/Waiver comparisons;
