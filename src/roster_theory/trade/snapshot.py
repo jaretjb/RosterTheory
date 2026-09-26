@@ -10,6 +10,7 @@ from roster_theory.core.errors import IdentityIncomplete, StaleData
 from roster_theory.core.models import FantasyTeam, LeagueRules, Player
 from roster_theory.core.provenance import AnalysisManifest, DataStamp, stable_hash
 from roster_theory.core.run_contract import evaluation_time
+from roster_theory.core.roster import require_membership, require_membership_artifact
 from roster_theory.providers.cache import atomic_write_json, is_fresh
 from roster_theory.providers.sleeper import SleeperBundle
 from roster_theory.trade.schedule import EvaluationWeek, ScheduleConfig, build_evaluation_weeks
@@ -151,6 +152,7 @@ def build_trade_snapshot(
             "Duplicate Sleeper ownership: " + ", ".join(sorted(duplicates))
         )
     player_by_id = {player.player_id: player for player in sleeper.players}
+    require_membership(league, sleeper.teams)
     missing = sorted(player_id for player_id in owner_by_player if player_id not in player_by_id)
 
     rostered_skill_ids = {
@@ -297,7 +299,7 @@ def build_trade_snapshot(
         input_hashes=input_hashes,
     )
     return TradeSnapshot(
-        schema_version=1,
+        schema_version=2,
         product="TRADE ASSISTANT",
         league_key=league_key,
         captured_at=sleeper.captured_at,
@@ -354,6 +356,9 @@ def _stamp(value: Mapping[str, Any]) -> DataStamp:
 
 def load_trade_snapshot(path: str | Path) -> TradeSnapshot:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
+    if value.get("schema_version") not in (1, 2):
+        raise ValueError("Unsupported Trade snapshot schema; refresh with this build")
+    require_membership_artifact(value["teams"])
     league_value = value["league"]
     league = LeagueRules(
         league_id=str(league_value["league_id"]),
@@ -364,6 +369,7 @@ def load_trade_snapshot(path: str | Path) -> TradeSnapshot:
         playoff_start_week=league_value.get("playoff_start_week"),
         championship_week=league_value.get("championship_week"),
         reserve_slots=league_value.get("reserve_slots"),
+        taxi_slots=league_value.get("taxi_slots"),
         trade_deadline_raw=league_value.get("trade_deadline_raw"),
         platform_settings=tuple(
             tuple(pair) for pair in league_value.get("platform_settings") or ()
@@ -377,6 +383,7 @@ def load_trade_snapshot(path: str | Path) -> TradeSnapshot:
             player_ids=tuple(item["player_ids"]),
             starter_ids=tuple(item.get("starter_ids") or ()),
             reserve_ids=tuple(item.get("reserve_ids") or ()),
+            taxi_ids=tuple(item["taxi_ids"]) if item["taxi_ids"] is not None else None,
             waiver_position=item.get("waiver_position"),
             waiver_budget_used=item.get("waiver_budget_used"),
             platform_settings=tuple(
@@ -452,5 +459,6 @@ def assert_current(
 ) -> None:
     if not snapshot.current:
         raise StaleData("Offline Trade snapshot is non-current")
+    require_membership(snapshot.league, snapshot.teams)
     if not is_fresh(snapshot.captured_at, maximum_age, now=now or evaluation_time()):
         raise StaleData("Sleeper ownership exceeds the current-run freshness gate")

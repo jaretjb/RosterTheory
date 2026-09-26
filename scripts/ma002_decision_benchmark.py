@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from statistics import median
 import sys
+import tracemalloc
 from time import perf_counter
 
 
@@ -11,12 +12,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--memory', action='store_true', help='Measure a separate traced run after timing')
     args = parser.parse_args()
     root = args.source_root.resolve()
     sys.path[:0] = [str(root / 'src'), str(root)]
     from scripts.ma001_baseline import evidence, offline, workloads
     from tests.ma001_fixtures import PROFILES, ROOT
-    goldens = json.loads((ROOT / 'semantics.json').read_text())['profiles']
+    golden_path = ROOT / 'semantics-membership-v2.json'
+    if not golden_path.exists():  # Comparator checkout predates membership v2.
+        golden_path = ROOT / 'semantics.json'
+    goldens = json.loads(golden_path.read_text())['profiles']
     results = {}
     with offline():
         for profile in PROFILES:
@@ -32,6 +37,12 @@ def main():
                     seconds.append(round(perf_counter() - start, 6))
                     assert evidence(result) == expected, (profile, name)
                 results[profile][name] = {'seconds': seconds, 'median_seconds': median(seconds)}
+                if args.memory:
+                    tracemalloc.start()
+                    function()
+                    _, peak = tracemalloc.get_traced_memory()
+                    tracemalloc.stop()
+                    results[profile][name]['peak_python_bytes'] = peak
                 print(profile, name, results[profile][name]['median_seconds'], flush=True)
     args.output.write_text(json.dumps({'repeats_after_warmup': 5, 'results': results}, indent=2) + '\n')
 

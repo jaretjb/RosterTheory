@@ -45,6 +45,7 @@ class FakeSleeperClient:
             "scoring_settings": {"pass_yd": 0.04, "rec": 0.5},
             "settings": {
                 "reserve_slots": 1,
+                "taxi_slots": 0,
                 "waiver_type": 2,
                 "waiver_budget": 100,
             },
@@ -328,7 +329,7 @@ class WaiverSnapshotTests(unittest.TestCase):
 
         bundle = self._bundle()
         bad_team = replace(bundle.teams[0], reserve_ids=("not-on-roster",))
-        with self.assertRaisesRegex(RosterIllegal, "reserve outside"):
+        with self.assertRaisesRegex(RosterIllegal, "RESERVE_NOT_OWNED"):
             build_waiver_snapshot(
                 league_key="fixture",
                 user_id="u1",

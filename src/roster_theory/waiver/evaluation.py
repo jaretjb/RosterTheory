@@ -1360,6 +1360,9 @@ def evaluate_waiver(
     )
     if not capacity.capacity_legal or not capacity.reserve_legality_known or not capacity.reserve_legal:
         raise RosterIllegal("Current roster capacity or reserve legality is incomplete")
+    from roster_theory.providers.sleeper_membership import reserve_eligibility
+    if issues := reserve_eligibility(snapshot.league, team, snapshot.players):
+        raise RosterIllegal("Reserve eligibility prevents this acquisition: " + ", ".join(row.code for row in issues))
     player_by_id = {player.player_id: player for player in snapshot.players}
     active_roster = set(team.player_ids) - set(team.reserve_ids)
     active_supported_roster = {

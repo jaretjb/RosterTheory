@@ -369,6 +369,8 @@ def build_league_board(
     scoring_settings_override: Mapping[str, Any] | None = None,
     approved_scoring_override: bool = False,
 ) -> LeagueBoard:
+    from roster_theory.providers.sleeper_membership import require_draft_snapshot_membership
+    require_draft_snapshot_membership(snapshot)
     league = snapshot["current"]["league"]
     scoring_settings = dict(league.get("scoring_settings", {}))
     scoring_settings.update(scoring_settings_override or {})

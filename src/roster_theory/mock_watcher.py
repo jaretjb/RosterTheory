@@ -778,6 +778,8 @@ def reconcile_draft_state(
     settings = draft.get("settings") or {}
     teams = int(settings.get("teams") or 0)
     rounds = int(settings.get("rounds") or 0)
+    from roster_theory.providers.sleeper_membership import require_draft_membership_settings
+    require_draft_membership_settings(settings)
     maximum_pick = teams * rounds
     status = str(draft.get("status") or "unknown")
     current_pick = None if status == "complete" else min(

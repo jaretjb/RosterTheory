@@ -10,6 +10,8 @@ from typing import Any, Mapping
 from roster_theory.core.errors import IdentityIncomplete, RosterIllegal, StaleData
 from roster_theory.core.models import FantasyTeam, LeagueRules, Player
 from roster_theory.core.provenance import AnalysisManifest, DataStamp, stable_hash
+from roster_theory.core.roster import require_membership, require_membership_artifact
+from roster_theory.providers.sleeper_membership import reserve_eligibility
 from roster_theory.providers.cache import atomic_write_json, is_fresh
 from roster_theory.providers.sleeper import SleeperBundle, SleeperTransaction
 
@@ -181,7 +183,8 @@ def classify_acquisition_state(
     )
 
 
-def _capacity(league: LeagueRules, team: FantasyTeam) -> RosterCapacity:
+def _capacity(league: LeagueRules, team: FantasyTeam, players=()) -> RosterCapacity:
+    membership = require_membership(league, (team,)).rosters[0]
     player_ids = set(team.player_ids)
     starter_ids = {player_id for player_id in team.starter_ids if player_id != "0"}
     reserve_ids = set(team.reserve_ids)
@@ -189,7 +192,7 @@ def _capacity(league: LeagueRules, team: FantasyTeam) -> RosterCapacity:
         raise RosterIllegal(f"Roster {team.roster_id} has a starter outside its player list")
     if not reserve_ids.issubset(player_ids):
         raise RosterIllegal(f"Roster {team.roster_id} has a reserve outside its player list")
-    active_limit = len(league.roster_positions)
+    active_limit = membership.active_limit
     active_count = len(player_ids - reserve_ids)
     reserve_limit = league.reserve_slots
     reserve_known = reserve_limit is not None
@@ -201,6 +204,9 @@ def _capacity(league: LeagueRules, team: FantasyTeam) -> RosterCapacity:
         raise RosterIllegal(f"Roster {team.roster_id} exceeds its configured capacity")
     if reserve_known and not reserve_legal:
         raise RosterIllegal(f"Roster {team.roster_id} exceeds its reserve capacity")
+    eligibility = reserve_eligibility(league, team, players)
+    reserve_known = reserve_known and not any(row.status == "UNKNOWN" for row in eligibility)
+    reserve_legal = reserve_legal and not eligibility
     return RosterCapacity(
         roster_id=team.roster_id,
         active_limit=active_limit,
@@ -271,7 +277,8 @@ def build_waiver_snapshot(
         if player.player_id in supported_rostered_ids
         or (player.active is True and SUPPORTED_POSITIONS.intersection(player.positions))
     )
-    capacities = tuple(_capacity(league, team) for team in sleeper.teams)
+    require_membership(league, sleeper.teams)
+    capacities = tuple(_capacity(league, team, sleeper.players) for team in sleeper.teams)
     explicit = availability_by_player or {}
     acquisitions = tuple(
         classify_acquisition_state(
@@ -286,11 +293,13 @@ def build_waiver_snapshot(
         acquisition.state == AcquisitionState.UNKNOWN.value
         for acquisition in acquisitions
     )
-    reserve_complete = all(item.reserve_legality_known for item in capacities)
+    reserve_complete = all(item.reserve_legality_known and item.reserve_legal for item in capacities)
     acquisition_complete = unclassified_count == 0
     warnings: list[str] = []
     if not reserve_complete:
-        warnings.append("Reserve-slot limits are unavailable for one or more rosters")
+        warnings.append("Reserve-slot limits or eligibility are incomplete for one or more rosters")
+        warnings.extend(f"{row.status}: {row.code} on roster {row.roster_id}: {','.join(row.player_ids)}"
+                        for team in sleeper.teams for row in reserve_eligibility(league, team, sleeper.players))
     if not acquisition_complete:
         warnings.append(
             "Current ownership could not classify "
@@ -361,7 +370,7 @@ def build_waiver_snapshot(
         input_hashes=input_hashes,
     )
     return WaiverSnapshot(
-        schema_version=1,
+        schema_version=2,
         product="WAIVER ASSISTANT",
         league_key=league_key,
         captured_at=sleeper.captured_at,
@@ -428,6 +437,9 @@ def _stamp(value: Mapping[str, Any]) -> DataStamp:
 
 def load_waiver_snapshot(path: str | Path) -> WaiverSnapshot:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
+    if value.get("schema_version") not in (1, 2):
+        raise ValueError("Unsupported Waiver snapshot schema; refresh with this build")
+    require_membership_artifact(value["teams"])
     league_value = value["league"]
     league = LeagueRules(
         league_id=str(league_value["league_id"]),
@@ -438,6 +450,7 @@ def load_waiver_snapshot(path: str | Path) -> WaiverSnapshot:
         playoff_start_week=league_value.get("playoff_start_week"),
         championship_week=league_value.get("championship_week"),
         reserve_slots=league_value.get("reserve_slots"),
+        taxi_slots=league_value.get("taxi_slots"),
         trade_deadline_raw=league_value.get("trade_deadline_raw"),
         platform_settings=tuple(
             tuple(pair) for pair in league_value.get("platform_settings") or ()
@@ -451,6 +464,7 @@ def load_waiver_snapshot(path: str | Path) -> WaiverSnapshot:
             player_ids=tuple(item["player_ids"]),
             starter_ids=tuple(item.get("starter_ids") or ()),
             reserve_ids=tuple(item.get("reserve_ids") or ()),
+            taxi_ids=tuple(item["taxi_ids"]) if item["taxi_ids"] is not None else None,
             waiver_position=item.get("waiver_position"),
             waiver_budget_used=item.get("waiver_budget_used"),
             platform_settings=tuple(
@@ -557,6 +571,7 @@ def assert_current(
 ) -> None:
     if not snapshot.current:
         raise StaleData("Offline Waiver snapshot is non-current")
+    require_membership(snapshot.league, snapshot.teams)
     maximum_age = timedelta(seconds=snapshot.freshness_window_seconds)
     if not is_fresh(snapshot.captured_at, maximum_age, now=now or datetime.now(timezone.utc)):
         raise StaleData("Sleeper waiver inputs exceed the current-run freshness gate")

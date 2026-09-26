@@ -410,7 +410,10 @@ def _load_snapshot(league_key: str, explicit_path: str | None = None) -> dict[st
             f"Sleeper snapshot not found: {path}. Pass --snapshot PATH, or "
             f"run roster-theory snapshot {league_key} for a read-only refresh."
         )
-    return json.loads(path.read_text(encoding="utf-8"))
+    snapshot = json.loads(path.read_text(encoding="utf-8"))
+    from roster_theory.providers.sleeper_membership import require_draft_snapshot_membership
+    require_draft_snapshot_membership(snapshot)
+    return snapshot
 
 
 def command_build_board(args: argparse.Namespace) -> None:

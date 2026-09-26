@@ -54,6 +54,7 @@ class FakeSleeperClient:
             "settings": {
                 "playoff_week_start": 2,
                 "reserve_slots": 0,
+                "taxi_slots": 0,
                 "trade_deadline": 99,
                 "waiver_type": 2,
                 "waiver_budget": 100,
@@ -74,6 +75,7 @@ class FakeSleeperClient:
                 "owner_id": "u1",
                 "players": ["p1"],
                 "starters": ["p1"],
+                "reserve": [],
                 "settings": {"waiver_position": 3, "waiver_budget_used": 17},
             },
             {
@@ -81,6 +83,7 @@ class FakeSleeperClient:
                 "owner_id": "u2",
                 "players": second,
                 "starters": ["p2"],
+                "reserve": [],
                 "settings": {"waiver_position": 1, "waiver_budget_used": 0},
             },
         ]

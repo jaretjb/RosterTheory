@@ -1,6 +1,40 @@
 # Active milestone
 
-## MA-002c - Decision-scoped missing player evidence
+## MA-002d - Preserve and validate roster membership
+
+Authorized by the user's request to continue after merging PR #37 on September
+26. Implement the membership slice of #31: explicit taxi membership in normalized
+teams; neutral active/starter/reserve/taxi reconciliation; duplicate ownership,
+overlap and capacity validation; visible rejection of taxi formats in feature
+admission. Preserve player identities and missing evidence rather than guessing.
+Requirements MR-01, MR-03, MR-05, MR-10; architecture sections 3 and 5.
+
+Allowed: core membership contracts, Sleeper translation, Trade/Waiver snapshot
+and operation gates, narrow Draft taxi admission, artifact readers, synthetic
+tests and compatibility evidence. Version intentional serialized additions;
+retain old golden evidence and prove ordinary decision fields unchanged. Reject
+old normalized artifacts that cannot establish lost taxi membership with a
+refresh instruction. Raw provider evidence is never rewritten.
+
+Reserve status/settings checks must distinguish invalid from unknown; no absent
+setting is invented. Unverified Draft position-limit semantics and broad league
+admission remain separate follow-ups under #31/MA-002. Do not change Draft caps,
+ranking weights, scoring, calibration, providers, user configuration or league
+state. No live simulation or provider refresh.
+
+Gates: reproduce lost taxi membership; direct and saved evidence preserve it;
+membership/capacity/eligibility cases and feature admission; reviewed schema-only
+baseline differences; full suite, Ruff, context/privacy and required CI. Stop at
+a tested PR against main; broader MA-002 and unfinished #31 acceptance stay open.
+
+Implementation complete: all 877 local tests pass, including 24 reference
+workloads against the explicit membership-v2 golden. The original golden is
+retained; the reviewed receipt contains only membership additions and derived
+hashes. Ruff, compilation, context and repository privacy checks pass. Detailed
+evidence: `docs/MODULAR_ROSTER_MEMBERSHIP.md`. Required CI and review remain the
+merge gate.
+
+## Previous MA-002c - Decision-scoped missing player evidence (merged PR #37)
 
 Authorized by the user's request to implement MR-02 section 3.1 now.
 Continue on draft PR #37: retain strict source scoring, protect unknown assets

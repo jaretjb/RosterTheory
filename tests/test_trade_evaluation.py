@@ -903,6 +903,7 @@ class ProjectionAndEvaluationTests(unittest.TestCase):
         user, partner = self.snapshot.teams
         snapshot = replace(
             self.snapshot,
+            league=replace(self.snapshot.league, reserve_slots=1),
             teams=(replace(user, reserve_ids=("a_low",)), partner),
         )
         package = build_entered_package(snapshot, send=("a_low",), receive=("b_rb",))
