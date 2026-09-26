@@ -18,8 +18,8 @@ decision-support tool. Its current product tracks are:
    in-season value, selected-expert versus market disagreement, lineup/depth
    impact, scenario risk, counterparty incentive, and bounded league-wide
    package discovery through four-player sides.
-3. **Waiver Assistant:** active development for player-agnostic, read-only 4th
-   & 20 add/drop decisions.
+3. **Waiver Assistant:** active development for player-agnostic, read-only
+   add/drop decisions using each configured league's rules.
 4. **Future assistants:** start/sit remains a reserved extension.
 
 `.codex/context/STEERING.md` owns product-track routing. Build one implementation
@@ -30,7 +30,8 @@ transaction.
 ## Leagues
 
 - `league_alpha`: completed 10-team Half-PPR draft from slot 4, with one
-  WR/RB flex, K and DEF, and linked 2025 history. The user's team is `synthetic_identity_02` (`team_4`); Sleeper user `synthetic_owner`, ID
+  WR/RB flex, K and DEF, and linked 2025 history. The user's team is
+  `team_4`; Sleeper user `synthetic_owner`, ID
   `synthetic-user-id`, owns 2026 roster 2. Its calibration is archived and
   must not be treated as League Beta input.
 - `league_beta`: 12 teams, live Half-PPR (`rec=0.5`), two WR/RB/TE flexes, five

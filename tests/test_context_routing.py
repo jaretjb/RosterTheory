@@ -4,6 +4,8 @@ import tomllib
 import unittest
 from pathlib import Path
 
+from scripts.release_gate import validate_repository
+
 
 ROOT = Path(__file__).parents[1]
 
@@ -134,57 +136,7 @@ class ContextRoutingTests(unittest.TestCase):
         self.assertIn("[the Unlicense](LICENSE)", readme)
 
     def test_public_boundary_uses_only_synthetic_manager_identifiers(self):
-        retired_markers = (
-            "Boe" + "ing",
-            "retired_" + "identity_01",
-            "retired_" + "identity_02",
-            "retired_" + "identity_03",
-            "retired_" + "identity_04",
-            "retired_" + "identity_05",
-            "retired_" + "identity_06",
-            "retired_" + "identity_07",
-            "retired_" + "identity_08",
-            "retired_" + "identity_09",
-            "retired_" + "identity_10",
-            "retired_" + "identity_11",
-            "retired_" + "identity_12",
-            "retired_" + "identity_13",
-        )
-        private_doc_patterns = (
-            "*_DRAFT_PREP.md",
-            "*_DRAFT_RESULT_*.md",
-            "*_MOCK_AUDIT_*.md",
-            "COMPLETED_*_DRAFT_ASSISTANT_MILESTONE.md",
-            "COMPLETED_*_DRAFT_DAY_GATE_MILESTONE.md",
-            "COMPLETED_*_DST_COUNTERFACTUAL.md",
-            "COMPLETED_*_MULTI_TURN_ROLLOUT_PROTOTYPE.md",
-            "COMPLETED_*_ROLLOUT_VALIDATION.md",
-            "COMPLETED_*_TURN_HORIZON_MILESTONE.md",
-            "COMPLETED_TRADE_ASSISTANT_PHASE_9.md",
-            "COMPLETED_WAIVER_ASSISTANT_*.md",
-            "TRADE_*_FORMAT_CAPABILITY_*.md",
-            "OPEN_SOURCE_FILE_INVENTORY.md",
-        )
-        public_docs = [
-            path
-            for path in (ROOT / "docs").rglob("*.md")
-            if not any(path.match(pattern) for pattern in private_doc_patterns)
-        ]
-        public_files = [
-            ROOT / ".gitignore",
-            ROOT / "README.md",
-            ROOT / "pyproject.toml",
-            *(ROOT / "src").rglob("*.py"),
-            *(ROOT / "tests").rglob("*.py"),
-            *(ROOT / "config").glob("*.example.json"),
-            *public_docs,
-            *(ROOT / ".codex/context").rglob("*.md"),
-        ]
-        public_text = "\n".join(
-            path.read_text(encoding="utf-8") for path in public_files
-        ).lower()
-        for marker in retired_markers:
-            self.assertNotIn(marker.lower(), public_text)
+        self.assertEqual(validate_repository(ROOT), [])
 
     def test_third_party_inventory_covers_every_public_data_file(self):
         notice = (ROOT / "docs/THIRD_PARTY_NOTICES.md").read_text(

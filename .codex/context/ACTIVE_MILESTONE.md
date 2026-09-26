@@ -1,14 +1,13 @@
 # Active milestone
 
-TA-1313 — Trade Finder projection scoring and League Beta provisional policy
-compatibility is active by the user's September 25, 2026 request. Work is limited
-to the TA-1313 row in `docs/TRADE_ASSISTANT_TASKS.md`. Keep provider-declared
-projection scope visible, score only verified raw stats with the league's
-Sleeper rules, leave ranking authority unchanged, and keep the league's policy
-league-local and provisional. Use a separate branch and pull request; no trade
-submission. Implementation and local validation are complete; PR review is
-pending. The live League Beta run remains incomplete for two unrelated missing
-Week 3 roster projections, so no offer is recommendation-ready.
+TA-1313 — Trade Finder projection scoring compatibility is implementation-complete;
+delivery is through PR #25. Projections retain provider-declared scope and use
+verified raw stats with each league's Sleeper rules; ranking authority is
+unchanged. The affected league's ignored policy remains local and provisional.
+Revalidation against PR #26's privacy cleanup passed all 802 tests, Ruff, and
+tracked-tree/index privacy gates. No additional provider refresh or Sleeper
+write was performed. The prior live League Beta run remains incomplete for two
+unrelated missing Week 3 roster projections, so no offer is recommendation-ready.
 
 AC-005 — Explicit ranking caps and specialist performance policy (issue #11) is
 merged in PR #19; all 20 CI checks passed and issue #11 is closed.
@@ -19,8 +18,8 @@ AC-007 — Freshness, readiness, provenance, and handoff contracts (issue #13)
 merged in PR #22 with all 20 checks passing. AC-008 — End-to-end release gates and
 measured optimization (issue #14) merged in PR #23 with all 20 checks passing;
 issue #14 is closed. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
-Before TA-1313, no product milestone was active. Further implementation beyond
-TA-1313 requires a new explicit authorization and a separate branch and pull request.
+No further product implementation milestone is active. New implementation
+requires explicit authorization and a separate branch and pull request.
 
 AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
 all CI checks. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
@@ -81,7 +80,7 @@ use weekly, ROS, and league-scored season/recent ranks when projections do not
 settle the choice. Search schema 10 returns a nine-item claim plan with shared-
 drop alternatives identified.
 
-The fresh read-only `fourth_and_20` proof protected Caleb Williams and Rico
+The fresh read-only League Alpha proof protected Caleb Williams and Rico
 Dowdle and exactly reproduced the four requested skill moves and two kicker
 moves. Current defensive evidence changed after the user's dated list and now
 ranks Minnesota, New England, and Carolina; Cincinnati fell to DST17 for the
@@ -97,7 +96,7 @@ value comparison. Waiver Wire uses the three most accurate trustworthy current
 contributors when at least three are available; otherwise it uses FantasyPros
 Latest ECR. Trade expert policy remains unchanged.
 
-The read-only `fourth_and_20` proof selected Pat Fitzmaurice, Derek Brown, and
+The read-only League Alpha proof selected Pat Fitzmaurice, Derek Brown, and
 Andrew Erickson for Waiver Wire evidence and Pat Fitzmaurice, Derek Brown, and
 Scott Pianowski for ROS evidence. It evaluated 57 candidates exactly, pruned 75
 lower-valued candidates with audited bounds, and performed no Sleeper write.
