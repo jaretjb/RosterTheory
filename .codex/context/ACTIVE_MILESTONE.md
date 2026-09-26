@@ -26,6 +26,14 @@ reproduced before the fix. Evidence and measured preparation overhead:
 `docs/MODULAR_PROVIDER_SCORING.md`. Await required PR CI and review. Both reference
 maps remain LIMITED for unresolved `fum_rec`; provider coverage is unverified.
 
+September 26 user clarification: irrelevant missing players must not disable
+independent Trade/Waiver decisions. PR #37 remains a draft until decision-specific
+readiness satisfies MR-02 section 3.1. This follow-up records that requirement,
+dependency criteria and acceptance examples; it does not silently relax runtime
+policy. Passing scoring tests alone is insufficient for promotion. The next
+implementation slice must scope feature-owned dependencies and conditional
+results while protecting unknown assets and retaining all evidence gaps.
+
 ## Previous Trade snapshot clock regression repair (not active)
 
 Authorized by the user on September 26, 2026 after the intermittent post-merge

@@ -2,14 +2,17 @@
 
 Updated: September 26, 2026 (America/Los_Angeles)
 
-Planning PR #27 and MA-001 PR #34 are merged to main. MA-002a PR #35 passed all
-20 CI checks and was merged into its former MA-001 base; MA-002b carries that
-approved contract forward alongside the merged PR #36 snapshot-clock repair.
+PRs #27/#34 are merged to main. PR #35 merged into its former MA-001 base;
+PR #37 carries that approved contract forward with PR #36's snapshot-clock repair.
 
 MA-002 is authorized on September 26. Active slice MA-002b integrates explicit
 scoring coverage into shared FantasyPros weekly projection preparation for Trade
 and Waiver. Missing/invalid statistics and unsupported/unresolved rules block
-completeness. All 847 tests, Ruff, context and privacy gates pass; awaiting PR CI/review.
+completeness. All 847 tests and 20 CI checks passed at `ae07d4e`.
+PR #37 is held as a draft after the user's clarification: irrelevant missing
+players must not disable independent decisions. MR-02 section 3.1 now defines
+candidate relevance, protected unknown assets and conditional results. Runtime
+decision scoping remains the next implementation step before promotion.
 Evidence: `docs/MODULAR_PROVIDER_SCORING.md`; pure contract history:
 `docs/MODULAR_SCORING_CONTRACT.md`.
 

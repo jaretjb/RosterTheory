@@ -96,7 +96,10 @@ and keep the three feature result models separate.
    provider schema. Distinguish absent/inapplicable/documented-zero values.
 5. Score only with explicit coverage. Return partial diagnostic points when
    useful, but never label them complete or pass them into a complete valuation.
-6. Apply feature-specific readiness/degraded-mode rules and retain every reason.
+6. Apply feature-specific readiness/degraded-mode rules to each candidate's
+   actual dependencies and retain every reason. Partial source coverage alone
+   is not a whole-roster veto: preserve independent comparisons, label conditional
+   conclusions and block only unsupported candidates/claims (MR-02 section 3.1).
 
 Place stat aliases and conversion facts in the provider schema layer where
 provider-specific; use canonical statistic names in scoring. Unknown categories

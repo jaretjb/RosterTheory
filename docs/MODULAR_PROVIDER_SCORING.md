@@ -1,6 +1,7 @@
 # MA-002b: explicit provider projection coverage
 
-Status: implementation complete; 847 tests and local gates pass; awaiting PR CI/review.
+Status: scoring integration tested (847 tests, all 20 CI checks at `ae07d4e`),
+but PR #37 is held as a draft pending decision-specific readiness acceptance.
 Tracking: [issue #30](https://github.com/jaretjb/RosterTheory/issues/30).
 Requirements: MR-01, MR-02, MR-04, MR-06, MR-09.
 
@@ -34,6 +35,15 @@ No paid provider retrieval, live simulation, league mutation, policy/calibration
 change, historical-stat scoring change or Draft import change occurred. The
 legacy `core.scoring.score_stats` remains for those other callers. MA-002 and
 issue #30 remain open; this slice does not solve league admission or membership.
+
+The user's subsequent clarification requires irrelevant missing players to stop
+blocking independent trade/waiver decisions. See
+[MR-02 section 3.1](MODULAR_REQUIREMENTS.md#31-missing-evidence-must-have-decision-specific-consequences).
+The existing roster-wide Trade gate and coarse Waiver position grouping do not
+yet establish that requirement. Preserve this scoring evidence work, but do not
+promote its stricter gates as a usable rollout until candidate relevance and
+conditional results are implemented and tested. This is an acceptance correction,
+not permission to assign zero to unknown players or missing scoring categories.
 
 ## Rule catalogue and source evidence
 

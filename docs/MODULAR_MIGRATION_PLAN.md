@@ -43,6 +43,16 @@ MA-002b's [provider integration](MODULAR_PROVIDER_SCORING.md) exposes incomplete
 weekly projection scoring in shared Trade/Waiver preparation. It leaves #30
 open for unresolved provider evidence and the other scoring consumers.
 
+September 26 acceptance correction: the user rejects blocking independent
+trade/waiver decisions because of irrelevant missing players. Before promoting
+the stricter MA-002b scoring gates, implement MR-02 section 3.1 with feature-owned
+dependency checks and explicit conditional results. PR #37 is held as a draft
+pending that work; its passing scoring tests do not establish decision relevance.
+Do not resolve this by disabling scoring checks or globally enabling partial
+schedule evaluation. The next bounded slice must test irrelevant-player
+invariance, protected unknown assets, relevant FLEX/bye/secondary-move changes
+and unaffected opponents; retain provider-definition work under #30.
+
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |
 | MA-000 | Review bounded league support and modular migration design | None | MR-01 through MR-14 | Planning PR reviewed; authority/conflicts resolved; no product changes |
