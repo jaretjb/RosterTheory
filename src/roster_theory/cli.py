@@ -1525,6 +1525,8 @@ def command_manual_board(args: argparse.Namespace) -> None:
         projection_paths=args.projections,
         adp_path=args.adp,
         scoring_settings=league.get("scoring_settings", {}),
+        league_id=league["league_id"],
+        season=int(league["season"]),
         roster_positions=league.get("roster_positions", []),
         team_count=int(league.get("total_rosters") or league.get("settings", {}).get("num_teams") or 0),
         historical_accuracy=historical_accuracy,
