@@ -9,6 +9,7 @@ from roster_theory.manual_import import (
     build_manual_board,
     load_fantasypros_rankings,
     load_fantasypros_rankings_matrix,
+    load_fantasypros_projections,
 )
 from roster_theory.rankings import AccuracyRecord
 
@@ -135,6 +136,8 @@ class ManualImportTests(unittest.TestCase):
                     "rec_td": 6,
                     "fum_lost": -2,
                 },
+                league_id="synthetic-draft-league",
+                season=2026,
                 roster_positions=["QB", "RB", "WR", "TE"],
                 team_count=1,
                 historical_accuracy=accuracy_records(),
@@ -142,13 +145,61 @@ class ManualImportTests(unittest.TestCase):
             )
 
         by_name = {player["player_name"]: player for player in result.players}
-        self.assertEqual(by_name["Alpha Quarterback"]["projected_points"], 290.0)
+        self.assertIsNone(by_name["Alpha Quarterback"]["projected_points"])
         self.assertEqual(by_name["Bravo Running Back"]["adp"], 1.5)
         self.assertTrue(all(row["match_status"] == "matched" for row in result.match_report))
-        self.assertEqual(set(result.metadata["replacement_baselines"]), {"QB", "RB", "WR", "TE"})
+        self.assertEqual(result.metadata["replacement_baselines"], {})
+        self.assertEqual(result.metadata["projections"]["complete_scoring_player_count"], 0)
+        self.assertEqual(result.metadata["coverage"]["projection"], 0.0)
+        self.assertFalse(result.metadata["checks"]["top_180_projection_coverage_at_least_90_percent"])
+        self.assertEqual(
+            {issue["reason"] for issue in result.issues if "scoring" in issue["reason"]},
+            {"scoring_incomplete_v1"},
+        )
         self.assertFalse(result.metadata["draft_ready"])
         self.assertTrue(result.metadata["sample_only"])
         self.assertFalse(result.metadata["checks"]["at_least_150_ranked_skill_players"])
+
+    def test_projection_import_distinguishes_explicit_zero_missing_and_invalid(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "qb_projections.csv"
+            path.write_text(
+                "PLAYER,YDS,TDS\n"
+                "Complete Passer SEA,250,0\n"
+                "Blank Passer SEA,250,\n"
+                "Invalid Passer SEA,250,unknown\n"
+                "Nonfinite Passer SEA,250,nan\n",
+                encoding="utf-8",
+            )
+            rows, metadata, issues = load_fantasypros_projections(
+                [path], {"pass_yd": 0.04, "pass_td": 6},
+                league_id="synthetic-draft-league", season=2026,
+            )
+        by_name = {row["player_name"]: row for row in rows.values()}
+        self.assertEqual(by_name["Complete Passer"]["projected_points"], 10.0)
+        self.assertIsNone(by_name["Blank Passer"]["projected_points"])
+        self.assertIsNone(by_name["Invalid Passer"]["projected_points"])
+        self.assertIsNone(by_name["Nonfinite Passer"]["projected_points"])
+        self.assertEqual(metadata["complete_scoring_player_count"], 1)
+        self.assertEqual(metadata["league_id"], "synthetic-draft-league")
+        self.assertEqual(metadata["season"], 2026)
+        details = {issue["row"]: issue["detail"] for issue in issues}
+        self.assertIn("missing_statistic=pass_td", details[3])
+        self.assertIn("invalid_statistic=pass_td", details[4])
+        self.assertIn("invalid_statistic=pass_td", details[5])
+
+    def test_missing_off_role_stat_and_unknown_rule_do_not_count_as_projections(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "rb_projections.csv"
+            path.write_text("PLAYER,YDS,TDS\nRunner DET,100,1\n", encoding="utf-8")
+            rows, _, issues = load_fantasypros_projections(
+                [path], {"rush_yd": 0.1, "rush_td": 6, "pass_td": 4,
+                         "bonus_unknown": 1},
+                league_id="synthetic-draft-league", season=2026,
+            )
+        self.assertIsNone(next(iter(rows.values()))["projected_points"])
+        self.assertIn("missing_statistic=pass_td", issues[0]["detail"])
+        self.assertIn("unsupported_rule=bonus_unknown", issues[0]["detail"])
 
     def test_reports_unknown_expert_columns_and_unusable_players(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -2,18 +2,25 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from roster_theory.core.scoring_contract import (
+    ScoringScope,
+    assess_scoring_rules,
+    observed_statistics,
+    score_evidence,
+)
+from roster_theory.providers.sleeper_scoring_rules import SLEEPER_LINEAR_RULES
 from roster_theory.rankings import (
     AccuracyRecord,
     SKILL_POSITIONS,
     add_vbd,
     normalize_name,
-    score_projection,
     starter_baselines,
     weighted_consensus,
 )
@@ -418,59 +425,68 @@ def _indices(headers: Sequence[str], *names: str) -> list[int]:
     return [index for index, value in enumerate(headers) if _header_key(value) in wanted]
 
 
-def _value(row: Sequence[str], indices: Sequence[int], occurrence: int = 0) -> float:
+def _projection_value(row: Sequence[str], indices: Sequence[int], occurrence: int = 0) -> float | str | None:
     if occurrence >= len(indices) or indices[occurrence] >= len(row):
-        return 0.0
-    return _as_float(row[indices[occurrence]]) or 0.0
+        return None
+    raw = row[indices[occurrence]]
+    if raw in ("", "-"):
+        return None
+    parsed = _as_float(raw)
+    return parsed if parsed is not None and math.isfinite(parsed) else raw
 
 
-def _projection_stats(position: str, headers: Sequence[str], row: Sequence[str]) -> dict[str, float]:
-    attempts = _indices(headers, "att", "attempts")
+def _projection_stats(position: str, headers: Sequence[str], row: Sequence[str]) -> dict[str, float | str]:
     yards = _indices(headers, "yds", "yards")
     touchdowns = _indices(headers, "td", "tds", "touchdowns")
     interceptions = _indices(headers, "int", "ints", "interceptions")
     receptions = _indices(headers, "rec", "receptions")
     fumbles = _indices(headers, "fl", "fumbles lost", "fumbles_lost")
-    stats: dict[str, float] = {"fum_lost": _value(row, fumbles)}
+    stats = {"fum_lost": _projection_value(row, fumbles)}
     if position == "QB":
         stats.update(
-            pass_yd=_value(row, yards, 0),
-            pass_td=_value(row, touchdowns, 0),
-            pass_int=_value(row, interceptions, 0),
-            rush_yd=_value(row, yards, 1),
-            rush_td=_value(row, touchdowns, 1),
+            pass_yd=_projection_value(row, yards, 0),
+            pass_td=_projection_value(row, touchdowns, 0),
+            pass_int=_projection_value(row, interceptions, 0),
+            rush_yd=_projection_value(row, yards, 1),
+            rush_td=_projection_value(row, touchdowns, 1),
         )
     elif position == "RB":
         stats.update(
-            rush_yd=_value(row, yards, 0),
-            rush_td=_value(row, touchdowns, 0),
-            rec=_value(row, receptions, 0),
-            rec_yd=_value(row, yards, 1),
-            rec_td=_value(row, touchdowns, 1),
+            rush_yd=_projection_value(row, yards, 0),
+            rush_td=_projection_value(row, touchdowns, 0),
+            rec=_projection_value(row, receptions, 0),
+            rec_yd=_projection_value(row, yards, 1),
+            rec_td=_projection_value(row, touchdowns, 1),
         )
     elif position == "WR":
         stats.update(
-            rec=_value(row, receptions, 0),
-            rec_yd=_value(row, yards, 0),
-            rec_td=_value(row, touchdowns, 0),
-            rush_yd=_value(row, yards, 1),
-            rush_td=_value(row, touchdowns, 1),
+            rec=_projection_value(row, receptions, 0),
+            rec_yd=_projection_value(row, yards, 0),
+            rec_td=_projection_value(row, touchdowns, 0),
+            rush_yd=_projection_value(row, yards, 1),
+            rush_td=_projection_value(row, touchdowns, 1),
         )
     else:
         stats.update(
-            rec=_value(row, receptions, 0),
-            rec_yd=_value(row, yards, 0),
-            rec_td=_value(row, touchdowns, 0),
+            rec=_projection_value(row, receptions, 0),
+            rec_yd=_projection_value(row, yards, 0),
+            rec_td=_projection_value(row, touchdowns, 0),
         )
-    return stats
+    return {key: value for key, value in stats.items() if value is not None}
 
 
 def load_fantasypros_projections(
-    paths: Iterable[str | Path], scoring_settings: Mapping[str, Any]
+    paths: Iterable[str | Path], scoring_settings: Mapping[str, Any],
+    *, league_id: str, season: int,
 ) -> tuple[dict[tuple[str, str], dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
     projections: dict[tuple[str, str], dict[str, Any]] = {}
     issues: list[dict[str, Any]] = []
     files: list[dict[str, Any]] = []
+    scope = ScoringScope(league_id, season, "DRAFT-MANUAL-IMPORT", "SEASON", None)
+    assessment = assess_scoring_rules(
+        scoring_settings, scope=scope, catalogue=SLEEPER_LINEAR_RULES,
+        catalogue_version="fantasypros-manual-preseason-v1",
+    )
     for path in paths:
         table = _read_table(path)
         header_index = next(
@@ -492,7 +508,7 @@ def load_fantasypros_projections(
             player_name, parsed_team, _ = _parse_player_cell(row[player_column], position)
             team = row[team_column].strip() if team_column is not None and team_column < len(row) else parsed_team
             stats = _projection_stats(position, headers, row)
-            if not player_name or not any(stats.values()):
+            if not player_name or not stats:
                 issues.append(
                     {
                         "source": str(path),
@@ -502,16 +518,40 @@ def load_fantasypros_projections(
                     }
                 )
                 continue
+            evidence = observed_statistics(
+                stats, source="FantasyPros manual export",
+                source_schema="fantasypros-manual-preseason-v1",
+                season=season, horizon="SEASON", week=None, position=position,
+            )
+            scored = score_evidence(assessment, evidence)
+            if not scored.complete:
+                issues.append({
+                    "source": str(path), "row": row_number,
+                    "reason": "scoring_incomplete_v1",
+                    "detail": ";".join(sorted({
+                        f"{issue.category}={issue.setting}" for issue in scored.issues
+                    })),
+                })
             projections[(normalize_name(player_name), position)] = {
                 "player_name": player_name,
                 "team": team,
                 "position": position,
-                "projected_points": score_projection(stats, scoring_settings),
+                "projected_points": scored.require_points() if scored.complete else None,
                 "stats": stats,
             }
             loaded += 1
         files.append({"path": str(path), "position": position, "players": loaded})
-    return projections, {"files": files, "player_count": len(projections)}, issues
+    return projections, {
+        "files": files, "player_count": len(projections),
+        "complete_scoring_player_count": sum(
+            row["projected_points"] is not None for row in projections.values()
+        ),
+        "league_id": league_id,
+        "season": season,
+        "scoring_hash": assessment.scoring_hash,
+        "rules_hash": assessment.rules_hash,
+        "scoring_contract": "fantasypros-manual-preseason-v1",
+    }, issues
 
 
 def load_fantasypros_adp(
@@ -644,6 +684,8 @@ def build_manual_board(
     projection_paths: Iterable[str | Path],
     adp_path: str | Path,
     scoring_settings: Mapping[str, Any],
+    league_id: str,
+    season: int,
     roster_positions: Iterable[str],
     team_count: int,
     historical_accuracy: Mapping[str, AccuracyRecord],
@@ -658,7 +700,7 @@ def build_manual_board(
         rankings_path, historical_accuracy, rankings_mode, selected_experts
     )
     projections, projections_metadata, projection_issues = load_fantasypros_projections(
-        projection_paths, scoring_settings
+        projection_paths, scoring_settings, league_id=league_id, season=season,
     )
     adp, adp_metadata, adp_issues = load_fantasypros_adp(adp_path)
     issues = ranking_issues + projection_issues + adp_issues

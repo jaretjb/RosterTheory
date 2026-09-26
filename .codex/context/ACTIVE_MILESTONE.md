@@ -1,6 +1,29 @@
 # Active milestone
 
-## MA-002h - Waiver emerging-scenario scoring evidence
+## MA-002i - Draft manual projection scoring evidence
+
+Authorized by the user's September 26 request to continue after merging PR #42.
+Implement a bounded #30 follow-up for the manual FantasyPros preseason export:
+preserve absent, blank, explicit zero, invalid and nonfinite raw-stat evidence;
+score only complete applicable categories under the actual league rules; keep
+expert ordering available while incomplete projections stay out of replacement
+baselines and draft-readiness counts. Requirements MR-01, MR-02, MR-04, MR-06,
+MR-09, MR-10; architecture sections 3.1 and 5.
+
+Allowed: manual export parsing/scoring, its CLI scope handoff, synthetic tests
+and evidence. No live FantasyPros API import, provider call, new Draft operation,
+acquisition policy or ranking-weight change. Do not infer absent off-role event
+counts or provider structural zeros. Preserve complete-case scoring, command
+names and saved board shape; additive issue/metadata evidence is allowed. Gates:
+missing/blank/zero/invalid examples, independent ranking availability, unchanged
+MA-001 reference goldens, full suite/Ruff/context/privacy/CI. Stop at a tested
+PR against main; #30 and MA-002 remain open.
+
+Implementation complete: 907 tests pass with unchanged reference goldens;
+Ruff, compilation, context and tracked-tree privacy gates pass. Evidence:
+`docs/MODULAR_DRAFT_MANUAL_SCORING.md`. Required CI and review remain the merge gate.
+
+## Previous MA-002h - Waiver emerging-scenario scoring evidence (merged PR #42)
 
 Authorized by the user's September 26 request to continue after merging PR #41.
 Implement a bounded #30 follow-up: value Waiver breakout scenarios only when
