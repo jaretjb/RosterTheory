@@ -170,6 +170,9 @@ def restore_record(record_type, value):
     if record_type is Path:
         return Path(value)
     if is_dataclass(record_type):
+        for field in fields(record_type):
+            if field.metadata.get('require_in_artifact') and field.name not in value:
+                raise ValueError(f'Legacy {record_type.__name__} lacks {field.name}; refresh source evidence or replay with its original build')
         hints = get_type_hints(record_type)
         return record_type(**{field.name: restore_record(hints[field.name], value[field.name])
                               for field in fields(record_type) if field.name in value})
@@ -180,6 +183,8 @@ def restore_record(record_type, value):
             raise ValueError('Ambiguous replay record type')
         return restore_record(choices[0], value)
     if origin is tuple:
+        if not isinstance(value, (list, tuple)):
+            raise ValueError('Saved tuple field must be an array; refresh source evidence')
         if len(args) == 2 and args[1] is Ellipsis:
             return tuple(restore_record(args[0], row) for row in value)
         return tuple(restore_record(kind, row) for kind, row in zip(args, value, strict=True))

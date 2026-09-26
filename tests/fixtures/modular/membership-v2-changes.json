@@ -1,0 +1,589 @@
+{
+  "scope": "MA-002d membership additions and derived hashes only",
+  "counts": {
+    "replay_hash": 2,
+    "taxi_slots": 4,
+    "taxi_ids": 44,
+    "evidence_hash": 22,
+    "manifest_id": 22,
+    "snapshot_hash": 2
+  },
+  "changes": [
+    {
+      "path": "/reference_a/offline_replay/replay_hash",
+      "kind": "CHANGED",
+      "before": "c6d4e1eaa8b9c66e0beeab1a4dfa7d07995fc5e10390be9293b50eec1b445abc",
+      "after": "88136af95cfbb79619a8b71da715d5f7d79c7c7845a872324b5058821a2b21aa"
+    },
+    {
+      "path": "/reference_a/prepare_cold/league/taxi_slots",
+      "kind": "ADDED",
+      "before": null,
+      "after": 0
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/0/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/1/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/2/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/3/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/4/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/5/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/6/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/7/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/8/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_cold/teams/9/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/league/taxi_slots",
+      "kind": "ADDED",
+      "before": null,
+      "after": 0
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/0/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/1/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/2/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/3/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/4/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/5/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/6/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/7/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/8/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/prepare_warm/teams/9/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_a/trade_exact/evidence_hash",
+      "kind": "CHANGED",
+      "before": "8883e1f0e4a2574eaa71eb8d079a55ec1660386737f570c1a2518d67f9016b6d",
+      "after": "95c415859942487b8a55bf5197355177c0f289b3002edbeba15095bad3ff9fe6"
+    },
+    {
+      "path": "/reference_a/trade_exact/manifest_id",
+      "kind": "CHANGED",
+      "before": "ec11cc67bee878870a2865ddd576660e315aaac069036073891e528b432eb528",
+      "after": "961edac31be231d5eca8041a0b16d59b47491dfb84b02da1fafba9e7a7d0a520"
+    },
+    {
+      "path": "/reference_a/trade_search/evidence_hash",
+      "kind": "CHANGED",
+      "before": "aa51492ef6743b4ae0b578115f98139618a34ae6916377d31b9accfea09bc8be",
+      "after": "ba644ebeb1d64339d2a29d63dae207752739f3d208dbb568b3984e87ab663cd3"
+    },
+    {
+      "path": "/reference_a/trade_search/manifest_id",
+      "kind": "CHANGED",
+      "before": "ec11cc67bee878870a2865ddd576660e315aaac069036073891e528b432eb528",
+      "after": "961edac31be231d5eca8041a0b16d59b47491dfb84b02da1fafba9e7a7d0a520"
+    },
+    {
+      "path": "/reference_a/trade_targets/evidence_hash",
+      "kind": "CHANGED",
+      "before": "f889ed1bdf9425d6d98530ebc130790afb83d7f844321a907645d1cb4a24c778",
+      "after": "c78ba255b45bcc34221b3594ad886fac0c9cad5222e5ada7c3256536a34b7f87"
+    },
+    {
+      "path": "/reference_a/trade_targets/manifest_id",
+      "kind": "CHANGED",
+      "before": "ec11cc67bee878870a2865ddd576660e315aaac069036073891e528b432eb528",
+      "after": "961edac31be231d5eca8041a0b16d59b47491dfb84b02da1fafba9e7a7d0a520"
+    },
+    {
+      "path": "/reference_a/trade_unequal/evidence_hash",
+      "kind": "CHANGED",
+      "before": "b2a1fc6778d344c52451c5475edf864105f170406b0708beafa2cf2acff43eb8",
+      "after": "859ede6ea7db3d2ecb33f6e5d983709c242acfd7ae1fac59dd48812c1ff3edbe"
+    },
+    {
+      "path": "/reference_a/trade_unequal/manifest_id",
+      "kind": "CHANGED",
+      "before": "ec11cc67bee878870a2865ddd576660e315aaac069036073891e528b432eb528",
+      "after": "961edac31be231d5eca8041a0b16d59b47491dfb84b02da1fafba9e7a7d0a520"
+    },
+    {
+      "path": "/reference_a/waiver_search/evidence_hash",
+      "kind": "CHANGED",
+      "before": "8a4f586120cd963c469f1055f6c83cc11a242ed2f3c92265ab2774e7b65f72fd",
+      "after": "14edcbca606f8c53a48001840edadc878fe980318a26526d750cd593a0238575"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/0/evidence_hash",
+      "kind": "CHANGED",
+      "before": "f13dd68c336c6d7f02417306e0bad06a67bccdfce7d13d0eaaef9fe1d5859656",
+      "after": "4788818e5d1a6f66e1476c6628aebd662cbad6113aab8914ec5d78f56235df51"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/0/manifest_id",
+      "kind": "CHANGED",
+      "before": "ad6a1b3a3f23460993f3b1d7c7a1af68130bb7da10c45f12a4e73f880325a8b8",
+      "after": "823eea9948fcf1f186b99b502377c9f9a09c468f9dd7b1fcccb866d946a40e13"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/1/evidence_hash",
+      "kind": "CHANGED",
+      "before": "8ad24014871ab73abad5d7571df434bfe269262827a2c161b35805b3dd44f283",
+      "after": "18ed85a52cf1ecfe319bb81f18464c03a81652c20b0edc900563c83a8b5d9ca8"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/1/manifest_id",
+      "kind": "CHANGED",
+      "before": "ad6a1b3a3f23460993f3b1d7c7a1af68130bb7da10c45f12a4e73f880325a8b8",
+      "after": "823eea9948fcf1f186b99b502377c9f9a09c468f9dd7b1fcccb866d946a40e13"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/2/evidence_hash",
+      "kind": "CHANGED",
+      "before": "2e7f3885ce6ac98d5a47b7528cbce436f2c6f5fa909ce8f1a90638b974c002f9",
+      "after": "660b9674bf0d7d455924bc2d4bc06cff0a7ca170062f33e29171e9472b45fbbb"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/2/manifest_id",
+      "kind": "CHANGED",
+      "before": "ad6a1b3a3f23460993f3b1d7c7a1af68130bb7da10c45f12a4e73f880325a8b8",
+      "after": "823eea9948fcf1f186b99b502377c9f9a09c468f9dd7b1fcccb866d946a40e13"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/3/evidence_hash",
+      "kind": "CHANGED",
+      "before": "456da7a742ec401d1f764f735befa3631b7e6206ff05f2fe3872ec0f2e7b087d",
+      "after": "9a4e4a5939080be5090e6e1fd22aca4d304425147181897b998bbb02750569f0"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/3/manifest_id",
+      "kind": "CHANGED",
+      "before": "ad6a1b3a3f23460993f3b1d7c7a1af68130bb7da10c45f12a4e73f880325a8b8",
+      "after": "823eea9948fcf1f186b99b502377c9f9a09c468f9dd7b1fcccb866d946a40e13"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/4/evidence_hash",
+      "kind": "CHANGED",
+      "before": "e26a1fa3e9520f74f3daa7251eb76b077546eda2c6a501076eafb4a0efe86b5d",
+      "after": "d74d8802ff67430eba13eeb8ceacbf8c7d2e64268e4dc5c1d4f51e35cf8d9cbb"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/4/manifest_id",
+      "kind": "CHANGED",
+      "before": "ad6a1b3a3f23460993f3b1d7c7a1af68130bb7da10c45f12a4e73f880325a8b8",
+      "after": "823eea9948fcf1f186b99b502377c9f9a09c468f9dd7b1fcccb866d946a40e13"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/5/evidence_hash",
+      "kind": "CHANGED",
+      "before": "0590d148ae8318624b41f62e24c01f11db60432ceb802e2036629a59ced8c1d4",
+      "after": "1562e74c3b4e0861bdc3da71f29eb31d7903d7e21aaef6b12d4a8e6212edcfb1"
+    },
+    {
+      "path": "/reference_a/waiver_search/exact_evaluations/5/manifest_id",
+      "kind": "CHANGED",
+      "before": "ad6a1b3a3f23460993f3b1d7c7a1af68130bb7da10c45f12a4e73f880325a8b8",
+      "after": "823eea9948fcf1f186b99b502377c9f9a09c468f9dd7b1fcccb866d946a40e13"
+    },
+    {
+      "path": "/reference_a/waiver_search/manifest_id",
+      "kind": "CHANGED",
+      "before": "ad6a1b3a3f23460993f3b1d7c7a1af68130bb7da10c45f12a4e73f880325a8b8",
+      "after": "823eea9948fcf1f186b99b502377c9f9a09c468f9dd7b1fcccb866d946a40e13"
+    },
+    {
+      "path": "/reference_a/waiver_search/snapshot_hash",
+      "kind": "CHANGED",
+      "before": "659782000c44251c26a3c1f7331802bff206d1ca249c9def693d992d47afce2c",
+      "after": "70e47e4791f75359b6730138278fae790d9da569e5f7f97e42347ac97d6da314"
+    },
+    {
+      "path": "/reference_b/offline_replay/replay_hash",
+      "kind": "CHANGED",
+      "before": "b5ffdacf9e2aad07e84c42c3d8bdbf51af3d058c79b84e0fe34afcccdd1bdb36",
+      "after": "08a9b137afa2682a4cb7f11e5b8b656e0cddd215715431ef8b5e22022239a155"
+    },
+    {
+      "path": "/reference_b/prepare_cold/league/taxi_slots",
+      "kind": "ADDED",
+      "before": null,
+      "after": 0
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/0/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/1/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/2/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/3/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/4/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/5/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/6/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/7/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/8/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/9/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/10/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_cold/teams/11/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/league/taxi_slots",
+      "kind": "ADDED",
+      "before": null,
+      "after": 0
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/0/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/1/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/2/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/3/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/4/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/5/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/6/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/7/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/8/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/9/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/10/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/prepare_warm/teams/11/taxi_ids",
+      "kind": "ADDED",
+      "before": null,
+      "after": []
+    },
+    {
+      "path": "/reference_b/trade_exact/evidence_hash",
+      "kind": "CHANGED",
+      "before": "57629c046d11d4826be6b72f2e93d4a16eca5f4078cf285f5f1ec152a65c4560",
+      "after": "c5f50a685845767039c9c3e656b857b9827a6f69c94dfcdda84c232669538ef9"
+    },
+    {
+      "path": "/reference_b/trade_exact/manifest_id",
+      "kind": "CHANGED",
+      "before": "7bfcc26c3d13df521488faa6bbeff5bfeacb9356f8534d3f96d0a420069a1648",
+      "after": "9026a0de519e00972c12b151c6551ce025af30a0606e4aea93836fd8aa16daa8"
+    },
+    {
+      "path": "/reference_b/trade_search/evidence_hash",
+      "kind": "CHANGED",
+      "before": "6b1feb24b417b2a9c3c54fbfa4052170c5c0323cecbde9d259ec80432d94b271",
+      "after": "b9e1969ff3c3e1765ece762a3b32fb3d30c4f8477317d45c838d13eff3e38d95"
+    },
+    {
+      "path": "/reference_b/trade_search/manifest_id",
+      "kind": "CHANGED",
+      "before": "7bfcc26c3d13df521488faa6bbeff5bfeacb9356f8534d3f96d0a420069a1648",
+      "after": "9026a0de519e00972c12b151c6551ce025af30a0606e4aea93836fd8aa16daa8"
+    },
+    {
+      "path": "/reference_b/trade_targets/evidence_hash",
+      "kind": "CHANGED",
+      "before": "87cd3622c6fb68f63752b54a57f27f56d04e578b42e330ef8b74cb09285dc6af",
+      "after": "87ebbf853961becafb312ce52cce0e96aecc87869994e7c38deefc23c62ec367"
+    },
+    {
+      "path": "/reference_b/trade_targets/manifest_id",
+      "kind": "CHANGED",
+      "before": "7bfcc26c3d13df521488faa6bbeff5bfeacb9356f8534d3f96d0a420069a1648",
+      "after": "9026a0de519e00972c12b151c6551ce025af30a0606e4aea93836fd8aa16daa8"
+    },
+    {
+      "path": "/reference_b/trade_unequal/evidence_hash",
+      "kind": "CHANGED",
+      "before": "ac4dac6335b64385b1f280680660f039f1826c1a0bf0a6e4e94533dce6a36051",
+      "after": "dd12aebc4fe96559e000c40df190ff76ebf419e0ab21ea1aec0a1830c0dd48ce"
+    },
+    {
+      "path": "/reference_b/trade_unequal/manifest_id",
+      "kind": "CHANGED",
+      "before": "7bfcc26c3d13df521488faa6bbeff5bfeacb9356f8534d3f96d0a420069a1648",
+      "after": "9026a0de519e00972c12b151c6551ce025af30a0606e4aea93836fd8aa16daa8"
+    },
+    {
+      "path": "/reference_b/waiver_search/evidence_hash",
+      "kind": "CHANGED",
+      "before": "0ae90a5389eac07d623d04799b4a7abb34ac5a2b109bb9f09a96ec349882bb52",
+      "after": "40095e73b2ce2c5e6ee98a36ddd9f98e94d9532cb8cb92fa5b9f3fafccda7776"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/0/evidence_hash",
+      "kind": "CHANGED",
+      "before": "3be722d897d4fef00ea543615cee89c95d14af45fd7c936c54dc915c4a6bd917",
+      "after": "90215b8a5169e538843a5c8a885fa5ccdffd04790aa65db59cd42082aa81456e"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/0/manifest_id",
+      "kind": "CHANGED",
+      "before": "97123eeb8f12f1adfa1ec6bcef99fa864798c407a59f3c91359fbd42bf339eaf",
+      "after": "af0b122a60884eea96f04458d0223d5e8612f6b7b847eec572b44112d5e64385"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/1/evidence_hash",
+      "kind": "CHANGED",
+      "before": "14ff690fb0afe07c100f3adad366d1e79a4fd3278eab4c5d276127e8fca2d333",
+      "after": "6a271ba3b4974962ae40a83b220a79e958c3992de9c84dda06315422832fe0ad"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/1/manifest_id",
+      "kind": "CHANGED",
+      "before": "97123eeb8f12f1adfa1ec6bcef99fa864798c407a59f3c91359fbd42bf339eaf",
+      "after": "af0b122a60884eea96f04458d0223d5e8612f6b7b847eec572b44112d5e64385"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/2/evidence_hash",
+      "kind": "CHANGED",
+      "before": "7f949d2983a260ac622c81d2e3a8b5294eb99adf9b06e5aed4babeaa3ad43e9f",
+      "after": "0edfe01c03e45a65e14655d9a876a358d928e45e07beddcaeac8755d1e213bea"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/2/manifest_id",
+      "kind": "CHANGED",
+      "before": "97123eeb8f12f1adfa1ec6bcef99fa864798c407a59f3c91359fbd42bf339eaf",
+      "after": "af0b122a60884eea96f04458d0223d5e8612f6b7b847eec572b44112d5e64385"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/3/evidence_hash",
+      "kind": "CHANGED",
+      "before": "c599ff9d78600aa74d06b3bb5ad13e55cb705d14e8d8c20cbde0ad39049ead55",
+      "after": "70c5abe074502593f51b3be9f158027f2bd8a6136cac91762a572e18636f60ed"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/3/manifest_id",
+      "kind": "CHANGED",
+      "before": "97123eeb8f12f1adfa1ec6bcef99fa864798c407a59f3c91359fbd42bf339eaf",
+      "after": "af0b122a60884eea96f04458d0223d5e8612f6b7b847eec572b44112d5e64385"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/4/evidence_hash",
+      "kind": "CHANGED",
+      "before": "7a18f4aea176f298ea4247df9444994188327ee5a498cab98f5599bf698e6834",
+      "after": "cb01d91fb7d14c13d241f4c5e7c1f507e8d48e67bee4cdbc2f714897abbb1ea1"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/4/manifest_id",
+      "kind": "CHANGED",
+      "before": "97123eeb8f12f1adfa1ec6bcef99fa864798c407a59f3c91359fbd42bf339eaf",
+      "after": "af0b122a60884eea96f04458d0223d5e8612f6b7b847eec572b44112d5e64385"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/5/evidence_hash",
+      "kind": "CHANGED",
+      "before": "63f3a63047a83c94fc45576bc4b92a633642f33910a9351454314217e7ba5ae8",
+      "after": "2c7a552b9aa88b1cb9e9fdb3a080e8619192aed1bc116f0ced64a9859590d00d"
+    },
+    {
+      "path": "/reference_b/waiver_search/exact_evaluations/5/manifest_id",
+      "kind": "CHANGED",
+      "before": "97123eeb8f12f1adfa1ec6bcef99fa864798c407a59f3c91359fbd42bf339eaf",
+      "after": "af0b122a60884eea96f04458d0223d5e8612f6b7b847eec572b44112d5e64385"
+    },
+    {
+      "path": "/reference_b/waiver_search/manifest_id",
+      "kind": "CHANGED",
+      "before": "97123eeb8f12f1adfa1ec6bcef99fa864798c407a59f3c91359fbd42bf339eaf",
+      "after": "af0b122a60884eea96f04458d0223d5e8612f6b7b847eec572b44112d5e64385"
+    },
+    {
+      "path": "/reference_b/waiver_search/snapshot_hash",
+      "kind": "CHANGED",
+      "before": "4d5d989fa5e591b558124edaa8a12e1db2e156cc2baa23864b6e5de30bece802",
+      "after": "8136a1a45383474441c3f878a369cb030ce5c767979112628eef1202d15408d4"
+    }
+  ]
+}

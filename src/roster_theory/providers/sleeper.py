@@ -58,6 +58,7 @@ def _integer(value: Any) -> int | None:
 
 
 def normalize_league(value: Mapping[str, Any]) -> LeagueRules:
+    from roster_theory.providers.sleeper_membership import capacity_setting
     league_id = str(value.get("league_id") or "")
     season = _integer(value.get("season"))
     team_count = _integer(value.get("total_rosters"))
@@ -78,15 +79,17 @@ def normalize_league(value: Mapping[str, Any]) -> LeagueRules:
         ),
         playoff_start_week=_integer(settings.get("playoff_week_start")),
         championship_week=None,
-        reserve_slots=_integer(settings.get("reserve_slots")),
+        reserve_slots=capacity_setting(settings, "reserve_slots"),
         trade_deadline_raw=settings.get("trade_deadline"),
         platform_settings=frozen_pairs(settings),
+        taxi_slots=capacity_setting(settings, "taxi_slots"),
     )
 
 
 def normalize_teams(
     users: list[Mapping[str, Any]], rosters: list[Mapping[str, Any]]
 ) -> tuple[FantasyTeam, ...]:
+    from roster_theory.providers.sleeper_membership import roster_ids
     user_names: dict[str, str] = {}
     for user in users:
         user_id = str(user.get("user_id") or "")
@@ -113,9 +116,10 @@ def normalize_teams(
                 roster_id=roster_id,
                 owner_id=owner_id,
                 display_name=user_names.get(owner_id or "", owner_id or roster_id),
-                player_ids=tuple(str(item) for item in (roster.get("players") or ())),
-                starter_ids=tuple(str(item) for item in (roster.get("starters") or ())),
-                reserve_ids=tuple(str(item) for item in (roster.get("reserve") or ())),
+                player_ids=roster_ids(roster, "players"),
+                starter_ids=roster_ids(roster, "starters"),
+                reserve_ids=roster_ids(roster, "reserve"),
+                taxi_ids=roster_ids(roster, "taxi", optional=True),
                 waiver_position=_integer(roster_settings.get("waiver_position")),
                 waiver_budget_used=_integer(roster_settings.get("waiver_budget_used")),
                 platform_settings=frozen_pairs(roster_settings),
@@ -299,6 +303,7 @@ class SleeperAdapter:
             reserve_slots=league.reserve_slots,
             trade_deadline_raw=league.trade_deadline_raw,
             platform_settings=league.platform_settings,
+            taxi_slots=league.taxi_slots,
         )
         stamps = tuple(
             DataStamp(

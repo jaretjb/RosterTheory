@@ -2,19 +2,19 @@
 
 Updated: September 26, 2026 (America/Los_Angeles)
 
-PRs #27/#34 are merged to main. PR #35 merged into its former MA-001 base;
-PR #37 carries that approved contract forward with PR #36's snapshot-clock repair.
+PR #37 is merged to main, carrying MA-002a/b scoring contracts, MA-002c decision
+coverage and the snapshot-clock repair. Independent Trade/Waiver comparisons
+remain available despite irrelevant missing players. Unknown assets stay
+protected; connected dependencies remain conditional. Evidence:
+`docs/MODULAR_DECISION_COVERAGE.md` and `docs/MODULAR_PROVIDER_SCORING.md`.
 
-MA-002c implements decision-scoped Trade/Waiver coverage on PR #37. Unknown
-players remain owned and protected from automatic trades/drops. Independent
-moves continue; connected lineup, replacement, holding or secondary dependencies
-produce conditional comparisons. Conditional results cannot become accepted
-offers or affirmative claims. Full-roster forecasts stay incomplete.
-All 860 local tests pass, including unchanged MA-001 goldens. Required PR CI
-and review remain the merge gate. Evidence: `docs/MODULAR_DECISION_COVERAGE.md`.
-Strict source scoring from MA-002b remains: missing/invalid statistics and
-unsupported/unresolved rules block completeness. Source evidence:
-`docs/MODULAR_PROVIDER_SCORING.md`; contract: `docs/MODULAR_SCORING_CONTRACT.md`.
+MA-002d implements the membership slice of #31: preserve taxi roles, reconcile
+ownership/capacity, check reserve eligibility and reject known taxi formats.
+Normalized snapshots now require explicit taxi evidence; old files request a
+refresh or original-build replay. The reviewed schema-only golden migration
+retains the original MA-001 evidence and unchanged reference decisions.
+All 877 local tests pass. Contract and validation: `docs/MODULAR_ROSTER_MEMBERSHIP.md`.
+Required CI and review remain the merge gate; stop at this tested PR handoff.
 
 Read `docs/MODULAR_BASELINE.md` only for baseline evidence; implementation loads
 the active milestone and `IMPLEMENTATION_POLICY.md`. Requirements/architecture
@@ -26,8 +26,8 @@ of provider coverage, feature readiness or calibration. Trade still has an
 explicit skill-player evaluation boundary. The 12-format matrix remains future
 validation, not an existing support claim.
 
-Known behavior issues: #30 scoring completeness, #31 roster membership, #32
-process-safe provider limits, #33 Draft cap/season assumptions. Both reference
-maps remain LIMITED (`fum_rec` applicability); actual provider coverage is not
-verified. Historical-stat/Draft scoring and remaining MA-002 contracts need
-separate slices. Stop at a tested PR against main; #30 and MA-002 remain open.
+Open: #30 scoring/provider completeness, #31 Draft position-limit semantics and
+full capability admission, #32 process-safe provider limits, #33 Draft cap/season
+assumptions. Both reference maps remain LIMITED (`fum_rec`); actual provider
+coverage is unverified. Historical-stat/Draft scoring and remaining MA-002
+contracts need separate slices. #30, #31 and MA-002 remain open.

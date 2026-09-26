@@ -9,6 +9,8 @@ from typing import Iterable, Mapping, Sequence
 
 from roster_theory.core.decision_coverage import lineup_dependency_positions, maximum_delta_bound
 from roster_theory.trade.coverage import comparison_roster
+from roster_theory.providers.sleeper_membership import reserve_eligibility
+from roster_theory.core.roster import assess_membership
 from roster_theory.core.errors import (
     CoverageIncomplete,
     IdentityIncomplete,
@@ -1254,6 +1256,15 @@ def evaluate_trade(
     matrix = projection_matrix or build_weekly_projection_matrix(snapshot, projections)
     modes: list[str] = []
     warnings: list[str] = list(snapshot.warnings)
+    eligibility = tuple(issue for team in snapshot.teams
+        if team.roster_id in {package.roster_a_id, package.roster_b_id}
+        for issue in reserve_eligibility(snapshot.league, team, snapshot.players))
+    eligibility += tuple(row for row in assess_membership(snapshot.league, snapshot.teams).issues
+                         if row.roster_id in {package.roster_a_id, package.roster_b_id})
+    if eligibility:
+        modes.append("MANUAL-LEGALITY")
+        warnings.extend(f"Reserve legality {row.status}: {row.code} on roster {row.roster_id}: {','.join(row.player_ids)}"
+                        for row in eligibility)
     if selected_board is not None and not selected_board.complete:
         selected_board = None
         warnings.append("Selected-expert board is incomplete")

@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002 authorized; MA-002a approved in PR #35; MA-002b provider integration active
+Status: MA-002 authorized; scoring and decision coverage merged in PR #37; MA-002d membership active
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -25,9 +25,9 @@ change recommendation policy, activate later work, or merge itself.
 ## 2. Sequence and traceability
 
 The user authorized MA-002 on September 26 and requested continuation after
-merging PRs #34/#35. ACTIVE_MILESTONE selects MA-002b provider scoring coverage.
-PR #35 merged to the former MA-001 base; this follow-up carries it onto main.
-Remaining MA-002
+merging PR #37. ACTIVE_MILESTONE selects MA-002d roster membership and eligibility,
+a bounded slice of #31. PR #37 brought the earlier scoring contracts, provider
+integration and decision-scoped coverage onto main. Remaining MA-002
 slices need their own detailed contracts and activation after the tested handoff;
 MA-003 onward remain **planned, not authorized**.
 
@@ -43,15 +43,18 @@ MA-002b's [provider integration](MODULAR_PROVIDER_SCORING.md) exposes incomplete
 weekly projection scoring in shared Trade/Waiver preparation. It leaves #30
 open for unresolved provider evidence and the other scoring consumers.
 
-September 26 acceptance correction: the user rejects blocking independent
-trade/waiver decisions because of irrelevant missing players. Before promoting
-the stricter MA-002b scoring gates, implement MR-02 section 3.1 with feature-owned
-dependency checks and explicit conditional results. PR #37 is held as a draft
-pending that work; its passing scoring tests do not establish decision relevance.
-Do not resolve this by disabling scoring checks or globally enabling partial
-schedule evaluation. The next bounded slice must test irrelevant-player
-invariance, protected unknown assets, relevant FLEX/bye/secondary-move changes
-and unaffected opponents; retain provider-definition work under #30.
+MA-002c's [decision coverage](MODULAR_DECISION_COVERAGE.md), merged in PR #37,
+satisfies the user's correction that irrelevant missing players must not block
+independent trade/waiver comparisons. Preserve unknown assets and explicit
+conditional results without disabling scoring checks or globally enabling
+partial schedules. Provider-definition work remains under #30.
+
+MA-002d's [membership contract and evidence](MODULAR_ROSTER_MEMBERSHIP.md) preserves
+taxi membership, validates ownership/capacity and reserve eligibility, rejects
+known taxi formats, and versions normalized snapshot evidence. Its reviewed
+schema-only baseline migration retains the original MA-001 golden. Draft
+position-limit semantics and full feature capability admission remain open under
+#31; this slice does not establish the future support matrix.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |

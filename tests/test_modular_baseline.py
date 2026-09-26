@@ -55,7 +55,7 @@ class ModularBaselineTests(unittest.TestCase):
         self.assertEqual(stats['pass_int'], 1)
 
     def test_semantic_baseline(self):
-        golden = json.loads((ROOT / 'semantics.json').read_text())['profiles']
+        golden = json.loads((ROOT / 'semantics-membership-v2.json').read_text())['profiles']
         with offline():
             for profile in PROFILES:
                 for name, function in workloads(profile).items():

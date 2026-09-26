@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 
@@ -35,6 +35,7 @@ class LeagueRules:
     reserve_slots: int | None = None
     trade_deadline_raw: Any = None
     platform_settings: tuple[tuple[str, Any], ...] = ()
+    taxi_slots: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +49,9 @@ class FantasyTeam:
     waiver_position: int | None = None
     waiver_budget_used: int | None = None
     platform_settings: tuple[tuple[str, Any], ...] = ()
+    # None means the source did not establish taxi membership. An empty tuple
+    # is explicit absence, not an inference from an old serialized record.
+    taxi_ids: tuple[str, ...] | None = field(default=(), metadata={"require_in_artifact": True})
 
 
 @dataclass(frozen=True, slots=True)
