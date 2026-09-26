@@ -5,11 +5,12 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from roster_theory.core.call_plan import CallPlan, PlannedCall, build_call_plan
 from roster_theory.core.errors import StaleData
 from roster_theory.core.provenance import canonical_json
+from roster_theory.core.run_contract import manifest_summary, record_run, revalidate_snapshot, run_footer, validate_sources
 from roster_theory.providers.cache import DailyRequestBudget, is_fresh
 from roster_theory.providers.sleeper import SleeperAdapter
 from roster_theory.sleeper import (
@@ -21,7 +22,7 @@ from roster_theory.sleeper import (
 from roster_theory.waiver.evaluation import (
     WaiverEvaluation,
     evaluate_waiver,
-    load_waiver_evaluation_inputs,
+    parse_waiver_evaluation_inputs,
     save_waiver_evaluation,
 )
 from roster_theory.waiver.policy import (
@@ -40,6 +41,7 @@ from roster_theory.waiver.search import (
     WaiverSearch,
     save_waiver_search,
     search_waiver_candidates,
+    waiver_readiness,
 )
 from roster_theory.waiver.snapshot import (
     WaiverSnapshot,
@@ -61,6 +63,7 @@ class EnteredWaiverEvaluationResult:
     refresh: WaiverRefreshResult
     output_path: Path
     input_path: Path
+    run_manifest: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +72,40 @@ class WaiverSearchResult:
     refresh: WaiverRefreshResult
     output_path: Path
     input_path: Path
+    run_manifest: Mapping[str, Any] | None = None
+
+
+def _news_freshness(inputs, now):
+    coverage = inputs.news_coverage
+    if coverage and coverage.get('scope') == 'FINITE_GLOBAL_FEED':
+        fresh = is_fresh(datetime.fromisoformat(coverage['captured_at']), timedelta(hours=1), now=now)
+        return {row.player_id: fresh for row in inputs.values}
+    return dict(inputs.news_fresh)
+
+
+def _publication_check(inputs, snapshot, *, client, clock):
+    proof = revalidate_snapshot(snapshot, client=client, clock=clock)
+    if inputs.drop_legality_context is not None:
+        matchups = (client or SleeperClient()).league_matchups(snapshot.league.league_id, snapshot.manifest.current_week)
+        starters = next((sorted(str(pid) for pid in row['starters']) for row in matchups
+                         if str(row.get('roster_id')) == snapshot.user_roster_id and 'starters' in row), None)
+        if starters != inputs.drop_legality_context.get('starters'):
+            raise StaleData('Matchup starters changed during analysis; refresh drop legality and rerun')
+        proof['matchup_verified_at'] = clock().isoformat()
+        proof['matchup_starters'] = starters
+        proof['verified_at'] = proof['matchup_verified_at']
+    final_time = datetime.fromisoformat(proof['verified_at'])
+    validate_sources(inputs.source_evidence, now=final_time)
+    if not is_fresh(inputs.captured_at, timedelta(minutes=10), now=final_time):
+        raise StaleData('Waiver inputs expired during publication validation')
+    # A start-time legality proof cannot authorize a new move after kickoff.
+    for row in (inputs.drop_legality_evidence or {}).values():
+        kickoff = row.get('kickoff_at')
+        if row.get('legal') is True and kickoff:
+            at = datetime.fromisoformat(kickoff)
+            if inputs.captured_at < at <= final_time:
+                raise StaleData('A game started during analysis; refresh drop legality and rerun')
+    return proof
 
 
 def _load_policy_for_league(
@@ -221,15 +258,19 @@ def evaluate_entered_waiver(
     config_path: str | Path | None = None,
     client: SleeperClient | None = None,
     now: datetime | None = None,
+    clock: Callable[[], datetime] | None = None,
 ) -> EnteredWaiverEvaluationResult:
-    input_check_time = now or datetime.now(timezone.utc)
+    wall_clock = clock or (lambda: datetime.now(timezone.utc))
+    input_check_time = now or wall_clock()
     input_path = Path(inputs_path)
-    inputs = load_waiver_evaluation_inputs(input_path)
+    input_payload = json.loads(input_path.read_text(encoding='utf-8'))
+    inputs = parse_waiver_evaluation_inputs(input_payload)
     if inputs.league_key != league_key:
         raise ValueError("Waiver evaluation inputs are for a different league")
     if not is_fresh(inputs.captured_at, timedelta(minutes=5), now=input_check_time):
         raise StaleData("Waiver value/legality inputs exceed the five-minute freshness gate")
     policy = _load_policy_for_league(league_key, policy_path, config_path)
+    validate_sources(inputs.source_evidence, now=input_check_time)
     refresh = refresh_waiver_snapshot(
         league_key,
         config_path=config_path,
@@ -262,30 +303,41 @@ def evaluate_entered_waiver(
             projections=inputs.projections,
             values=inputs.values,
             drop_legality=dict(inputs.drop_legality),
-            news_fresh=dict(inputs.news_fresh),
+            news_fresh=_news_freshness(inputs, input_check_time),
             contingencies=inputs.contingencies,
             waiver_wire_evidence=inputs.waiver_wire_evidence,
             waiver_priorities=priority_by_id,
-            ros_panel_evidence=inputs.ros_panel_evidence,
+            ros_panel_evidence={**(inputs.ros_panel_evidence or {}), 'news_coverage': inputs.news_coverage},
             emergence_evidence=inputs.emergence_evidence,
             input_bundle_hash=inputs.input_hash,
             availability_source=inputs.availability_source,
             options=evaluation_options_for_policy(policy),
-            now=now,
+            now=now or refresh.snapshot.captured_at,
         ),
         policy,
     )
-    final_check_time = now or datetime.now(timezone.utc)
+    final_check_time = wall_clock()
     if not is_fresh(inputs.captured_at, timedelta(minutes=5), now=final_check_time):
         raise StaleData("Waiver value/legality inputs expired during evaluation")
+    proof = _publication_check(inputs, refresh.snapshot, client=client, clock=wall_clock)
     target = Path(
         output_path
         or refresh.output_path.with_name(
             f"waiver_evaluation_{evaluation.evidence_hash[:16]}.json"
         )
     )
+    manifest = record_run(target, snapshot=refresh.snapshot,
+        inputs={'bundle': input_payload,
+                'request': {'operation': 'exact', 'add': add, 'drop': drop},
+                'result_hash': evaluation.evidence_hash}, policy=policy,
+        revalidation=proof, sources=inputs.source_evidence, as_of=evaluation.evaluated_at,
+        readiness={'inputs_complete': evaluation.value_inputs_complete and evaluation.projection_inputs_complete,
+                   'search_complete': None, 'candidate_confidence': {
+                       'status': 'UNQUANTIFIED', 'decision_label': evaluation.decision_label,
+                       'strongest_uncertainty': evaluation.strongest_uncertainty},
+                   'informational_warnings': evaluation.warnings})
     save_waiver_evaluation(evaluation, target)
-    return EnteredWaiverEvaluationResult(evaluation, refresh, target, input_path)
+    return EnteredWaiverEvaluationResult(evaluation, refresh, target, input_path, manifest)
 
 
 def waiver_evaluation_report(result: EnteredWaiverEvaluationResult) -> dict[str, Any]:
@@ -293,6 +345,7 @@ def waiver_evaluation_report(result: EnteredWaiverEvaluationResult) -> dict[str,
     value["output_path"] = str(result.output_path)
     value["input_path"] = str(result.input_path)
     value["refresh_call_plan"] = waiver_refresh_report(result.refresh)["call_plan"]
+    value['run_manifest'] = manifest_summary(result.run_manifest)
     return value
 
 
@@ -308,15 +361,19 @@ def search_waivers(
     now: datetime | None = None,
     enable_pruning: bool = True,
     exact_candidate_budget: int | None = None,
+    clock: Callable[[], datetime] | None = None,
 ) -> WaiverSearchResult:
-    input_check_time = now or datetime.now(timezone.utc)
+    wall_clock = clock or (lambda: datetime.now(timezone.utc))
+    input_check_time = now or wall_clock()
     input_path = Path(inputs_path)
-    inputs = load_waiver_evaluation_inputs(input_path)
+    input_payload = json.loads(input_path.read_text(encoding='utf-8'))
+    inputs = parse_waiver_evaluation_inputs(input_payload)
     if inputs.league_key != league_key:
         raise ValueError("Waiver search inputs are for a different league")
     if not is_fresh(inputs.captured_at, timedelta(minutes=5), now=input_check_time):
         raise StaleData("Waiver search inputs exceed the five-minute freshness gate")
     policy = _load_policy_for_league(league_key, policy_path, config_path)
+    validate_sources(inputs.source_evidence, now=input_check_time)
     refresh = refresh_waiver_snapshot(
         league_key,
         config_path=config_path,
@@ -324,17 +381,17 @@ def search_waivers(
         client=client,
         availability_by_player=dict(inputs.availability_by_player),
     )
-    evaluation_time = now or datetime.now(timezone.utc)
+    evaluation_time = now or wall_clock()
     search = search_waiver_candidates(
         refresh.snapshot,
         weeks=inputs.weeks,
         projections=inputs.projections,
         values=inputs.values,
         drop_legality=dict(inputs.drop_legality),
-        news_fresh=dict(inputs.news_fresh),
+        news_fresh=_news_freshness(inputs, evaluation_time),
         contingencies=inputs.contingencies,
         waiver_wire_evidence=inputs.waiver_wire_evidence,
-        ros_panel_evidence=inputs.ros_panel_evidence,
+        ros_panel_evidence={**(inputs.ros_panel_evidence or {}), 'news_coverage': inputs.news_coverage},
         emergence_evidence=inputs.emergence_evidence,
         input_bundle_hash=inputs.input_hash,
         availability_source=inputs.availability_source,
@@ -347,17 +404,25 @@ def search_waivers(
         # different effective timestamps while the search is in progress.
         now=evaluation_time,
     )
-    final_check_time = now or datetime.now(timezone.utc)
+    final_check_time = wall_clock()
     if not is_fresh(inputs.captured_at, timedelta(minutes=10), now=final_check_time):
         raise StaleData("Waiver search inputs exceeded the ten-minute completion gate")
+    proof = _publication_check(inputs, refresh.snapshot, client=client, clock=wall_clock)
     target = Path(
         output_path
         or refresh.output_path.with_name(
             f"waiver_search_{search.evidence_hash[:16]}.json"
         )
     )
+    manifest = record_run(target, snapshot=refresh.snapshot,
+        inputs={'bundle': input_payload,
+                'request': {'operation': 'search', 'enable_pruning': enable_pruning,
+                            'exact_candidate_budget': exact_candidate_budget},
+                'result_hash': search.evidence_hash}, policy=policy,
+        revalidation=proof, sources=inputs.source_evidence, as_of=evaluation_time,
+        readiness=waiver_readiness(search))
     save_waiver_search(search, target)
-    return WaiverSearchResult(search, refresh, target, input_path)
+    return WaiverSearchResult(search, refresh, target, input_path, manifest)
 
 
 def waiver_search_report(result: WaiverSearchResult) -> dict[str, Any]:
@@ -365,6 +430,7 @@ def waiver_search_report(result: WaiverSearchResult) -> dict[str, Any]:
     value["output_path"] = str(result.output_path)
     value["input_path"] = str(result.input_path)
     value["refresh_call_plan"] = waiver_refresh_report(result.refresh)["call_plan"]
+    value['run_manifest'] = manifest_summary(result.run_manifest)
     return value
 
 
@@ -584,7 +650,7 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
             "Confirm free-agent versus waiver status in Sleeper. No bid or claim-success probability is predicted.",
         )
     )
-    return "\n".join(lines)
+    return "\n".join((*lines, *run_footer(getattr(result, 'run_manifest', None))))
 
 
 def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
@@ -873,4 +939,4 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
                     f"{evidence.scenario_depth_above_waiver:.2f}; replacement exposure "
                     f"{evidence.replacement_exposure:.2f}",
                 )
-    return "\n".join(lines)
+    return "\n".join((*lines, *run_footer(getattr(result, 'run_manifest', None))))

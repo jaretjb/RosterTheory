@@ -176,7 +176,7 @@ def schedule_fixture() -> ScheduleConfig:
 
 
 class SleeperAdapterTests(unittest.TestCase):
-    def test_adapter_normalizes_and_reuses_daily_player_cache(self) -> None:
+    def test_adapter_normalizes_and_reuses_fresh_player_cache(self) -> None:
         client = FakeSleeperClient()
         with tempfile.TemporaryDirectory() as directory:
             cache = Path(directory) / "players.json"

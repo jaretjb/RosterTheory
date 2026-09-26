@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import csv
 import json
+from datetime import datetime, timezone
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping
 
 from roster_theory.core.errors import Uncalibrated
 from roster_theory.core.provenance import stable_hash
+from roster_theory.core.run_contract import evaluate_at, manifest_summary, run_footer
 from roster_theory.providers.base import TradeMarketSource
 from roster_theory.providers.cache import atomic_write_json
 from roster_theory.sleeper import resolve_league_policy_path
 from roster_theory.stats_guy_fantasy import StatsGuyFantasyClient
 from roster_theory.trade.board_service import BoardRefreshResult, refresh_value_boards
 from roster_theory.trade.evaluation import EvaluationOptions
-from roster_theory.trade.evaluation_service import _options_from_policy
+from roster_theory.trade.evaluation_service import _options_from_policy, finish_trade_run
 from roster_theory.trade.market import (
     TradeMarketEvidence,
     resolve_trade_market_evidence,
@@ -52,6 +54,7 @@ class TargetWorkflowResult:
     policy_basis: str
     performance_history: PerformanceHistoryResult | None
     feedback_path: Path | None
+    run_manifest: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -343,7 +346,8 @@ def run_target_workflow(
         ),
     )
     normalized_options = _options_from_policy(options, decision_path)
-    targets = discover_trade_targets(
+    as_of = datetime.now(timezone.utc)
+    targets = evaluate_at(as_of, discover_trade_targets,
         snapshot,
         projections=refresh.weekly_projections,
         selected_board=refresh.selected_final,
@@ -359,7 +363,7 @@ def run_target_workflow(
     if search and policy.optimizer is None:
         raise ValueError("Search requires a league-scoped target optimizer policy")
     packages = (
-        optimize_target_packages(
+        evaluate_at(as_of, optimize_target_packages,
             snapshot,
             projections=refresh.weekly_projections,
             selected_board=refresh.selected_final,
@@ -418,12 +422,25 @@ def run_target_workflow(
     target = Path(output_path or refresh.output_path.with_name(
         f"trade_{'search' if search else 'targets'}_{evidence_hash[:16]}.json"
     ))
+    manifest = finish_trade_run(target, refresh, as_of=as_of,
+        inputs={'operation': 'target_search' if search else 'targets', 'trade_market': market,
+                'performance_context': performance_history.evidence.contexts if performance_history and performance_history.evidence else (),
+                'target_hash': targets.evidence_hash, 'package_hash': packages.evidence_hash if packages else None},
+        policy={'options': normalized_options, 'target_policy': policy},
+        readiness={'inputs_complete': not targets.roster_exclusions and not any(
+                       any(token in row.reason for token in ('MISSING', 'INCOMPLETE', 'UNAVAILABLE'))
+                       for row in targets.exclusions),
+                   'search_complete': False if search else None,
+                   'candidate_confidence': {row.evaluation_hash: row.decision_axes.confidence
+                       if row.decision_axes else 'INCOMPLETE'
+                       for row in packages.evaluated_decisions} if packages else {},
+                   'pricing_mode': targets.pricing_mode, 'informational_warnings': payload['warnings']})
     atomic_write_json(target, payload)
     csv_target = Path(csv_path) if csv_path else None
     feedback_path = target.with_suffix(".feedback.csv")
     result = TargetWorkflowResult(
         targets, packages, market, refresh, target, csv_target, evidence_hash,
-        policy.status, policy.basis, performance_history, feedback_path,
+        policy.status, policy.basis, performance_history, feedback_path, manifest,
     )
     _write_feedback_template(feedback_path, result)
     if csv_target:
@@ -443,7 +460,9 @@ def load_target_workflow_evidence(path: str | Path) -> dict[str, Any]:
 
 
 def target_workflow_report(result: TargetWorkflowResult) -> dict[str, Any]:
-    return json.loads(result.output_path.read_text(encoding="utf-8"))
+    value = json.loads(result.output_path.read_text(encoding="utf-8"))
+    value['run_manifest'] = manifest_summary(result.run_manifest)
+    return value
 
 
 def format_target_workflow(result: TargetWorkflowResult) -> str:
@@ -600,4 +619,4 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
         lines.append("No offer passed the exact intrinsic, market, partner, and risk gates; targets remain WATCH.")
     for warning in tuple(dict.fromkeys((*result.targets.warnings, *(result.packages.warnings if result.packages else ())))):
         lines.append(f"Warning: {warning}")
-    return "\n".join(lines)
+    return "\n".join((*lines, *run_footer(result.run_manifest)))

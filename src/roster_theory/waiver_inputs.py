@@ -11,6 +11,8 @@ from roster_theory.core.models import Projection
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.projections import projection_is_complete
 from roster_theory.core.scoring import score_stats
+from roster_theory.core.run_contract import revalidate_snapshot
+from roster_theory.core.provenance import stable_hash
 from roster_theory.providers.formats import ranking_format
 from roster_theory.sleeper import SleeperClient, resolve_league_policy_path
 from roster_theory.waiver.evaluation import (
@@ -137,14 +139,26 @@ def _performance_evidence(
     players: dict[str, object],
     scoring: dict[str, float],
     as_of: datetime | None = None,
+    source_evidence: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, dict[str, object]], tuple[int, ...]]:
     as_of = as_of or datetime.now(timezone.utc)
     completed_weeks = tuple(
         range(max(1, current_week - 2), current_week)
     )
-    season_rows = client.season_stats(season)
+    def observe(name, fetch):
+        observed_at = datetime.now(timezone.utc)
+        value = fetch()
+        if source_evidence is not None:
+            source_evidence.append({
+                'name': name, 'captured_at': observed_at.isoformat(),
+                'fetched_at': datetime.now(timezone.utc).isoformat(),
+                'payload_hash': stable_hash(value), 'maximum_age_seconds': 72 * 60 * 60,
+            })
+        return value
+    season_rows = observe(f'Sleeper season stats {season}', lambda: client.season_stats(season))
     weekly_rows = {
-        week: client.weekly_stats(season, week) for week in completed_weeks
+        week: observe(f'Sleeper stats {season}/W{week}', lambda: client.weekly_stats(season, week))
+        for week in completed_weeks
     }
     season_points = {
         player_id: score_stats(row, scoring, position=next(iter(players[player_id].positions), None)).points
@@ -418,12 +432,14 @@ def build_waiver_inputs(
     } - skill_ids - special_ids
     covered_ids = skill_ids | special_ids | notable_visibility_ids
     sleeper = SleeperClient()
+    performance_sources: list[dict[str, Any]] = []
     performance, completed_weeks = _performance_evidence(
         client=sleeper,
         season=waiver_state.league.season,
         current_week=waiver_state.manifest.current_week,
         players=players,
         scoring=dict(waiver_state.league.scoring),
+        source_evidence=performance_sources,
     )
     raw_projection = {
         player_id: sum(
@@ -517,6 +533,8 @@ def build_waiver_inputs(
         snapshot=snapshot,
         projections=projections,
     )
+    revalidate_snapshot(waiver_state, client=sleeper)
+    matchup_observed_at = datetime.now(timezone.utc)
     matchups = sleeper.league_matchups(
         waiver_state.league.league_id, waiver_state.manifest.current_week
     )
@@ -539,7 +557,7 @@ def build_waiver_inputs(
         captured_at=captured_at,
         availability_source=(
             "current Sleeper roster and matchup delta with supported-position eligibility; "
-            "fresh FantasyPros rankings, projections, and material-news feed; exact "
+            "FantasyPros rankings, projections, and limited global material-news feed; exact "
             "free-agent/waivers mechanism and pending claims informational"
         ),
         availability_by_player={},
@@ -550,11 +568,24 @@ def build_waiver_inputs(
         weeks=snapshot.weeks,
         projections=projections,
         values=values,
-        news_fresh={player_id: True for player_id in sorted(covered_ids)},
+        news_fresh={},
+        source_evidence=(*board.source_evidence, *performance_sources, {
+            'name': 'FantasyPros Waiver Wire',
+            'captured_at': waiver_wire_refresh.evidence.captured_at.isoformat(),
+            'payload_hash': waiver_wire_refresh.evidence.evidence_hash,
+            'maximum_age_seconds': waiver_wire_refresh.evidence.maximum_age_hours * 3600,
+        }),
+        news_coverage=board.news_coverage,
         contingencies=contingencies,
         waiver_wire_evidence=waiver_wire_refresh.evidence,
         ros_panel_evidence=ros_panel_evidence,
         drop_legality_evidence={pid: asdict(row) for pid, row in legality_evidence.items()},
+        drop_legality_context={
+            'captured_at': matchup_observed_at.isoformat(),
+            'starters': next((sorted(str(pid) for pid in row['starters'])
+                for row in matchups if str(row.get('roster_id')) == waiver_state.user_roster_id
+                and 'starters' in row), None),
+        },
     )
     return {
         "operation": "WAIVER LIVE INPUT BUILD",

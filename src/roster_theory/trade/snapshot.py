@@ -9,6 +9,7 @@ from typing import Any, Mapping
 from roster_theory.core.errors import IdentityIncomplete, StaleData
 from roster_theory.core.models import FantasyTeam, LeagueRules, Player
 from roster_theory.core.provenance import AnalysisManifest, DataStamp, stable_hash
+from roster_theory.core.run_contract import evaluation_time
 from roster_theory.providers.cache import atomic_write_json, is_fresh
 from roster_theory.providers.sleeper import SleeperBundle
 from roster_theory.trade.schedule import EvaluationWeek, ScheduleConfig, build_evaluation_weeks
@@ -448,5 +449,5 @@ def assert_current(
 ) -> None:
     if not snapshot.current:
         raise StaleData("Offline Trade snapshot is non-current")
-    if not is_fresh(snapshot.captured_at, maximum_age, now=now or datetime.now(timezone.utc)):
+    if not is_fresh(snapshot.captured_at, maximum_age, now=now or evaluation_time()):
         raise StaleData("Sleeper ownership exceeds the current-run freshness gate")
