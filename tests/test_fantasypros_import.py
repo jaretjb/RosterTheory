@@ -35,6 +35,7 @@ class SyntheticDraftClient:
         self.scope_by_position = scope_by_position or {}
         self.ranking_scope_by_source = ranking_scope_by_source or {}
         self.ranking_requests = []
+        self.projection_requests = []
 
     def ranking_experts(self, season, **params):
         return {"experts": [
@@ -47,8 +48,10 @@ class SyntheticDraftClient:
         return {"players": []}
 
     def projections(self, season, **params):
+        self.projection_requests.append(params)
         position = params["position"]
-        return {"season": season, "players": self.projected.get(position, []),
+        return {"season": season, "week": "0", "positions": position,
+                "players": self.projected.get(position, []),
                 **self.scope_by_position.get(position, {})}
 
     def consensus_rankings(self, season, **params):
@@ -189,6 +192,47 @@ class DraftRankingScopeTests(unittest.TestCase):
         self.assertTrue(all(request["type"] == "DRAFT" and request["week"] == 0
                             for request in client.ranking_requests))
         self.assertEqual(len(board.metadata["ranking_issues"]), 3)
+
+
+class DraftProjectionScopeTests(unittest.TestCase):
+    def test_missing_declarations_cannot_supply_season_points(self):
+        ranked = {"QB": [{"player_id": "qb", "player_name": "A Passer",
+                          "player_position_id": "QB", "rank_ecr": 1}]}
+        projected = {"QB": [{"fpid": "qb", "stats": {"pass_yds": 250}}]}
+        client = SyntheticDraftClient(ranked, projected, scope_by_position={
+            "QB": {"season": None, "week": None, "positions": None},
+        })
+        board = draft_board(client, {"pass_yd": 0.04})
+        self.assertIsNone(board.players[0]["projected_points"])
+        self.assertIn("missing_season", board.metadata["projection_issues"][0]["reason"])
+        self.assertIn("missing_week", board.metadata["projection_issues"][0]["reason"])
+        self.assertIn("missing_positions", board.metadata["projection_issues"][0]["reason"])
+        self.assertFalse(board.metadata["checks"]["draft_projection_sources_verified"])
+        self.assertTrue(all(request["week"] == 0 for request in client.projection_requests))
+
+    def test_wrong_or_fallback_scope_preserves_independent_valid_position(self):
+        ranked = {"RB": [{"player_id": "shared", "player_name": "A Runner",
+                          "player_position_id": "RB", "rank_ecr": 1}]}
+        projected = {
+            "QB": [{"fpid": "shared", "stats": {"rec_rec": 100}}],
+            "RB": [{"fpid": "shared", "stats": {"rec_rec": 2}}],
+        }
+        client = SyntheticDraftClient(ranked, projected, scope_by_position={
+            "QB": {"season": 2025, "week": 4, "positions": "WR",
+                   "type": "ROS", "ros": True, "fallback_for": "preseason"},
+        })
+        board = draft_board(client, {"rec": 0.5})
+        self.assertEqual(board.players[0]["projected_points"], 1.0)
+        reasons = [issue["reason"] for issue in board.metadata["projection_issues"]]
+        self.assertTrue(any("season_mismatch" in reason and "weekly_response=4" in reason
+                            and "positions_mismatch" in reason and "projection_type_mismatch" in reason
+                            and "ros_response" in reason and "fallback_response" in reason
+                            for reason in reasons))
+        self.assertNotIn("duplicate_fpid", reasons)
+        self.assertFalse(board.metadata["draft_ready"])
+
+
+class DraftRankingSourceShapeTests(unittest.TestCase):
 
     def test_missing_and_mismatched_source_declarations_remain_incomplete(self):
         ranked = {"QB": [{"player_id": "qb", "player_name": "A Passer",
