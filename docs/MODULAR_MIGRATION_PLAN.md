@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: Approved planning baseline; MA-001 awaits explicit active-milestone entry
+Status: MA-000 merged in PR #27; MA-001 implementation-complete under issue #29, awaiting PR review/merge
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -24,8 +24,13 @@ change recommendation policy, activate later work, or merge itself.
 
 ## 2. Sequence and traceability
 
-All implementation rows are **planned, not authorized**. Later rows are planning
-outlines to be refined against the preceding milestone's evidence.
+MA-001 is authorized in ACTIVE_MILESTONE. MA-002 onward remain **planned, not
+authorized**, to be refined against the preceding milestone's evidence.
+
+MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
+Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
+follow-ups are #30/#31 (MA-002), #32 (MA-003), and #33 (MA-004); creating these
+issues does not activate them.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |
@@ -207,13 +212,11 @@ implied by the next row in the table.
 
 Review the envelope, Trade specialist boundary, module ownership, conservative
 compatibility approach and proposed performance gates as one planning package.
-There are no additional blocking user decisions for this draft. Exact profile
-settings and provider schema capabilities remain explicit MA-001 evidence tasks.
+There are no additional blocking user decisions for this baseline. MA-001 records
+observed profile settings and unresolved provider-stat/capability evidence.
 Escalate only a discovered scope conflict or a proposed change to policy,
 compatibility, runtime dependencies or operational permissions.
 
-MA-000 completion requires three linked documents, reconciliation references in
-the existing specifications, a discoverable documentation/context route, passing
-documentation/privacy checks and a reviewable planning PR. Later implementation
-issues can be opened after design review; the detailed MA-001 contract is ready
-to turn into the first issue without treating it as active work.
+MA-000 delivered the three linked documents, reconciliation references and
+context route through merged PR #27. Issue #29 tracks the separately activated
+MA-001 baseline. Later issues remain inactive until their own bounded activation.

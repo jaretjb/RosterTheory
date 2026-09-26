@@ -69,7 +69,7 @@ class ContextRoutingTests(unittest.TestCase):
         ):
             self.assertIn(path, router)
             self.assertTrue((ROOT / path).is_file())
-        for name in ("DRAFT", "TRADE", "WAIVER"):
+        for name in ("DRAFT", "TRADE", "WAIVER", "MODULAR"):
             self.assertLessEqual(words(f".codex/context/status/{name}.md"), 250)
 
     def test_project_wide_next_task_routes_to_release_backlog(self):

@@ -1,0 +1,1476 @@
+{
+  "reference_a": {
+    "trade_search": {
+      "metrics": {
+        "stage_ms": {
+          "setup": 53.503,
+          "construction": 1.608,
+          "exact": 1255.39,
+          "finalize": 7.715
+        },
+        "coverage": {
+          "enumerated": 81,
+          "pruned": 72,
+          "attempted": 9,
+          "accepted": 0
+        },
+        "cache": {
+          "exact_hits": 0,
+          "exact_misses": 9
+        }
+      },
+      "evidence": {
+        "semantic_hash": "ab4f79f7df203d356b905c7f54137d1c3eac1b86044f0838cc02c329f4028543",
+        "bytes": 64896,
+        "schema_fields": [
+          "schema_version",
+          "manifest_id",
+          "league_key",
+          "horizon",
+          "risk_posture",
+          "search_policy_version",
+          "diagnostics",
+          "opportunities",
+          "coverage",
+          "rejection_counts",
+          "exhaustive_large_search",
+          "evidence_hash",
+          "roster_exclusions"
+        ],
+        "coverage": [
+          {
+            "accepted": 0,
+            "enumerated": 36,
+            "evaluated": 6,
+            "package_size": "1-for-1",
+            "pruned": 30
+          },
+          {
+            "accepted": 0,
+            "enumerated": 18,
+            "evaluated": 3,
+            "package_size": "1-for-2",
+            "pruned": 15
+          },
+          {
+            "accepted": 0,
+            "enumerated": 18,
+            "evaluated": 0,
+            "package_size": "2-for-1",
+            "pruned": 18
+          },
+          {
+            "accepted": 0,
+            "enumerated": 9,
+            "evaluated": 0,
+            "package_size": "2-for-2",
+            "pruned": 9
+          }
+        ],
+        "exhaustive_large_search": false,
+        "roster_exclusions": []
+      }
+    },
+    "waiver_search": {
+      "metrics": {
+        "stage_ms": {
+          "validation": 0.728,
+          "ordering": 1.245,
+          "exact": 3968.986,
+          "branch_validation": 155.361,
+          "finalize": 165.12
+        },
+        "coverage": {
+          "eligible": 6,
+          "evaluated": 6,
+          "budget_excluded": 0,
+          "pruned": 0
+        },
+        "cache": {
+          "contingency_entries": 105,
+          "evaluation_entries": 2
+        }
+      },
+      "evidence": {
+        "semantic_hash": "c7f68958081966b148d2a5c2b9064e7b4669c2d8ca855cbf56299a9015aaf60f",
+        "bytes": 1578670,
+        "schema_fields": [
+          "schema_version",
+          "evaluation_schema_version",
+          "product",
+          "operation",
+          "league_key",
+          "manifest_id",
+          "current_week",
+          "horizon",
+          "policy_version",
+          "policy_hash",
+          "pruning_version",
+          "pruning_enabled",
+          "ranking_basis",
+          "eligible_candidate_ids",
+          "candidate_bounds",
+          "exact_evaluations",
+          "pruned_candidates",
+          "omissions",
+          "notable_candidates",
+          "claim_plan",
+          "best_add_player_id",
+          "best_drop_player_id",
+          "best_decision_label",
+          "recommended_action",
+          "no_action",
+          "candidate_hash",
+          "value_input_hash",
+          "snapshot_hash",
+          "input_bundle_hash",
+          "availability_source",
+          "emergence_evidence",
+          "ros_panel_evidence",
+          "strongest_uncertainty",
+          "warnings",
+          "sleeper_write_performed",
+          "evidence_hash",
+          "coverage_status",
+          "budget_excluded_player_ids",
+          "claim_branch_checks"
+        ],
+        "coverage_status": "EXHAUSTIVE_ELIGIBLE",
+        "warnings": [
+          "All eligible adds are evaluated against all supported legal drops unless an explicit budget is supplied; no add-only dominance is assumed",
+          "Exact FREE_AGENT versus WAIVERS mechanism and competing pending claims are informational; claim success cannot be predicted",
+          "No FAAB bid or claim-success probability was generated",
+          "Role and volume emergence evidence was not provided"
+        ],
+        "best_add_player_id": "fa_DST",
+        "best_drop_player_id": "r1_14",
+        "exact_count": 6,
+        "candidate_decisions": [
+          {
+            "add_player_id": "fa_DST",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "DST_STREAM",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "In-cap weekly rank, value coverage, fresh news, and either complete projections or fresh sampled season production are required",
+                  "name": "complete_special_team_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Pass a projection improvement with a nonnegative available production balance, or a positive normalized rank/season-production comparison",
+                  "name": "current_week_and_rolling_stream",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Cross-position specialist claims must preserve lineup, depth, downside, ownership and protected retention value",
+                  "name": "cross_position_roster_safety",
+                  "passed": true,
+                  "threshold": true
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "3e76206ac680045833b4fee5d059bcedded51a9f6e264549a27238cbad0c7a02",
+              "policy_version": "reference_a-synthetic-v1",
+              "priority_score": 0.526316,
+              "reversal_conditions": [
+                "Projected streaming improvement no longer clears its current-week/rolling floor",
+                "Available normalized season-production comparison becomes negative",
+                "Weekly ranking, player availability, value coverage, or news freshness changes"
+              ],
+              "specialist_evidence": {
+                "add_as_of": null,
+                "basis": "PROJECTION",
+                "cross_position": true,
+                "drop_as_of": null,
+                "historically_calibrated": false,
+                "method": "NORMALIZED_SEASON_V1",
+                "performance": {
+                  "confidence": 0,
+                  "prior_games": 2.0,
+                  "production_advantage": null,
+                  "production_weight": 0.4,
+                  "score": null,
+                  "status": "NOT_APPLICABLE_NO_SAME_POSITION_DROP",
+                  "weekly_advantage": null
+                },
+                "performance_complete": false,
+                "performance_fresh": false,
+                "priority_basis": "NORMALIZED_PROJECTION",
+                "priority_units": "NORMALIZED_ADVANTAGE",
+                "production_guard": true,
+                "projection_complete": true,
+                "projection_priority_points": 20.0,
+                "projection_stream_pass": true,
+                "season_add_games": null,
+                "season_add_points": null,
+                "season_drop_games": null,
+                "season_drop_points": null
+              }
+            }
+          },
+          {
+            "add_player_id": "fa_K",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "K_STREAM",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "In-cap weekly rank, value coverage, fresh news, and either complete projections or fresh sampled season production are required",
+                  "name": "complete_special_team_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Pass a projection improvement with a nonnegative available production balance, or a positive normalized rank/season-production comparison",
+                  "name": "current_week_stream",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Cross-position specialist claims must preserve lineup, depth, downside, ownership and protected retention value",
+                  "name": "cross_position_roster_safety",
+                  "passed": true,
+                  "threshold": true
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "3e76206ac680045833b4fee5d059bcedded51a9f6e264549a27238cbad0c7a02",
+              "policy_version": "reference_a-synthetic-v1",
+              "priority_score": 0.413793,
+              "reversal_conditions": [
+                "Projected streaming improvement no longer clears its current-week/rolling floor",
+                "Available normalized season-production comparison becomes negative",
+                "Weekly ranking, player availability, value coverage, or news freshness changes"
+              ],
+              "specialist_evidence": {
+                "add_as_of": null,
+                "basis": "PROJECTION",
+                "cross_position": true,
+                "drop_as_of": null,
+                "historically_calibrated": false,
+                "method": "NORMALIZED_SEASON_V1",
+                "performance": {
+                  "confidence": 0,
+                  "prior_games": 2.0,
+                  "production_advantage": null,
+                  "production_weight": 0.75,
+                  "score": null,
+                  "status": "NOT_APPLICABLE_NO_SAME_POSITION_DROP",
+                  "weekly_advantage": null
+                },
+                "performance_complete": false,
+                "performance_fresh": false,
+                "priority_basis": "NORMALIZED_PROJECTION",
+                "priority_units": "NORMALIZED_ADVANTAGE",
+                "production_guard": true,
+                "projection_complete": true,
+                "projection_priority_points": 12.0,
+                "projection_stream_pass": true,
+                "season_add_games": null,
+                "season_add_points": null,
+                "season_drop_games": null,
+                "season_drop_points": null
+              }
+            }
+          },
+          {
+            "add_player_id": "fa_TE",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "INSURANCE",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "name": "complete_required_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 18.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose selected-expert ownership value",
+                  "name": "selected_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 13.5,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose market-consensus ownership value",
+                  "name": "market_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 27.0,
+                  "comparison": ">=",
+                  "explanation": "Raw remaining-horizon projection must independently support the move",
+                  "name": "raw_projection_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "The move needs a lineup gain or a separately strong bench-insurance case",
+                  "name": "immediate_insurance_or_qb_hold_value",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "A future-facing add cannot create an excessive current-week loss",
+                  "name": "current_week_delta",
+                  "passed": true,
+                  "threshold": -2.0
+                },
+                {
+                  "actual": 11.0,
+                  "comparison": ">=",
+                  "explanation": "The required drop cannot create excessive replacement exposure",
+                  "name": "depth_delta",
+                  "passed": true,
+                  "threshold": -10.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": "<=",
+                  "explanation": "The move cannot add excessive same-offense downside",
+                  "name": "offense_downside_increase",
+                  "passed": true,
+                  "threshold": 5.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "No protected contingent-upside drop gate applies",
+                  "name": "protected_upside_incremental_value",
+                  "passed": true,
+                  "threshold": 0.0
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "3e76206ac680045833b4fee5d059bcedded51a9f6e264549a27238cbad0c7a02",
+              "policy_version": "reference_a-synthetic-v1",
+              "priority_score": 0.0,
+              "reversal_conditions": [
+                "Raw projection delta below +0.0",
+                "Selected ownership delta below +0.0",
+                "Market ownership delta below +0.0",
+                "Current-week loss exceeds 2.0",
+                "Offense-downside increase exceeds 5.0",
+                "Material-news freshness becomes unproved",
+                "The added player becomes currently inactive",
+                "Protected-upside incremental option value falls below +4.0"
+              ],
+              "specialist_evidence": null
+            }
+          },
+          {
+            "add_player_id": "fa_WR",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "INSURANCE",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "name": "complete_required_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 16.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose selected-expert ownership value",
+                  "name": "selected_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 12.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose market-consensus ownership value",
+                  "name": "market_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 24.0,
+                  "comparison": ">=",
+                  "explanation": "Raw remaining-horizon projection must independently support the move",
+                  "name": "raw_projection_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "The move needs a lineup gain or a separately strong bench-insurance case",
+                  "name": "immediate_insurance_or_qb_hold_value",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "A future-facing add cannot create an excessive current-week loss",
+                  "name": "current_week_delta",
+                  "passed": true,
+                  "threshold": -2.0
+                },
+                {
+                  "actual": 5.0,
+                  "comparison": ">=",
+                  "explanation": "The required drop cannot create excessive replacement exposure",
+                  "name": "depth_delta",
+                  "passed": true,
+                  "threshold": -10.0
+                },
+                {
+                  "actual": -1.6,
+                  "comparison": "<=",
+                  "explanation": "The move cannot add excessive same-offense downside",
+                  "name": "offense_downside_increase",
+                  "passed": true,
+                  "threshold": 5.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "No protected contingent-upside drop gate applies",
+                  "name": "protected_upside_incremental_value",
+                  "passed": true,
+                  "threshold": 0.0
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "3e76206ac680045833b4fee5d059bcedded51a9f6e264549a27238cbad0c7a02",
+              "policy_version": "reference_a-synthetic-v1",
+              "priority_score": 0.0,
+              "reversal_conditions": [
+                "Raw projection delta below +0.0",
+                "Selected ownership delta below +0.0",
+                "Market ownership delta below +0.0",
+                "Current-week loss exceeds 2.0",
+                "Offense-downside increase exceeds 5.0",
+                "Material-news freshness becomes unproved",
+                "The added player becomes currently inactive",
+                "Protected-upside incremental option value falls below +4.0"
+              ],
+              "specialist_evidence": null
+            }
+          },
+          {
+            "add_player_id": "fa_RB",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "INSURANCE",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "name": "complete_required_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 14.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose selected-expert ownership value",
+                  "name": "selected_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 10.5,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose market-consensus ownership value",
+                  "name": "market_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 21.0,
+                  "comparison": ">=",
+                  "explanation": "Raw remaining-horizon projection must independently support the move",
+                  "name": "raw_projection_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "The move needs a lineup gain or a separately strong bench-insurance case",
+                  "name": "immediate_insurance_or_qb_hold_value",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "A future-facing add cannot create an excessive current-week loss",
+                  "name": "current_week_delta",
+                  "passed": true,
+                  "threshold": -2.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "The required drop cannot create excessive replacement exposure",
+                  "name": "depth_delta",
+                  "passed": true,
+                  "threshold": -10.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": "<=",
+                  "explanation": "The move cannot add excessive same-offense downside",
+                  "name": "offense_downside_increase",
+                  "passed": true,
+                  "threshold": 5.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "No protected contingent-upside drop gate applies",
+                  "name": "protected_upside_incremental_value",
+                  "passed": true,
+                  "threshold": 0.0
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "3e76206ac680045833b4fee5d059bcedded51a9f6e264549a27238cbad0c7a02",
+              "policy_version": "reference_a-synthetic-v1",
+              "priority_score": 0.0,
+              "reversal_conditions": [
+                "Raw projection delta below +0.0",
+                "Selected ownership delta below +0.0",
+                "Market ownership delta below +0.0",
+                "Current-week loss exceeds 2.0",
+                "Offense-downside increase exceeds 5.0",
+                "Material-news freshness becomes unproved",
+                "The added player becomes currently inactive",
+                "Protected-upside incremental option value falls below +4.0"
+              ],
+              "specialist_evidence": null
+            }
+          },
+          {
+            "add_player_id": "fa_QB",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "QB_INJURY_INSURANCE",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "name": "complete_required_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 12.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose selected-expert ownership value",
+                  "name": "selected_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 9.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose market-consensus ownership value",
+                  "name": "market_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 18.0,
+                  "comparison": ">=",
+                  "explanation": "Raw QB-versus-drop points are reported but are not a one-QB hold gate",
+                  "name": "raw_projection_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A one-QB backup needs positive net hold value or materially superior injury insurance",
+                  "name": "immediate_insurance_or_qb_hold_value",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "A future-facing add cannot create an excessive current-week loss",
+                  "name": "current_week_delta",
+                  "passed": true,
+                  "threshold": -2.0
+                },
+                {
+                  "actual": 8.0,
+                  "comparison": ">=",
+                  "explanation": "One-QB hold replacement exposure is charged as bench-slot opportunity cost",
+                  "name": "depth_delta",
+                  "passed": true,
+                  "threshold": -10.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": "<=",
+                  "explanation": "The move cannot add excessive same-offense downside",
+                  "name": "offense_downside_increase",
+                  "passed": true,
+                  "threshold": 5.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "No protected contingent-upside drop gate applies",
+                  "name": "protected_upside_incremental_value",
+                  "passed": true,
+                  "threshold": 0.0
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "3e76206ac680045833b4fee5d059bcedded51a9f6e264549a27238cbad0c7a02",
+              "policy_version": "reference_a-synthetic-v1",
+              "priority_score": 0.0,
+              "reversal_conditions": [
+                "Net one-QB hold value falls below +1.0 and injury-insurance advantage falls below 4.0",
+                "Selected ownership delta below +0.0",
+                "Market ownership delta below +0.0",
+                "Current-week loss exceeds 2.0",
+                "Offense-downside increase exceeds 5.0",
+                "Material-news freshness becomes unproved",
+                "The added player becomes currently inactive",
+                "Protected-upside incremental option value falls below +4.0"
+              ],
+              "specialist_evidence": null
+            }
+          }
+        ]
+      }
+    }
+  },
+  "reference_b": {
+    "trade_search": {
+      "metrics": {
+        "stage_ms": {
+          "setup": 84.157,
+          "construction": 1.922,
+          "exact": 3209.155,
+          "finalize": 8.095
+        },
+        "coverage": {
+          "enumerated": 99,
+          "pruned": 88,
+          "attempted": 11,
+          "accepted": 0
+        },
+        "cache": {
+          "exact_hits": 0,
+          "exact_misses": 11
+        }
+      },
+      "evidence": {
+        "semantic_hash": "e650bb4791bab29dd3fcf3c757adac5fdcedef8f77c8acf41f101a6d55e62185",
+        "bytes": 78313,
+        "schema_fields": [
+          "schema_version",
+          "manifest_id",
+          "league_key",
+          "horizon",
+          "risk_posture",
+          "search_policy_version",
+          "diagnostics",
+          "opportunities",
+          "coverage",
+          "rejection_counts",
+          "exhaustive_large_search",
+          "evidence_hash",
+          "roster_exclusions"
+        ],
+        "coverage": [
+          {
+            "accepted": 0,
+            "enumerated": 44,
+            "evaluated": 4,
+            "package_size": "1-for-1",
+            "pruned": 40
+          },
+          {
+            "accepted": 0,
+            "enumerated": 22,
+            "evaluated": 4,
+            "package_size": "1-for-2",
+            "pruned": 18
+          },
+          {
+            "accepted": 0,
+            "enumerated": 22,
+            "evaluated": 0,
+            "package_size": "2-for-1",
+            "pruned": 22
+          },
+          {
+            "accepted": 0,
+            "enumerated": 11,
+            "evaluated": 3,
+            "package_size": "2-for-2",
+            "pruned": 8
+          }
+        ],
+        "exhaustive_large_search": false,
+        "roster_exclusions": []
+      }
+    },
+    "waiver_search": {
+      "metrics": {
+        "stage_ms": {
+          "validation": 0.768,
+          "ordering": 1.604,
+          "exact": 19807.707,
+          "branch_validation": 688.207,
+          "finalize": 174.439
+        },
+        "coverage": {
+          "eligible": 6,
+          "evaluated": 6,
+          "budget_excluded": 0,
+          "pruned": 0
+        },
+        "cache": {
+          "contingency_entries": 105,
+          "evaluation_entries": 2
+        }
+      },
+      "evidence": {
+        "semantic_hash": "985a3389bea10759175e28a3dd03638e204cf95171fbecd46c27c1942105125d",
+        "bytes": 1593095,
+        "schema_fields": [
+          "schema_version",
+          "evaluation_schema_version",
+          "product",
+          "operation",
+          "league_key",
+          "manifest_id",
+          "current_week",
+          "horizon",
+          "policy_version",
+          "policy_hash",
+          "pruning_version",
+          "pruning_enabled",
+          "ranking_basis",
+          "eligible_candidate_ids",
+          "candidate_bounds",
+          "exact_evaluations",
+          "pruned_candidates",
+          "omissions",
+          "notable_candidates",
+          "claim_plan",
+          "best_add_player_id",
+          "best_drop_player_id",
+          "best_decision_label",
+          "recommended_action",
+          "no_action",
+          "candidate_hash",
+          "value_input_hash",
+          "snapshot_hash",
+          "input_bundle_hash",
+          "availability_source",
+          "emergence_evidence",
+          "ros_panel_evidence",
+          "strongest_uncertainty",
+          "warnings",
+          "sleeper_write_performed",
+          "evidence_hash",
+          "coverage_status",
+          "budget_excluded_player_ids",
+          "claim_branch_checks"
+        ],
+        "coverage_status": "EXHAUSTIVE_ELIGIBLE",
+        "warnings": [
+          "All eligible adds are evaluated against all supported legal drops unless an explicit budget is supplied; no add-only dominance is assumed",
+          "Exact FREE_AGENT versus WAIVERS mechanism and competing pending claims are informational; claim success cannot be predicted",
+          "No FAAB bid or claim-success probability was generated",
+          "Role and volume emergence evidence was not provided"
+        ],
+        "best_add_player_id": "fa_TE",
+        "best_drop_player_id": "r1_14",
+        "exact_count": 6,
+        "candidate_decisions": [
+          {
+            "add_player_id": "fa_TE",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "IMMEDIATE",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "name": "complete_required_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 18.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose selected-expert ownership value",
+                  "name": "selected_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 13.5,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose market-consensus ownership value",
+                  "name": "market_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 27.0,
+                  "comparison": ">=",
+                  "explanation": "Raw remaining-horizon projection must independently support the move",
+                  "name": "raw_projection_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "The move needs a lineup gain or a separately strong bench-insurance case",
+                  "name": "immediate_insurance_or_qb_hold_value",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 2.0,
+                  "comparison": ">=",
+                  "explanation": "A future-facing add cannot create an excessive current-week loss",
+                  "name": "current_week_delta",
+                  "passed": true,
+                  "threshold": -0.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "The required drop cannot create excessive replacement exposure",
+                  "name": "depth_delta",
+                  "passed": true,
+                  "threshold": -0.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": "<=",
+                  "explanation": "The move cannot add excessive same-offense downside",
+                  "name": "offense_downside_increase",
+                  "passed": true,
+                  "threshold": 2.0
+                },
+                {
+                  "actual": 2.0,
+                  "comparison": ">=",
+                  "explanation": "No protected contingent-upside drop gate applies",
+                  "name": "protected_upside_incremental_value",
+                  "passed": true,
+                  "threshold": 0.0
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "009f48b2aac94ecc391e1c316145e21a5d637b87162eb41b39a88b2938fc6a83",
+              "policy_version": "reference_b-synthetic-v1",
+              "priority_score": 2.0,
+              "reversal_conditions": [
+                "Raw projection delta below +0.0",
+                "Selected ownership delta below +0.0",
+                "Market ownership delta below +0.0",
+                "Current-week loss exceeds 0.0",
+                "Offense-downside increase exceeds 2.0",
+                "Material-news freshness becomes unproved",
+                "The added player becomes currently inactive",
+                "Protected-upside incremental option value falls below +5.0"
+              ],
+              "specialist_evidence": null
+            }
+          },
+          {
+            "add_player_id": "fa_WR",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "IMMEDIATE",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "name": "complete_required_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 16.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose selected-expert ownership value",
+                  "name": "selected_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 12.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose market-consensus ownership value",
+                  "name": "market_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 24.0,
+                  "comparison": ">=",
+                  "explanation": "Raw remaining-horizon projection must independently support the move",
+                  "name": "raw_projection_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "The move needs a lineup gain or a separately strong bench-insurance case",
+                  "name": "immediate_insurance_or_qb_hold_value",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 1.0,
+                  "comparison": ">=",
+                  "explanation": "A future-facing add cannot create an excessive current-week loss",
+                  "name": "current_week_delta",
+                  "passed": true,
+                  "threshold": -0.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "The required drop cannot create excessive replacement exposure",
+                  "name": "depth_delta",
+                  "passed": true,
+                  "threshold": -0.0
+                },
+                {
+                  "actual": -0.6,
+                  "comparison": "<=",
+                  "explanation": "The move cannot add excessive same-offense downside",
+                  "name": "offense_downside_increase",
+                  "passed": true,
+                  "threshold": 2.0
+                },
+                {
+                  "actual": 1.0,
+                  "comparison": ">=",
+                  "explanation": "No protected contingent-upside drop gate applies",
+                  "name": "protected_upside_incremental_value",
+                  "passed": true,
+                  "threshold": 0.0
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "009f48b2aac94ecc391e1c316145e21a5d637b87162eb41b39a88b2938fc6a83",
+              "policy_version": "reference_b-synthetic-v1",
+              "priority_score": 1.0,
+              "reversal_conditions": [
+                "Raw projection delta below +0.0",
+                "Selected ownership delta below +0.0",
+                "Market ownership delta below +0.0",
+                "Current-week loss exceeds 0.0",
+                "Offense-downside increase exceeds 2.0",
+                "Material-news freshness becomes unproved",
+                "The added player becomes currently inactive",
+                "Protected-upside incremental option value falls below +5.0"
+              ],
+              "specialist_evidence": null
+            }
+          },
+          {
+            "add_player_id": "fa_DST",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "DST_STREAM",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "In-cap weekly rank, value coverage, fresh news, and either complete projections or fresh sampled season production are required",
+                  "name": "complete_special_team_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Pass a projection improvement with a nonnegative available production balance, or a positive normalized rank/season-production comparison",
+                  "name": "current_week_and_rolling_stream",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Cross-position specialist claims must preserve lineup, depth, downside, ownership and protected retention value",
+                  "name": "cross_position_roster_safety",
+                  "passed": true,
+                  "threshold": true
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "009f48b2aac94ecc391e1c316145e21a5d637b87162eb41b39a88b2938fc6a83",
+              "policy_version": "reference_b-synthetic-v1",
+              "priority_score": 0.571429,
+              "reversal_conditions": [
+                "Projected streaming improvement no longer clears its current-week/rolling floor",
+                "Available normalized season-production comparison becomes negative",
+                "Weekly ranking, player availability, value coverage, or news freshness changes"
+              ],
+              "specialist_evidence": {
+                "add_as_of": null,
+                "basis": "PROJECTION",
+                "cross_position": true,
+                "drop_as_of": null,
+                "historically_calibrated": false,
+                "method": "NORMALIZED_SEASON_V1",
+                "performance": {
+                  "confidence": 0,
+                  "prior_games": 2.0,
+                  "production_advantage": null,
+                  "production_weight": 0.4,
+                  "score": null,
+                  "status": "NOT_APPLICABLE_NO_SAME_POSITION_DROP",
+                  "weekly_advantage": null
+                },
+                "performance_complete": false,
+                "performance_fresh": false,
+                "priority_basis": "NORMALIZED_PROJECTION",
+                "priority_units": "NORMALIZED_ADVANTAGE",
+                "production_guard": true,
+                "projection_complete": true,
+                "projection_priority_points": 24.0,
+                "projection_stream_pass": true,
+                "season_add_games": null,
+                "season_add_points": null,
+                "season_drop_games": null,
+                "season_drop_points": null
+              }
+            }
+          },
+          {
+            "add_player_id": "fa_K",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "K_STREAM",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "In-cap weekly rank, value coverage, fresh news, and either complete projections or fresh sampled season production are required",
+                  "name": "complete_special_team_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Pass a projection improvement with a nonnegative available production balance, or a positive normalized rank/season-production comparison",
+                  "name": "current_week_stream",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Cross-position specialist claims must preserve lineup, depth, downside, ownership and protected retention value",
+                  "name": "cross_position_roster_safety",
+                  "passed": true,
+                  "threshold": true
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "009f48b2aac94ecc391e1c316145e21a5d637b87162eb41b39a88b2938fc6a83",
+              "policy_version": "reference_b-synthetic-v1",
+              "priority_score": 0.484848,
+              "reversal_conditions": [
+                "Projected streaming improvement no longer clears its current-week/rolling floor",
+                "Available normalized season-production comparison becomes negative",
+                "Weekly ranking, player availability, value coverage, or news freshness changes"
+              ],
+              "specialist_evidence": {
+                "add_as_of": null,
+                "basis": "PROJECTION",
+                "cross_position": true,
+                "drop_as_of": null,
+                "historically_calibrated": false,
+                "method": "NORMALIZED_SEASON_V1",
+                "performance": {
+                  "confidence": 0,
+                  "prior_games": 2.0,
+                  "production_advantage": null,
+                  "production_weight": 0.75,
+                  "score": null,
+                  "status": "NOT_APPLICABLE_NO_SAME_POSITION_DROP",
+                  "weekly_advantage": null
+                },
+                "performance_complete": false,
+                "performance_fresh": false,
+                "priority_basis": "NORMALIZED_PROJECTION",
+                "priority_units": "NORMALIZED_ADVANTAGE",
+                "production_guard": true,
+                "projection_complete": true,
+                "projection_priority_points": 16.0,
+                "projection_stream_pass": true,
+                "season_add_games": null,
+                "season_add_points": null,
+                "season_drop_games": null,
+                "season_drop_points": null
+              }
+            }
+          },
+          {
+            "add_player_id": "fa_RB",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "INSURANCE",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "name": "complete_required_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 14.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose selected-expert ownership value",
+                  "name": "selected_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 10.5,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose market-consensus ownership value",
+                  "name": "market_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 21.0,
+                  "comparison": ">=",
+                  "explanation": "Raw remaining-horizon projection must independently support the move",
+                  "name": "raw_projection_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "The move needs a lineup gain or a separately strong bench-insurance case",
+                  "name": "immediate_insurance_or_qb_hold_value",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "A future-facing add cannot create an excessive current-week loss",
+                  "name": "current_week_delta",
+                  "passed": true,
+                  "threshold": -0.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "The required drop cannot create excessive replacement exposure",
+                  "name": "depth_delta",
+                  "passed": true,
+                  "threshold": -0.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": "<=",
+                  "explanation": "The move cannot add excessive same-offense downside",
+                  "name": "offense_downside_increase",
+                  "passed": true,
+                  "threshold": 2.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "No protected contingent-upside drop gate applies",
+                  "name": "protected_upside_incremental_value",
+                  "passed": true,
+                  "threshold": 0.0
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "009f48b2aac94ecc391e1c316145e21a5d637b87162eb41b39a88b2938fc6a83",
+              "policy_version": "reference_b-synthetic-v1",
+              "priority_score": 0.0,
+              "reversal_conditions": [
+                "Raw projection delta below +0.0",
+                "Selected ownership delta below +0.0",
+                "Market ownership delta below +0.0",
+                "Current-week loss exceeds 0.0",
+                "Offense-downside increase exceeds 2.0",
+                "Material-news freshness becomes unproved",
+                "The added player becomes currently inactive",
+                "Protected-upside incremental option value falls below +5.0"
+              ],
+              "specialist_evidence": null
+            }
+          },
+          {
+            "add_player_id": "fa_QB",
+            "selected_drop_player_id": "r1_14",
+            "decision": {
+              "calibration_mode": "CONTROLLED_FIXTURES",
+              "decision_path": "QB_INJURY_INSURANCE",
+              "elite_dst_exception": false,
+              "gates": [
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "name": "complete_required_evidence",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A currently inactive target cannot receive an affirmative label",
+                  "name": "player_currently_active",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 12.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose selected-expert ownership value",
+                  "name": "selected_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 9.0,
+                  "comparison": ">=",
+                  "explanation": "The add minus drop must not lose market-consensus ownership value",
+                  "name": "market_ownership_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": 18.0,
+                  "comparison": ">=",
+                  "explanation": "Raw QB-versus-drop points are reported but are not a one-QB hold gate",
+                  "name": "raw_projection_delta",
+                  "passed": true,
+                  "threshold": 0.0
+                },
+                {
+                  "actual": true,
+                  "comparison": "==",
+                  "explanation": "A one-QB backup needs positive net hold value or materially superior injury insurance",
+                  "name": "immediate_insurance_or_qb_hold_value",
+                  "passed": true,
+                  "threshold": true
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "A future-facing add cannot create an excessive current-week loss",
+                  "name": "current_week_delta",
+                  "passed": true,
+                  "threshold": -0.0
+                },
+                {
+                  "actual": 7.0,
+                  "comparison": ">=",
+                  "explanation": "One-QB hold replacement exposure is charged as bench-slot opportunity cost",
+                  "name": "depth_delta",
+                  "passed": true,
+                  "threshold": -0.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": "<=",
+                  "explanation": "The move cannot add excessive same-offense downside",
+                  "name": "offense_downside_increase",
+                  "passed": true,
+                  "threshold": 2.0
+                },
+                {
+                  "actual": 0.0,
+                  "comparison": ">=",
+                  "explanation": "No protected contingent-upside drop gate applies",
+                  "name": "protected_upside_incremental_value",
+                  "passed": true,
+                  "threshold": 0.0
+                }
+              ],
+              "label": "ACQUIRE",
+              "policy_hash": "009f48b2aac94ecc391e1c316145e21a5d637b87162eb41b39a88b2938fc6a83",
+              "policy_version": "reference_b-synthetic-v1",
+              "priority_score": 0.0,
+              "reversal_conditions": [
+                "Net one-QB hold value falls below +1.0 and injury-insurance advantage falls below 4.0",
+                "Selected ownership delta below +0.0",
+                "Market ownership delta below +0.0",
+                "Current-week loss exceeds 0.0",
+                "Offense-downside increase exceeds 2.0",
+                "Material-news freshness becomes unproved",
+                "The added player becomes currently inactive",
+                "Protected-upside incremental option value falls below +5.0"
+              ],
+              "specialist_evidence": null
+            }
+          }
+        ]
+      }
+    }
+  }
+}
