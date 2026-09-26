@@ -219,8 +219,11 @@ def build_trade_snapshot(
     )
     if schedule_captured_at.tzinfo is None:
         schedule_captured_at = schedule_captured_at.replace(tzinfo=timezone.utc)
+    # The manifest describes evidence at the recorded snapshot time, not rebuild
+    # time. Wall-clock age here changes IDs/seeds for otherwise identical inputs.
+    # Current-use/publication freshness remains a separate validation step.
     schedule_age_seconds = max(
-        0, int((datetime.now(timezone.utc) - schedule_captured_at).total_seconds())
+        0, int((sleeper.captured_at - schedule_captured_at).total_seconds())
     )
     schedule_stamp = DataStamp(
         source=schedule.source,

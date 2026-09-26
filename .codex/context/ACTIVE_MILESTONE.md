@@ -1,6 +1,26 @@
 # Active milestone
 
-## MA-001 - Reference profiles and migration baseline
+## Trade snapshot clock regression repair
+
+Authorized by the user on September 26, 2026 after the intermittent post-merge
+PR #34 failure. Scope: anchor schedule provenance age to the snapshot's recorded
+capture time, preserve deterministic IDs/seeds for identical evidence, and add
+second-boundary and freshness-boundary regression tests. Follow AC-007's explicit
+as-of contract in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
+
+No ranking, scoring, recommendation policy, schema, provider calls, or Sleeper
+writes. Preserve current-time publication/ownership validation and MA-001 semantic
+goldens. Separate branch; do not modify the parallel MA-002a worktree.
+
+Gates: prove the new tests fail before the fix; focused/full tests, Ruff,
+tracked/index privacy checks, and required CI. Stop at a tested pull request.
+
+Implementation complete: new regressions fail before the fix and pass after it.
+All 813 tests pass, including unchanged MA-001 semantic goldens. The original
+intermittent test passed 100 repeats; 15 run-contract tests, Ruff, and privacy
+gates pass. Delivery awaits protected PR review/CI; no merge authorized yet.
+
+## Previous MA-001 handoff (not active)
 
 Active by user authorization on September 25, 2026. Planning PR #27 is merged.
 MA-001 implementation is complete and locally validated; awaiting PR review/merge.
