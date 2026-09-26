@@ -861,7 +861,7 @@ renormalizes over only the signals actually available. Waiver Wire dynamically
 selects the three best trustworthy current contributors by 70/30 recent/prior
 weekly accuracy and falls back to fresh Latest ECR when fewer than three
 qualify. The ROS panel selects two or three current contributors independently
-of Trade. The read-only `fourth_and_20` run used three trustworthy experts for
+of Trade. The read-only League Alpha run used three trustworthy experts for
 both ranking horizons, completed within the freshness window, evaluated 57
 candidates exactly, pruned 75 behind higher Waiver Values, and made no Sleeper
 write. Ruff and all 658 repository tests pass.
@@ -892,7 +892,7 @@ Acceptance:
 - Block an affirmative move when it materially reduces modeled lineup value,
   violates a positional retention floor, or replaces a same-position player
   with an inferior ROS anchor without sufficiently stronger evidence.
-- Start 4th & 20 target ordering at league-local 40/35/25 weekly/Waiver/ROS
+- Start League Alpha target ordering at league-local 40/35/25 weekly/Waiver/ROS
   weights, preserve a two-point equivalence band, and resolve close cases with
   recent league-scored production, opportunity, lineup gain, and disagreement-
   aware Waiver evidence. Do not transfer these settings to another league.
@@ -904,7 +904,7 @@ Acceptance:
   separate one-week streaming and ROS holding views.
 - Return an ordered claim portfolio that distinguishes claims able to execute
   together from mutually exclusive alternatives sharing a drop player.
-- The 4th & 20 acceptance fixture protects Caleb Williams and Rico Dowdle and
+- The League Alpha acceptance fixture protects Caleb Williams and Rico Dowdle and
   targets, in order: Denzel Boston for Michael Pittman; Jonah Coleman for
   Kaelon Black; Dontayvion Wicks for Pittman; Adonai Mitchell for Pittman; Evan
   McPherson then Eddy Pineiro for Cameron Dicker; Carolina, Cincinnati, then
@@ -924,7 +924,7 @@ performance support when projections are zero, tied, or contradicted by the
 authoritative rank views. Search schema 10 and evaluation schema 15 expose an
 ordered claim plan and the priorities that share a drop player.
 
-The final read-only `fourth_and_20` run evaluated 57 candidates, pruned 75, and
+The final read-only League Alpha run evaluated 57 candidates, pruned 75, and
 performed no Sleeper write. It protected Caleb Williams and Rico Dowdle. The
 claim plan began Boston/Pittman, Coleman/Black, Wicks/Pittman,
 Mitchell/Pittman, McPherson/Dicker, and Pineiro/Dicker exactly as requested.
@@ -1028,7 +1028,7 @@ Acceptance:
   Cincinnati versus Detroit using player-agnostic controlled fixtures.
 - Preserve WA-023 rolling DST projection behavior, existing skill-player
   behavior, deterministic evidence, and read-only Sleeper boundaries.
-- Run focused tests, Ruff, the full suite, and a fresh 4th & 20 read-only search
+- Run focused tests, Ruff, the full suite, and a fresh League Alpha read-only search
   before completion.
 
 Completion proof: exact specialist evidence now carries add/drop season points

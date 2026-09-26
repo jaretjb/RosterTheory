@@ -19,6 +19,9 @@ allowed-failure jobs:
 3. **Repository contents** — `python scripts/release_gate.py repository`
    rejects tracked `.env` variants, `leagues.json`, credential/key files, and
    anything beneath `data/cache`, `data/exports`, or `data/manual`.
+   It scans every tracked file's name and contents for known private identity
+   markers, including completed documents and wrapped names. The companion
+   `repository --staged` check inspects the exact Git index before committing.
 4. **Secret scan** — Gitleaks scans the complete fetched Git history and the
    working tree. A finding blocks the workflow; do not add an allowlist merely
    to silence an unexplained result.
@@ -64,6 +67,16 @@ These judgments are intentionally not automated and remain required in OS-007:
   absolute path appears in the candidate artifacts; and
 - obtain explicit user approval before tagging, publishing a release, making a
   repository public, or pushing rewritten history.
+
+After a privacy incident, agree the containment and cleanup scope with the
+maintainer, including whether a visibility change is warranted. Review current
+files, retained branches/tags, history, PR/issue text, release assets, and workflow
+artifacts within that scope. Current-tree checks do not certify history or
+GitHub metadata. Record unreviewed surfaces and explicitly accepted historical
+content separately. Visibility changes require explicit approval; completing a
+cleanup PR does not authorize them.
+History replacement must be separately planned with a private backup and clone
+recovery instructions, without bypassing branch protection.
 
 ## OS-007 candidate procedure
 
