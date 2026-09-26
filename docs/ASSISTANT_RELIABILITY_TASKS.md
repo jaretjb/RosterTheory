@@ -18,7 +18,7 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 | AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Merged in [PR #18](https://github.com/jaretjb/RosterTheory/pull/18) |
 | AC-005 | [#11](https://github.com/jaretjb/RosterTheory/issues/11) | Merged in [PR #19](https://github.com/jaretjb/RosterTheory/pull/19) |
 | AC-006 | [#12](https://github.com/jaretjb/RosterTheory/issues/12) | Merged in [PR #21](https://github.com/jaretjb/RosterTheory/pull/21) |
-| AC-007 | [#13](https://github.com/jaretjb/RosterTheory/issues/13) | In progress |
+| AC-007 | [#13](https://github.com/jaretjb/RosterTheory/issues/13) | Implemented in [PR #22](https://github.com/jaretjb/RosterTheory/pull/22) |
 | AC-008 | [#14](https://github.com/jaretjb/RosterTheory/issues/14) | Planned |
 
 ## AC-001 — Weekly availability and projection provenance
@@ -126,7 +126,8 @@ reuse. Verify provider capabilities against primary documentation before changes
 
 ## AC-007 — Freshness, readiness, provenance, and handoff contracts
 
-Status: IN PROGRESS. Findings: D2, Q3. Depends on AC-002 and AC-004 (merged).
+Status: implemented in [PR #22](https://github.com/jaretjb/RosterTheory/pull/22).
+GitHub records its merge state. Findings: D2, Q3. Depends on AC-002 and AC-004 (merged).
 
 Preserve per-source observation/fetch times and scope news coverage honestly.
 Use an explicit as-of evaluation contract and revalidate volatile facts before

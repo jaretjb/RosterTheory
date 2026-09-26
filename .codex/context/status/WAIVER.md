@@ -5,7 +5,7 @@ Updated: September 25, 2026 (America/Los_Angeles)
 AC-001/#7 through AC-005/#11 merged in PRs #15–#19.
 PR #20 reconciled #11's completion records; issue #11 is closed.
 AC-006/#12 merged in PR #21 with all 20 checks passing; issue #12 is closed.
-AC-007/#13 implements freshness, readiness and replay contracts on its own branch.
+AC-007/#13 is implemented in PR #22; GitHub records its merge state.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_007.md`.
 
 Source observations retain their original times, including cache hits. News uses

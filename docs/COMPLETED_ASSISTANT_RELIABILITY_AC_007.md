@@ -1,6 +1,7 @@
 # AC-007 — Freshness, readiness, provenance, and handoff contracts
 
-Implementation for issue #13, September 25, 2026. PR handoff pending final checks.
+Implemented for issue #13, September 25, 2026, in
+[PR #22](https://github.com/jaretjb/RosterTheory/pull/22); GitHub records its merge state.
 AC-008 remains planned; this does not close the reliability audit.
 
 ## Behavior and boundaries
