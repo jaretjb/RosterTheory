@@ -2,18 +2,17 @@
 
 Updated: September 26, 2026 (America/Los_Angeles)
 
-PR #44 merged Draft API scoring. MA-002k verifies ranking-source declarations.
-Mismatched or unknown responses supply no ranks or ECR; valid sources remain.
-Evidence: `docs/MODULAR_DRAFT_RANKING_SCOPE.md`; CI/review remain the gate.
-All 913 local tests pass with unchanged reference goldens.
+PR #45 merged Draft ranking-source checks. MA-002l checks preseason projection
+scope. Absent or conflicting season/week/position declarations cannot supply
+league-scored Draft points; valid positions remain independent. Evidence:
+`docs/MODULAR_DRAFT_PROJECTION_SCOPE.md`; CI/review remain the gate.
+All 915 local tests pass with unchanged reference goldens.
 
-MA-002j addressed the API board:
-only complete league-scored preseason projections enter points and baselines.
-Source-scope, identity and stat gaps remain visible; expert ordering is
-independent. Import readiness now checks top-board scoring coverage rather
-than treating premium tier alone as sufficient. Evidence:
-`docs/MODULAR_DRAFT_API_SCORING.md`; CI/review remain the merge gate.
-The MA-002j handoff passed 910 local tests, including unchanged reference goldens.
+MA-002k excluded wrong-horizon or unknown ranks/ECR while retaining valid
+sources. Evidence: `docs/MODULAR_DRAFT_RANKING_SCOPE.md`; 913 tests passed.
+
+MA-002j admitted only complete league-scored Draft points and checked top-board
+coverage. Evidence: `docs/MODULAR_DRAFT_API_SCORING.md`.
 
 PRs #37–#40 merged scoring/decision coverage, membership, Draft position-limit
 admission and operation capacity. Missing independent players no longer veto Trade/Waiver comparisons;
@@ -32,7 +31,7 @@ Source observation is not proof of provider coverage, readiness or calibration.
 All public fixtures are synthetic. Trade retains its skill-player boundary; the
 12-format matrix remains future validation.
 
-Open: #30 provider field and rank-scope evidence; #31 positional-cap source mapping
+Open: #30 provider field and actual-source evidence; #31 positional-cap source mapping
 and full admission, #32 provider limits, #33 Draft cap/season
 assumptions. Actual provider coverage is unverified. Remaining MA-002
 contracts need separate slices. #30, #31 and MA-002 remain open.

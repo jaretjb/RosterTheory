@@ -100,13 +100,36 @@ def _sleeper_name_index(players: Mapping[str, Mapping[str, Any]] | None) -> dict
     return index
 
 
-def _projection_response_scope_issues(response: Mapping[str, Any], season: int) -> list[str]:
+def _projection_response_scope_issues(
+    response: Mapping[str, Any], season: int, position: str,
+) -> list[str]:
     issues = []
-    for field in ("season", "year"):
-        if response.get(field) not in (None, "") and str(response[field]) != str(season):
-            issues.append(f"{field}_mismatch={response[field]}")
-    if response.get("week") not in (None, "", 0, "0"):
-        issues.append(f"weekly_response={response['week']}")
+    declared_season = response.get("season")
+    if declared_season in (None, ""):
+        issues.append("missing_season")
+    elif str(declared_season).strip() != str(season):
+        issues.append("season_mismatch")
+    if response.get("year") not in (None, "") and str(response["year"]).strip() != str(season):
+        issues.append("year_mismatch")
+    declared_week = response.get("week")
+    if declared_week in (None, ""):
+        issues.append("missing_week")
+    elif type(declared_week) is bool or str(declared_week).strip() != "0":
+        issues.append(f"weekly_response={declared_week}")
+    declared_positions = response.get("positions")
+    if declared_positions in (None, ""):
+        issues.append("missing_positions")
+    elif not isinstance(declared_positions, str) or declared_positions.strip().upper() != position:
+        issues.append("positions_mismatch")
+    declared_type = response.get("type")
+    if declared_type not in (None, "") and str(declared_type).strip().upper() not in {
+        "DRAFT", "PRESEASON",
+    }:
+        issues.append("projection_type_mismatch")
+    if response.get("ros") not in (None, "", False, 0, "0", "false"):
+        issues.append("ros_response")
+    if response.get("fallback_for") not in (None, ""):
+        issues.append("fallback_response")
     return issues
 
 
@@ -182,22 +205,32 @@ def build_fantasypros_board(
     projection_sources: list[dict[str, Any]] = []
     seen_projection_ids: set[str] = set()
     for position in ("QB", "RB", "WR", "TE"):
-        projection_response = client.projections(season, position=position)
-        scope_issues = _projection_response_scope_issues(projection_response, season)
+        projection_response = client.projections(season, position=position, week=0)
+        scope_issues = _projection_response_scope_issues(projection_response, season, position)
         projection_sources.append({
             "position": position,
             "declared_season": projection_response.get("season"),
             "declared_year": projection_response.get("year"),
             "declared_week": projection_response.get("week"),
+            "declared_positions": projection_response.get("positions"),
             "declared_scoring": projection_response.get("scoring"),
+            "declared_type": projection_response.get("type"),
+            "declared_ros": projection_response.get("ros"),
+            "fallback_for": projection_response.get("fallback_for"),
             "scope_issues": scope_issues,
         })
+        if scope_issues:
+            projection_issues.append({
+                "position": position, "reason": "source_scope_mismatch:" + ";".join(scope_issues),
+            })
         if "players" not in projection_response:
             projection_issues.append({"position": position, "reason": "missing_players_field"})
             continue
         players = projection_response.get("players", [])
         if not isinstance(players, list):
             projection_issues.append({"position": position, "reason": "invalid_players_shape"})
+            continue
+        if scope_issues:
             continue
         for index, player in enumerate(players):
             if not isinstance(player, Mapping):
@@ -219,12 +252,6 @@ def build_fantasypros_board(
                 })
                 continue
             seen_projection_ids.add(player_id)
-            if scope_issues:
-                projection_issues.append({
-                    "position": position, "fpid": player_id,
-                    "reason": "source_scope_mismatch:" + ";".join(scope_issues),
-                })
-                continue
             declared_position = player.get("position_id") or player.get("player_position_id")
             if declared_position and str(declared_position).upper() != position:
                 projection_issues.append({
@@ -357,6 +384,9 @@ def build_fantasypros_board(
     board = add_vbd(board, baselines) if baselines else board
     checks = {
         "draft_ranking_sources_verified": not ranking_issues,
+        "draft_projection_sources_verified": not any(
+            source["scope_issues"] for source in projection_sources
+        ),
         "premium_api": expert_response.get("public_api_limited") is False,
         "multi_year_accuracy": weight_source == "multi_year_2021_2025",
         "at_least_five_current_experts": sum(count > 0 for count in returned_counts.values()) >= 5,
