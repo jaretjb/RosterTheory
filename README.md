@@ -281,17 +281,43 @@ roster-theory setup show-redacted home_league
 Public examples contain invented data. See [Privacy](docs/PRIVACY.md) and
 [third-party data notices](docs/THIRD_PARTY_NOTICES.md) for details.
 
-## Development
+## Maintenance
+
+RosterTheory is owner-maintained and is not accepting outside patches or pull
+requests. Public availability is for installation and use under the license
+below. Only the repository owner, including tools acting through the owner's
+account, manages changes and merges.
 
 Install the development tools and run the tests:
 
 ```powershell
 python -m pip install -e ".[dev]"
 $env:PYTHONPATH = "src"
+python -m unittest tests.test_context_routing
 python -m unittest discover -s tests
 ```
 
-See [Contributing](CONTRIBUTING.md) for the rest of the contributor workflow.
+Maintainer changes use a separate branch and a pull request. Direct pushes,
+force pushes, and bypass merges to `main` are prohibited. Pull requests must
+be up to date with `main`, pass all required checks, and resolve review threads
+before merging. No account has a ruleset bypass exception. A second account's
+approval is not required: the owner and their tools use the same GitHub account,
+which cannot approve its own pull requests.
+
+Before committing, run `python scripts/release_gate.py repository` and
+`python scripts/release_gate.py repository --staged` to check both tracked
+files and the exact staged contents for unsafe artifacts and known private
+identifiers. These checks do not recognize every possible private identifier;
+manual review is still necessary. Keep real IDs, credentials, provider data,
+and personal reports out of code, test output, issues, and pull requests.
+Use synthetic fixtures and offline provider fakes for tests.
+
+New checkouts can enable the pre-commit gate with
+`git config core.hooksPath .githooks`; preserve any additional privacy/history
+hooks already installed in an existing checkout. CI runs the same gates.
+Follow the [task router](.codex/context/STEERING.md) before product changes and
+the [release checklist](docs/RELEASE_CHECKLIST.md) before a release.
+For private security reporting, see [SECURITY.md](SECURITY.md).
 
 ## License
 
