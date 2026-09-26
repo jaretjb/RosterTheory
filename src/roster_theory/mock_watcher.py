@@ -7,6 +7,8 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Iterable, Mapping
 
 from roster_theory.draft_analysis import HistoricalPositionCurves
+from roster_theory.core.errors import CoverageIncomplete
+from roster_theory.providers.sleeper_draft_rules import require_draft_position_limits
 from roster_theory.draft_preferences import (
     DraftPreferenceBook,
     evaluate_draft_preferences,
@@ -1929,7 +1931,13 @@ class MockDraftWatcher:
     def poll_once(self, now: float | None = None) -> dict[str, Any]:
         started = time.perf_counter()
         draft_id = parse_draft_id(self.draft_reference)
-        draft = self.client.draft(draft_id)
+        draft = self.client.draft(draft_id, fresh=True)
+        try:
+            require_draft_position_limits(draft)
+        except CoverageIncomplete:
+            self.last_recommendation = None
+            self.planned_turn = None
+            raise
         picks = self.client.draft_picks(draft_id)
         pick_fetch = dict(self.client.last_get_metadata)
         cache_status = str(pick_fetch.get("cache_status") or "").upper()
