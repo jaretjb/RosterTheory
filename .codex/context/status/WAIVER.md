@@ -25,7 +25,7 @@ conditional-claim safeguards remain unchanged.
 
 Specialist calibration and league-exact expert ranks remain unproven.
 No live report, paid refresh or Sleeper mutation ran.
-AC-008/#14 is implemented on `codex/ac-008-release-gates`, pending PR/merge.
+AC-008/#14 is implemented in PR #23, pending merge.
 Stage timing, exact coverage, and cache sizes are exposed outside hashed Waiver
 evidence. Independent alpha/beta policy fixtures and offline replay remain
 decision-stable. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.

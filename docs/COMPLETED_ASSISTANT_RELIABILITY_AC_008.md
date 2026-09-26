@@ -1,6 +1,7 @@
 # AC-008 — End-to-end release gates and measured optimization
 
-Status: implemented on `codex/ac-008-release-gates`; merge pending. Issue #14.
+Status: implemented in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23);
+merge pending. Issue #14.
 The reliability audit remains open pending merge and any future dated calibration.
 No live provider refresh, league action, or Sleeper mutation was run.
 
