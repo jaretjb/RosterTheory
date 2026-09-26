@@ -544,15 +544,37 @@ def _fetch_value_inputs(
         name = f"projections_{week}"
         record = values[name]
         payload = record["payload"]
-        validate_provider_scope(payload, season=snapshot.league.season, scoring=scoring_code)
+        declared_scoring = str(payload.get("scoring") or "").upper()
+        if declared_scoring not in {"STD", "HALF", "PPR"}:
+            raise CoverageIncomplete(
+                f"FantasyPros projection Week {week} has unknown scoring {declared_scoring!r}"
+            )
+        # Ranking scope remains exact. Projection points are independently
+        # calculated from raw stats, so the provider's point label may differ.
+        validate_provider_scope(
+            payload, season=snapshot.league.season, scoring=declared_scoring
+        )
         points: dict[str, float] = {}
         premium_coverage: dict[str, str] = {}
         for row in payload.get("players") or ():
             if not isinstance(row, Mapping) or row.get("fpid") is None:
                 continue
-            scored = score_stats(row.get("stats") or {}, scoring, position=row.get("position_id"))
+            stats = row.get("stats")
+            if not isinstance(stats, Mapping):
+                stats = {}
+            position = str(row.get("position_id") or "").upper()
+            scored = score_stats(stats, scoring, position=position)
             points[str(row["fpid"])] = scored.points
-            if set(scored.unsupported_settings) & set(POSITION_RECEPTION_BONUSES):
+            if declared_scoring != scoring_code and not scored.used_settings:
+                premium_coverage[str(row["fpid"])] = "missing_league_scoring_raw_stats"
+            elif (
+                declared_scoring != scoring_code
+                and position in {"RB", "WR", "TE"}
+                and float(scoring.get("rec") or 0.0) != 0.0
+                and "rec" not in scored.used_settings
+            ):
+                premium_coverage[str(row["fpid"])] = "missing_reception_stats_for_rescore"
+            elif set(scored.unsupported_settings) & set(POSITION_RECEPTION_BONUSES):
                 premium_coverage[str(row["fpid"])] = "missing_position_reception_stats"
         dataset = normalize_projections(
             payload,
@@ -577,6 +599,14 @@ def _fetch_value_inputs(
         source_evidence=tuple({
             "name": call.name, "endpoint": call.endpoint,
             "parameters": dict(call.parameters),
+            "declared_scoring": (
+                values[call.name]["payload"].get("scoring")
+                if call.name.startswith("projections_") else None
+            ),
+            "projection_points_method": (
+                "RAW_STATS_LEAGUE_SCORED"
+                if call.name.startswith("projections_") else None
+            ),
             "captured_at": values[call.name]['captured_at'],
             "fetched_at": values[call.name].get('fetched_at'),
             "cache_status": 'hit' if call.fresh_cache_hit else 'miss',
@@ -1603,6 +1633,18 @@ def refresh_value_boards(
         mode=stage.mode,
         data=tuple(prospective_data),
     )
+    projection_scope_mismatches = tuple(
+        f"{dataset.week}:{dataset.scoring}"
+        for dataset in inputs.projection_sets
+        if dataset.scoring != format_evidence.scoring
+    )
+    projection_scope_warnings = (
+        (
+            "FantasyPros projection week:declared-scoring differs from requested "
+            f"{format_evidence.scoring} ({', '.join(projection_scope_mismatches)}); "
+            "raw stats were scored under league rules and unscorable rows are unavailable"
+        ),
+    ) if projection_scope_mismatches else ()
     export_board_evidence(
         target,
         selected_ranks=selected_ranks,
@@ -1613,6 +1655,7 @@ def refresh_value_boards(
         manifest_id=snapshot.manifest.analysis_id,
         warnings=(
             *format_evidence.warnings,
+            *projection_scope_warnings,
             f"{stage.mode} owns long-term value; CURRENT_SIGNAL remains separate",
             "CURRENT_SIGNAL weekly ranks/projections remain separate and do not change ownership value",
             "Valuation gaps are signals, not trade recommendations or opponent preferences",
