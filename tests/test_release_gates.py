@@ -1,7 +1,10 @@
 import io
+import hashlib
+import subprocess
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 from pathlib import Path
 import tomllib
@@ -10,12 +13,66 @@ from scripts.release_gate import (
     SDIST_REQUIRED,
     WHEEL_REQUIRED,
     forbidden_path_reason,
+    identity_findings,
     validate_distributions,
+    validate_repository,
     validate_tracked_paths,
 )
 
 
 class ReleaseGateTests(unittest.TestCase):
+    def test_identity_scan_covers_case_separators_and_wrapped_names(self):
+        digests = frozenset({hashlib.sha256(b"privateleague20").hexdigest()})
+        samples = (
+            "PrivateLEAGUE20", "private_league_20", "Private League & 20",
+            "PRIVATE\n   LEAGUE 20", "private-league-20",
+        )
+        for sample in samples:
+            for encoding in ("utf-8", "utf-16"):
+                findings = identity_findings(sample.encode(encoding), "fixture", digests)
+                self.assertTrue(findings)
+                self.assertNotIn(sample, repr(findings))
+        self.assertEqual(identity_findings(b"fourth pick; League Alpha; synthetic_owner", "safe", digests), [])
+
+    def test_repository_scan_uses_all_tracked_files_and_exact_index(self):
+        digests = frozenset({hashlib.sha256(b"privateleague20").hexdigest()})
+        def scan(data, label):
+            return identity_findings(data, label, digests)
+        with tempfile.TemporaryDirectory() as directory, patch(
+            "scripts.release_gate.identity_findings", side_effect=scan,
+        ):
+            root = Path(directory)
+            def git(*args):
+                return subprocess.run(
+                    ["git", *args], cwd=root, check=True, capture_output=True
+                )
+            git("init")
+            (root / ".gitignore").write_text("COMPLETED_*.md\nlocal.json\n", encoding="utf-8")
+            private = "PrivateLeague20"
+            doc = root / "COMPLETED_EXPERIMENT.md"
+            doc.write_text(private, encoding="utf-8")
+            (root / "local.json").write_text(private, encoding="utf-8")
+            git("add", ".gitignore")
+            git("add", "-f", doc.name)
+            self.assertTrue(validate_repository(root))
+            self.assertTrue(validate_repository(root, staged=True))
+            doc.write_text("League Alpha", encoding="utf-8")
+            self.assertEqual(validate_repository(root), [])
+            self.assertTrue(validate_repository(root, staged=True))
+            git("add", "-f", doc.name)
+            self.assertEqual(validate_repository(root, staged=True), [])
+            doc.write_text(private, encoding="utf-8")
+            self.assertTrue(validate_repository(root))
+            self.assertEqual(validate_repository(root, staged=True), [])
+            git("rm", "--cached", "-f", doc.name)
+            self.assertEqual(validate_repository(root), [])
+            named = root / (private + ".txt")
+            named.write_text("safe", encoding="utf-8")
+            git("add", named.name)
+            findings = validate_repository(root)
+            self.assertTrue(any("tracked path #" in value for value in findings))
+            self.assertNotIn(private, repr(findings))
+
     def test_ci_matrix_and_release_tools_are_declared_and_blocking(self):
         root = Path(__file__).resolve().parents[1]
         workflow = (root / ".github/workflows/release-gates.yml").read_text(encoding="utf-8")
@@ -32,6 +89,7 @@ class ReleaseGateTests(unittest.TestCase):
             "tests.test_cli_output_contract",
             "python -m build",
             "release_gate.py distributions",
+            "release_gate.py repository --staged",
             "clean_install_smoke.py",
             "python -m pip_audit",
             "python -m ruff",
@@ -42,6 +100,10 @@ class ReleaseGateTests(unittest.TestCase):
             "actions/upload-artifact@v6",
         ):
             self.assertIn(command, workflow)
+        self.assertIn(
+            "python scripts/release_gate.py repository --staged",
+            (root / ".githooks/pre-commit").read_text(encoding="utf-8"),
+        )
         self.assertEqual(
             project["project"]["optional-dependencies"]["dev"],
             ["build==1.6.1", "pip-audit==2.10.1", "ruff==0.16.7"],
@@ -92,6 +154,14 @@ class ReleaseGateTests(unittest.TestCase):
                 archive.writestr("data/manual/private.csv", "private")
             findings = validate_distributions(root)
             self.assertTrue(any("manual-input" in finding for finding in findings))
+
+            digest = frozenset({hashlib.sha256(b"privateleague20").hexdigest()})
+            with zipfile.ZipFile(wheel, "a") as archive:
+                archive.writestr("notes.txt", "PRIVATE\nLEAGUE 20")
+            with patch("scripts.release_gate.identity_findings", side_effect=(
+                lambda data, label: identity_findings(data, label, digest)
+            )):
+                self.assertTrue(any("private identity" in value for value in validate_distributions(root)))
 
 
 if __name__ == "__main__":

@@ -22,10 +22,10 @@ optimization remains unchanged.
 
 ## Live read-only acceptance
 
-- `fourth_and_20`: Denver changed from ACQUIRE over Tampa Bay to WATCH. Its
+- League Alpha: Denver changed from ACQUIRE over Tampa Bay to WATCH. Its
   four-week weighted advantage is `-2.654`; weekly baselines are Tampa Bay,
   Minnesota, Jacksonville, and Minnesota.
-- `boeing`: Denver changed from ACQUIRE over San Francisco to WATCH. Its
+- League Beta: Denver changed from ACQUIRE over San Francisco to WATCH. Its
   four-week weighted advantage is `-2.471`; weekly baselines are Chicago,
   Detroit, Jacksonville, and Detroit.
 - Bye replacement evidence uses DST alternatives (`JAX`/`PIT`) rather than the
