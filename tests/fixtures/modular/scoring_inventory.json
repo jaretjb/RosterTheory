@@ -1,0 +1,1257 @@
+{
+  "schema_version": 1,
+  "scope": "MA-002a inventory, not production admission",
+  "provider_coverage": "UNVERIFIED; no live retrieval or provider zero rules",
+  "profiles": {
+    "reference_a": {
+      "observed_at": "2026-09-26T06:11:03.589137+00:00",
+      "reference_rules_hash": "25c2c5944b354a1fbd0d8e07847f80f4faa37d8df21e2d252617aae925176b8e",
+      "scoring_hash": "8ac986e7ca9982a7788ee9c9927788f94e1b7695c91587d4a89dee7485f94dc4",
+      "support": "UNSUPPORTED",
+      "disabled_settings": [
+        "blk_kick",
+        "blk_kick_ret_yd",
+        "bonus_def_fum_td_50p",
+        "bonus_def_int_td_50p",
+        "bonus_fd_qb",
+        "bonus_fd_rb",
+        "bonus_fd_te",
+        "bonus_fd_wr",
+        "bonus_pass_cmp_25",
+        "bonus_pass_yd_300",
+        "bonus_pass_yd_400",
+        "bonus_rec_rb",
+        "bonus_rec_te",
+        "bonus_rec_wr",
+        "bonus_rec_yd_100",
+        "bonus_rec_yd_200",
+        "bonus_rush_att_20",
+        "bonus_rush_rec_yd_100",
+        "bonus_rush_rec_yd_200",
+        "bonus_rush_td_qb",
+        "bonus_rush_yd_100",
+        "bonus_rush_yd_200",
+        "bonus_sack_2p",
+        "bonus_tkl_10p",
+        "def_2pt",
+        "def_3_and_out",
+        "def_4_and_stop",
+        "def_forced_punts",
+        "def_kr_yd",
+        "def_pass_def",
+        "def_pr_yd",
+        "def_st_ff",
+        "def_st_tkl_solo",
+        "ff",
+        "fg_ret_yd",
+        "fgm",
+        "fgm_50_59",
+        "fgm_60p",
+        "fgm_yds",
+        "fgm_yds_over_30",
+        "fgmiss_0_19",
+        "fgmiss_20_29",
+        "fgmiss_30_39",
+        "fgmiss_40_49",
+        "fgmiss_50_59",
+        "fgmiss_50p",
+        "fgmiss_60p",
+        "fum",
+        "fum_ret_yd",
+        "idp_blk_kick",
+        "idp_def_td",
+        "idp_ff",
+        "idp_fum_rec",
+        "idp_fum_ret_yd",
+        "idp_int",
+        "idp_int_ret_yd",
+        "idp_pass_def",
+        "idp_pass_def_3p",
+        "idp_qb_hit",
+        "idp_sack",
+        "idp_sack_yd",
+        "idp_safe",
+        "idp_tkl",
+        "idp_tkl_ast",
+        "idp_tkl_loss",
+        "idp_tkl_solo",
+        "int_ret_yd",
+        "kr_yd",
+        "pass_att",
+        "pass_cmp",
+        "pass_cmp_40p",
+        "pass_fd",
+        "pass_inc",
+        "pass_int_td",
+        "pass_sack",
+        "pass_td_40p",
+        "pass_td_50p",
+        "pr_yd",
+        "pts_allow",
+        "pts_allow_21_27",
+        "qb_hit",
+        "rec_0_4",
+        "rec_10_19",
+        "rec_20_29",
+        "rec_30_39",
+        "rec_40p",
+        "rec_5_9",
+        "rec_fd",
+        "rec_td_40p",
+        "rec_td_50p",
+        "rush_40p",
+        "rush_att",
+        "rush_fd",
+        "rush_td_40p",
+        "rush_td_50p",
+        "sack_yd",
+        "st_ff",
+        "st_fum_rec",
+        "st_tkl_solo",
+        "tkl",
+        "tkl_ast",
+        "tkl_loss",
+        "tkl_solo",
+        "yds_allow",
+        "yds_allow_0_100",
+        "yds_allow_100_199",
+        "yds_allow_200_299",
+        "yds_allow_300_349",
+        "yds_allow_350_399",
+        "yds_allow_400_449",
+        "yds_allow_450_499",
+        "yds_allow_500_549",
+        "yds_allow_550p"
+      ],
+      "nonzero_settings": [
+        {
+          "setting": "def_st_fum_rec",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "def_st_fum_rec",
+          "legacy_alias_candidates": [
+            "def_st_fum_rec",
+            "def_fr"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "def_st_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "def_st_td",
+          "legacy_alias_candidates": [
+            "def_st_td",
+            "def_retd"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "def_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "def_td",
+          "legacy_alias_candidates": [
+            "def_td"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_0_19",
+          "multiplier": 3.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_0_19",
+          "legacy_alias_candidates": [
+            "fgm_0_19"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_20_29",
+          "multiplier": 3.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_20_29",
+          "legacy_alias_candidates": [
+            "fgm_20_29"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_30_39",
+          "multiplier": 3.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_30_39",
+          "legacy_alias_candidates": [
+            "fgm_30_39"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_40_49",
+          "multiplier": 3.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_40_49",
+          "legacy_alias_candidates": [
+            "fgm_40_49"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_50p",
+          "multiplier": 5.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_50p",
+          "legacy_alias_candidates": [
+            "fgm_50p"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgmiss",
+          "multiplier": -1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgmiss",
+          "legacy_alias_candidates": [
+            "fgmiss"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fum_lost",
+          "multiplier": -2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fum_lost",
+          "legacy_alias_candidates": [
+            "fum_lost",
+            "fumbles_lost",
+            "fumbles"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fum_rec",
+          "multiplier": 2.0,
+          "contract_issue": "unsupported_rule",
+          "candidate_canonical_statistic": null,
+          "legacy_alias_candidates": [],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": null,
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fum_rec_td",
+          "multiplier": 6.0,
+          "contract_issue": "unsupported_rule",
+          "candidate_canonical_statistic": null,
+          "legacy_alias_candidates": [],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": null,
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "int",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "int",
+          "legacy_alias_candidates": [
+            "int",
+            "def_int"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pass_2pt",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pass_2pt",
+          "legacy_alias_candidates": [
+            "pass_2pt",
+            "passing_2pt"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pass_int",
+          "multiplier": -2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pass_int",
+          "legacy_alias_candidates": [
+            "pass_int",
+            "pass_ints",
+            "interceptions"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pass_td",
+          "multiplier": 4.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pass_td",
+          "legacy_alias_candidates": [
+            "pass_td",
+            "pass_tds",
+            "passing_touchdowns"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pass_yd",
+          "multiplier": 0.04,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pass_yd",
+          "legacy_alias_candidates": [
+            "pass_yd",
+            "pass_yds",
+            "passing_yards"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_0",
+          "multiplier": 10.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_0",
+          "legacy_alias_candidates": [
+            "pts_allow_0",
+            "def_pa_a"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_14_20",
+          "multiplier": 1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_14_20",
+          "legacy_alias_candidates": [
+            "pts_allow_14_20",
+            "def_pa_d"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_1_6",
+          "multiplier": 7.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_1_6",
+          "legacy_alias_candidates": [
+            "pts_allow_1_6",
+            "def_pa_b"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_28_34",
+          "multiplier": -1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_28_34",
+          "legacy_alias_candidates": [
+            "pts_allow_28_34",
+            "def_pa_f"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_35p",
+          "multiplier": -4.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_35p",
+          "legacy_alias_candidates": [
+            "pts_allow_35p",
+            "def_pa_g"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_7_13",
+          "multiplier": 4.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_7_13",
+          "legacy_alias_candidates": [
+            "pts_allow_7_13",
+            "def_pa_c"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rec",
+          "multiplier": 0.5,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rec",
+          "legacy_alias_candidates": [
+            "rec",
+            "rec_rec",
+            "receptions"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rec_2pt",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rec_2pt",
+          "legacy_alias_candidates": [
+            "rec_2pt",
+            "receiving_2pt"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rec_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rec_td",
+          "legacy_alias_candidates": [
+            "rec_td",
+            "rec_tds",
+            "receiving_touchdowns"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rec_yd",
+          "multiplier": 0.1,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rec_yd",
+          "legacy_alias_candidates": [
+            "rec_yd",
+            "rec_yds",
+            "receiving_yards"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rush_2pt",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rush_2pt",
+          "legacy_alias_candidates": [
+            "rush_2pt",
+            "rushing_2pt"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rush_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rush_td",
+          "legacy_alias_candidates": [
+            "rush_td",
+            "rush_tds",
+            "rushing_touchdowns"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rush_yd",
+          "multiplier": 0.1,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rush_yd",
+          "legacy_alias_candidates": [
+            "rush_yd",
+            "rush_yds",
+            "rushing_yards"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "sack",
+          "multiplier": 1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "sack",
+          "legacy_alias_candidates": [
+            "sack",
+            "def_sack"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "safe",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "safe",
+          "legacy_alias_candidates": [
+            "safe",
+            "def_safety"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "st_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "st_td",
+          "legacy_alias_candidates": [
+            "st_td",
+            "ret_tds"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "xpm",
+          "multiplier": 1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "xpm",
+          "legacy_alias_candidates": [
+            "xpm"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "xpmiss",
+          "multiplier": -1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "xpmiss",
+          "legacy_alias_candidates": [
+            "xpmiss"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        }
+      ]
+    },
+    "reference_b": {
+      "observed_at": "2026-09-26T06:11:03.915626+00:00",
+      "reference_rules_hash": "9e62886c8ccac377c9dfe7e8b9488e643918c74a613a61a9f4fc86118582173d",
+      "scoring_hash": "9ea7be70f46c6f032774d7c05fa7e45649b35471ed7e57e2d241a094c0b76c85",
+      "support": "UNSUPPORTED",
+      "disabled_settings": [
+        "fum",
+        "pts_allow_21_27"
+      ],
+      "nonzero_settings": [
+        {
+          "setting": "blk_kick",
+          "multiplier": 2.0,
+          "contract_issue": "unsupported_rule",
+          "candidate_canonical_statistic": null,
+          "legacy_alias_candidates": [],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": null,
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "def_st_ff",
+          "multiplier": 1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "def_st_ff",
+          "legacy_alias_candidates": [
+            "def_st_ff",
+            "def_ff"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "def_st_fum_rec",
+          "multiplier": 1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "def_st_fum_rec",
+          "legacy_alias_candidates": [
+            "def_st_fum_rec",
+            "def_fr"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "def_st_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "def_st_td",
+          "legacy_alias_candidates": [
+            "def_st_td",
+            "def_retd"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "def_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "def_td",
+          "legacy_alias_candidates": [
+            "def_td"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "ff",
+          "multiplier": 1.0,
+          "contract_issue": "unsupported_rule",
+          "candidate_canonical_statistic": null,
+          "legacy_alias_candidates": [],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": null,
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_0_19",
+          "multiplier": 3.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_0_19",
+          "legacy_alias_candidates": [
+            "fgm_0_19"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_20_29",
+          "multiplier": 3.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_20_29",
+          "legacy_alias_candidates": [
+            "fgm_20_29"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_30_39",
+          "multiplier": 3.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_30_39",
+          "legacy_alias_candidates": [
+            "fgm_30_39"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_40_49",
+          "multiplier": 4.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_40_49",
+          "legacy_alias_candidates": [
+            "fgm_40_49"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_50_59",
+          "multiplier": 5.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_50_59",
+          "legacy_alias_candidates": [
+            "fgm_50_59"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgm_60p",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgm_60p",
+          "legacy_alias_candidates": [
+            "fgm_60p"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fgmiss",
+          "multiplier": -1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fgmiss",
+          "legacy_alias_candidates": [
+            "fgmiss"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fum_lost",
+          "multiplier": -2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "fum_lost",
+          "legacy_alias_candidates": [
+            "fum_lost",
+            "fumbles_lost",
+            "fumbles"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fum_rec",
+          "multiplier": 2.0,
+          "contract_issue": "unsupported_rule",
+          "candidate_canonical_statistic": null,
+          "legacy_alias_candidates": [],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": null,
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "fum_rec_td",
+          "multiplier": 6.0,
+          "contract_issue": "unsupported_rule",
+          "candidate_canonical_statistic": null,
+          "legacy_alias_candidates": [],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": null,
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "int",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "int",
+          "legacy_alias_candidates": [
+            "int",
+            "def_int"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pass_2pt",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pass_2pt",
+          "legacy_alias_candidates": [
+            "pass_2pt",
+            "passing_2pt"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pass_int",
+          "multiplier": -1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pass_int",
+          "legacy_alias_candidates": [
+            "pass_int",
+            "pass_ints",
+            "interceptions"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pass_td",
+          "multiplier": 4.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pass_td",
+          "legacy_alias_candidates": [
+            "pass_td",
+            "pass_tds",
+            "passing_touchdowns"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pass_yd",
+          "multiplier": 0.04,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pass_yd",
+          "legacy_alias_candidates": [
+            "pass_yd",
+            "pass_yds",
+            "passing_yards"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_0",
+          "multiplier": 10.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_0",
+          "legacy_alias_candidates": [
+            "pts_allow_0",
+            "def_pa_a"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_14_20",
+          "multiplier": 1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_14_20",
+          "legacy_alias_candidates": [
+            "pts_allow_14_20",
+            "def_pa_d"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_1_6",
+          "multiplier": 7.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_1_6",
+          "legacy_alias_candidates": [
+            "pts_allow_1_6",
+            "def_pa_b"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_28_34",
+          "multiplier": -1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_28_34",
+          "legacy_alias_candidates": [
+            "pts_allow_28_34",
+            "def_pa_f"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_35p",
+          "multiplier": -4.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_35p",
+          "legacy_alias_candidates": [
+            "pts_allow_35p",
+            "def_pa_g"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "pts_allow_7_13",
+          "multiplier": 4.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "pts_allow_7_13",
+          "legacy_alias_candidates": [
+            "pts_allow_7_13",
+            "def_pa_c"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rec",
+          "multiplier": 0.5,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rec",
+          "legacy_alias_candidates": [
+            "rec",
+            "rec_rec",
+            "receptions"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rec_2pt",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rec_2pt",
+          "legacy_alias_candidates": [
+            "rec_2pt",
+            "receiving_2pt"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rec_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rec_td",
+          "legacy_alias_candidates": [
+            "rec_td",
+            "rec_tds",
+            "receiving_touchdowns"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rec_yd",
+          "multiplier": 0.1,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rec_yd",
+          "legacy_alias_candidates": [
+            "rec_yd",
+            "rec_yds",
+            "receiving_yards"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rush_2pt",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rush_2pt",
+          "legacy_alias_candidates": [
+            "rush_2pt",
+            "rushing_2pt"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rush_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rush_td",
+          "legacy_alias_candidates": [
+            "rush_td",
+            "rush_tds",
+            "rushing_touchdowns"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "rush_yd",
+          "multiplier": 0.1,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "rush_yd",
+          "legacy_alias_candidates": [
+            "rush_yd",
+            "rush_yds",
+            "rushing_yards"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "sack",
+          "multiplier": 1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "sack",
+          "legacy_alias_candidates": [
+            "sack",
+            "def_sack"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "safe",
+          "multiplier": 2.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "safe",
+          "legacy_alias_candidates": [
+            "safe",
+            "def_safety"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "st_ff",
+          "multiplier": 1.0,
+          "contract_issue": "unsupported_rule",
+          "candidate_canonical_statistic": null,
+          "legacy_alias_candidates": [],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": null,
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "st_fum_rec",
+          "multiplier": 1.0,
+          "contract_issue": "unsupported_rule",
+          "candidate_canonical_statistic": null,
+          "legacy_alias_candidates": [],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": null,
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "st_td",
+          "multiplier": 6.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "st_td",
+          "legacy_alias_candidates": [
+            "st_td",
+            "ret_tds"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "xpm",
+          "multiplier": 1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "xpm",
+          "legacy_alias_candidates": [
+            "xpm"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        },
+        {
+          "setting": "xpmiss",
+          "multiplier": -1.0,
+          "contract_issue": "unknown_applicability",
+          "candidate_canonical_statistic": "xpmiss",
+          "legacy_alias_candidates": [
+            "xpmiss"
+          ],
+          "legacy_position_bonus": null,
+          "applicable_positions": null,
+          "verified_provider_fields": null,
+          "calculation": "multiplier * explicit canonical statistic",
+          "missing_data_behavior": "BLOCK: no zero inference"
+        }
+      ]
+    }
+  }
+}

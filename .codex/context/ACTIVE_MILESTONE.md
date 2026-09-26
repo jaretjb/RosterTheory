@@ -1,6 +1,26 @@
 # Active milestone
 
-## Trade snapshot clock regression repair
+## MA-002b - Provider projection scoring coverage
+
+Active by the user's September 26 request to continue after merging PRs.
+Integrate MA-002a's approved contracts into shared FantasyPros weekly projection
+preparation used by Trade and Waiver. Preserve diagnostic partial totals, but
+expose missing/invalid statistics and unsupported rules to readiness checks.
+Use explicit provider aliases and rule applicability; do not infer absent zeros.
+Requirements: MR-01, MR-02, MR-04, MR-06, MR-09; follow-up issue #30.
+
+Allowed: shared provider scoring translation, direct adapter and prepared-board
+integration, offline regression tests, evidence and handoff documentation.
+Keep feature policies, ranking authority, historical-stat scoring, legacy Draft
+imports, roster membership, provider budgeting and live operations outside this
+slice. No new dependencies, provider refresh, calibration or league mutations.
+
+Gates: independent arithmetic and missing/zero/invalid/unsupported coverage;
+consistent direct/prepared results and downstream readiness; unchanged MA-001
+goldens; full compact tests, Ruff, context/privacy checks and required CI.
+Stop at a tested PR against main. Overall MA-002 and issue #30 remain open.
+
+## Previous Trade snapshot clock regression repair (not active)
 
 Authorized by the user on September 26, 2026 after the intermittent post-merge
 PR #34 failure. Scope: anchor schedule provenance age to the snapshot's recorded
@@ -18,7 +38,34 @@ tracked/index privacy checks, and required CI. Stop at a tested pull request.
 Implementation complete: new regressions fail before the fix and pass after it.
 All 813 tests pass, including unchanged MA-001 semantic goldens. The original
 intermittent test passed 100 repeats; 15 run-contract tests, Ruff, and privacy
-gates pass. Delivery awaits protected PR review/CI; no merge authorized yet.
+gates pass. Merged by the user through PR #36; preserve this repair.
+
+## Previous MA-002a - Explicit scoring rule and evidence contracts (not active)
+
+Authorized on September 26, 2026 as a bounded shared-contract slice.
+MA-001 PR #34 is merged to main. MA-002a PR #35 was merged into its former
+MA-001 base branch; this follow-up carries the approved contract onto main.
+MA-002a is implementation-complete: 828 tests, Ruff and context checks pass.
+All 20 CI checks passed. Evidence: `docs/MODULAR_SCORING_CONTRACT.md`.
+Requirements: MR-01, MR-02, MR-04, MR-06, MR-09, MR-10; architecture sections
+3.1 and 5-6; migration plan MA-002 row. Follow-up integration is tracked in #30.
+
+Allowed: pure versioned scoring-rule/evidence records and calculations under
+`src/roster_theory/core/`, independent synthetic contract tests, explicit
+reference-rule inventory and handoff documentation. Separate rule support from
+per-player evidence completeness. Preserve observed zero, documented structural
+zero, missing/invalid values, unsupported rules, position and source/horizon.
+
+Do not wire the contract into existing providers or feature decisions in this
+slice. Those behavior fixes require their own reviewed before/after evidence.
+No new dependencies, providers, live simulation, calibration, roster-membership
+changes (#31), Draft policy changes, or league mutations. Existing CLI/artifact
+contracts and MA-001 semantic goldens must stay unchanged.
+
+Gates: independent arithmetic and missing/invalid/unsupported cases; both
+reference scoring inventories; deterministic serialization; full compact unit
+suite, Ruff, context/privacy checks and required CI. Stop at a tested dependent
+PR for MA-002a; do not claim #30 or the overall MA-002 milestone complete.
 
 ## Previous MA-001 handoff (not active)
 
