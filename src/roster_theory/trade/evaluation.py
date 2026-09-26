@@ -10,7 +10,7 @@ from typing import Iterable, Mapping, Sequence
 from roster_theory.core.decision_coverage import lineup_dependency_positions, maximum_delta_bound
 from roster_theory.trade.coverage import comparison_roster
 from roster_theory.providers.sleeper_membership import reserve_eligibility
-from roster_theory.core.roster import assess_membership
+from roster_theory.core.roster import CAPACITY_OVERAGE_CODES, assess_membership
 from roster_theory.core.errors import (
     CoverageIncomplete,
     IdentityIncomplete,
@@ -1259,12 +1259,25 @@ def evaluate_trade(
     eligibility = tuple(issue for team in snapshot.teams
         if team.roster_id in {package.roster_a_id, package.roster_b_id}
         for issue in reserve_eligibility(snapshot.league, team, snapshot.players))
-    eligibility += tuple(row for row in assess_membership(snapshot.league, snapshot.teams).issues
-                         if row.roster_id in {package.roster_a_id, package.roster_b_id})
+    membership_issues = tuple(row for row in assess_membership(snapshot.league, snapshot.teams).issues
+                              if row.roster_id in {package.roster_a_id, package.roster_b_id})
+    eligibility += tuple(row for row in membership_issues if row.code not in CAPACITY_OVERAGE_CODES)
     if eligibility:
         modes.append("MANUAL-LEGALITY")
         warnings.extend(f"Reserve legality {row.status}: {row.code} on roster {row.roster_id}: {','.join(row.player_ids)}"
                         for row in eligibility)
+    overages = tuple(row for row in membership_issues if row.code in CAPACITY_OVERAGE_CODES)
+    if overages:
+        modes.append("DECISION-CONDITIONAL")
+        for row in overages:
+            if row.code == "RESERVE_CAPACITY_EXCEEDED":
+                modes.append("MANUAL-LEGALITY")
+                warnings.append(f"Roster {row.roster_id} exceeds reserve capacity; trade legality depends "
+                                "on Sleeper reserve settings. Modeled lineup and secondary moves are conditional.")
+            else:
+                warnings.append(f"Roster {row.roster_id} exceeds active capacity; Sleeper permits the trade, "
+                                "but lineup edits and free-agent additions are locked until the roster is legal. "
+                                "Modeled lineup and secondary moves are conditional.")
     if selected_board is not None and not selected_board.complete:
         selected_board = None
         warnings.append("Selected-expert board is incomplete")
@@ -1459,7 +1472,10 @@ def evaluate_trade(
     else:
         summary = "Ownership values are shown without projected lineup impact; no decision label is applied."
     if "DECISION-CONDITIONAL" in modes:
-        summary = "Conditional known-player comparison; protected missing players may change the outcome. " + summary
+        if overages:
+            summary = "Conditional lineup comparison; over-limit roster state may prevent modeled moves. " + summary
+        else:
+            summary = "Conditional known-player comparison; protected missing players may change the outcome. " + summary
     elif "ROSTER-EVIDENCE-PARTIAL" in modes:
         summary = "Independent move deltas; absolute whole-roster forecasts remain incomplete. " + summary
     source_times = tuple(

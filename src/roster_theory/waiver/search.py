@@ -233,14 +233,19 @@ def _validate_search_inputs(
     dict[str, str],
     dict[str, str],
 ]:
-    if not snapshot.completeness.snapshot_complete:
-        failed = tuple(
-            name
-            for name, complete in asdict(snapshot.completeness).items()
-            if not complete
-        )
+    # Opponents' overages and reserve status remain visible in the snapshot,
+    # but do not determine whether this user's acquisition can proceed.
+    user_capacity = next((row for row in snapshot.roster_capacity
+                          if row.roster_id == snapshot.user_roster_id), None)
+    failed = tuple(name for name, complete in asdict(snapshot.completeness).items()
+                   if not complete and name not in {"roster_capacity_complete", "reserve_legality_complete"})
+    if user_capacity is None or not user_capacity.capacity_legal:
+        failed += ("user_roster_capacity",)
+    if user_capacity is None or not user_capacity.reserve_legality_known or not user_capacity.reserve_legal:
+        failed += ("user_reserve_legality",)
+    if failed:
         raise CoverageIncomplete(
-            "Complete Waiver search requires a complete snapshot: " + ", ".join(failed)
+            "Waiver search requires decision-relevant snapshot evidence: " + ", ".join(failed)
         )
     if not input_bundle_hash:
         raise CoverageIncomplete("Complete Waiver search requires a verified input hash")

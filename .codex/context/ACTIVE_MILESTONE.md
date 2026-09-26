@@ -1,5 +1,29 @@
 # Active milestone
 
+## MA-002f - Operation-specific roster capacity
+
+Authorized by the user's September 26 request to continue after merging PR #39.
+Implement the next bounded #31 follow-up: distinguish observed over-limit roster
+state from structural membership defects, and apply capacity restrictions to the
+specific Trade or Waiver action. Requirements MR-01, MR-03, MR-05, MR-10;
+architecture sections 3 and 5.
+
+Allow read-only snapshots and independent Trade comparisons when an unrelated
+roster exceeds active/reserve capacity. Trades involving an over-limit roster
+may be compared, but modeled lineup changes must be visibly conditional while
+Sleeper lineup edits are locked. Waiver refresh may observe any overage;
+acquisition and search must reject the user's own over-limit or reserve-ineligible
+roster. Retain structural identity, ownership, overlap and unsupported taxi
+admission, and report all observed gaps. Do not infer positional-cap semantics,
+claim success, or provider readiness.
+
+Use synthetic examples and preserve complete-data MA-001 goldens. No scoring,
+rankings, Draft policy, calibration, provider refresh, live simulation or league
+mutation. Gates: before-fix overage regressions for refresh/current/evaluation/
+search, structural defect counterexamples, unchanged reference decisions, full
+suite/Ruff/context/privacy and required CI. Stop at a tested PR against main;
+#31 and MA-002 remain open.
+
 ## MA-002e - Draft position-limit evidence and room admission
 
 Authorized by the user's September 26 request to continue after merging PR #38.

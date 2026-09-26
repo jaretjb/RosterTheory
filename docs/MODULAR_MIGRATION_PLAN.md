@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002 authorized; membership merged in PR #38; MA-002e Draft rule admission active
+Status: MA-002 authorized; Draft rule admission merged in PR #39; MA-002f capacity active
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -25,9 +25,9 @@ change recommendation policy, activate later work, or merge itself.
 ## 2. Sequence and traceability
 
 The user authorized MA-002 on September 26 and requested continuation after
-merging PR #38. ACTIVE_MILESTONE selects MA-002e Draft position-limit evidence
-and room admission, a bounded #31 follow-up. PRs #37/#38 brought scoring,
-decision-scoped coverage and roster membership onto main. Remaining MA-002
+merging PR #39. ACTIVE_MILESTONE selects MA-002f operation-specific roster
+capacity, a bounded #31 follow-up. PRs #37–#39 brought scoring, decision-scoped
+coverage, roster membership and Draft rule admission onto main. Remaining MA-002
 slices need their own detailed contracts and activation after the tested handoff;
 MA-003 onward remain **planned, not authorized**.
 
@@ -61,6 +61,12 @@ scoped capability contract and guards room-backed recommendations against
 unresolved position-limit evidence, including cached recommendations. Both
 reference Draft profiles remain LIMITED for this scope. Provider cap mapping,
 other draft modes and operation-specific in-season capacity remain under #31.
+
+MA-002f's [operation capacity](MODULAR_OPERATION_CAPACITY.md) observes temporary
+over-limit rosters without hiding them. It permits conditional Trade comparisons
+and independent Waiver searches while user acquisitions still require legal
+capacity and reserve state. Positional-cap source mapping and full admission
+remain under #31.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |

@@ -7,6 +7,8 @@ from roster_theory.core.errors import RosterIllegal
 from roster_theory.core.lineup import NON_STARTERS
 from roster_theory.core.models import FantasyTeam, LeagueRules, Player
 
+CAPACITY_OVERAGE_CODES = frozenset({"ACTIVE_CAPACITY_EXCEEDED", "RESERVE_CAPACITY_EXCEEDED"})
+
 
 @dataclass(frozen=True, slots=True)
 class MembershipIssue:
@@ -89,7 +91,7 @@ def assess_membership(league: LeagueRules, teams: Sequence[FantasyTeam]) -> Memb
                 issue("TAXI_MEMBERSHIP_OVERLAP", players=set(taxis) & (reserves | set(starters)))
         active = None if taxis is None else owned - reserves - set(taxis)
         if active is not None and len(active) > active_limit:
-            issue("ACTIVE_CAPACITY_EXCEEDED")
+            issue("ACTIVE_CAPACITY_EXCEEDED", "OVER_LIMIT")
         limit = league.reserve_slots
         if limit is None:
             if reserves:
@@ -97,7 +99,7 @@ def assess_membership(league: LeagueRules, teams: Sequence[FantasyTeam]) -> Memb
         elif type(limit) is not int or limit < 0:
             issue("INVALID_RESERVE_CAPACITY")
         elif len(reserves) > limit:
-            issue("RESERVE_CAPACITY_EXCEEDED")
+            issue("RESERVE_CAPACITY_EXCEEDED", "OVER_LIMIT")
         states.append(RosterState(team.roster_id, tuple(sorted(owned, key=str)),
             tuple(sorted(active, key=str)) if active is not None else None, starters, tuple(sorted(reserves, key=str)),
             tuple(taxis) if taxis is not None else None, active_limit,
@@ -105,9 +107,13 @@ def assess_membership(league: LeagueRules, teams: Sequence[FantasyTeam]) -> Memb
     return MembershipAssessment(tuple(states), tuple(issues))
 
 
-def require_membership(league: LeagueRules, teams: Sequence[FantasyTeam]) -> MembershipAssessment:
+def require_membership(league: LeagueRules, teams: Sequence[FantasyTeam], *,
+                       allow_capacity_overage: bool = False) -> MembershipAssessment:
+    """Admit trustworthy membership; snapshots may observe temporary overages."""
     assessment = assess_membership(league, teams)
-    blockers = [row for row in assessment.issues if row.code != "RESERVE_CAPACITY_UNKNOWN"]
+    blockers = [row for row in assessment.issues
+                if row.code != "RESERVE_CAPACITY_UNKNOWN"
+                and not (allow_capacity_overage and row.code in CAPACITY_OVERAGE_CODES)]
     if blockers:
         raise RosterIllegal("Roster membership unavailable: " + "; ".join(
             f"{row.status}: {row.code} (roster {row.roster_id or 'league'})" for row in blockers))
