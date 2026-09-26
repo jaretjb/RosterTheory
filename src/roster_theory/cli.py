@@ -1625,7 +1625,11 @@ def command_simulate(args: argparse.Namespace) -> None:
 def command_recommend(args: argparse.Namespace) -> None:
     config = find_league_config(args.league, _config_path(args))
     client = SleeperClient()
-    draft = client.draft(str(config["draft_id"]))
+    draft = client.draft(str(config["draft_id"]), fresh=True)
+    from roster_theory.providers.sleeper_draft_rules import require_draft_position_limits
+    from roster_theory.providers.sleeper_membership import require_draft_membership_settings
+    require_draft_position_limits(draft)
+    require_draft_membership_settings(draft.get('settings') or {})
     picks = client.draft_picks(str(config["draft_id"]))
     board = _load_board(args.board)
     teams = int(draft.get("settings", {}).get("teams") or 0)

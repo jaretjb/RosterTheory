@@ -181,8 +181,8 @@ class SleeperClient:
         value = self._get(f"players/{sport}/trending/{trend_type}?{query}")
         return value if isinstance(value, list) else []
 
-    def draft(self, draft_id: str) -> dict[str, Any]:
-        value = self._get(f"draft/{draft_id}")
+    def draft(self, draft_id: str, *, fresh: bool = False) -> dict[str, Any]:
+        value = self._get(f"draft/{draft_id}", fresh=fresh)
         if not isinstance(value, dict) or not value.get("draft_id"):
             raise SleeperError(f"Draft {draft_id} was not found")
         return value

@@ -38,6 +38,7 @@ class MockWatcherTests(unittest.TestCase):
                 "teams": 2,
                 "rounds": 5,
                 "pick_timer": 60,
+                "enforce_position_limits": 0,
                 "slots_qb": 1,
                 "slots_rb": 1,
                 "slots_wr": 1,
@@ -616,6 +617,8 @@ class MockWatcherTests(unittest.TestCase):
         )
         pick_urls = [url for url in urls if urlsplit(url).path.endswith("/picks")]
         self.assertTrue(all("roster_theory_fresh=" in url for url in pick_urls))
+        draft_urls = [url for url in urls if urlsplit(url).path.endswith(draft['draft_id'])]
+        self.assertTrue(all('roster_theory_fresh=' in url for url in draft_urls))
 
     def test_watcher_warns_and_counts_an_unexpected_cached_picks_response(self) -> None:
         draft = self.draft()
@@ -623,7 +626,7 @@ class MockWatcherTests(unittest.TestCase):
         class CachedPicksClient:
             last_get_metadata: dict = {}
 
-            def draft(self, draft_id: str) -> dict:
+            def draft(self, draft_id: str, *, fresh: bool = False) -> dict:
                 return draft
 
             def draft_picks(self, draft_id: str) -> list[dict]:

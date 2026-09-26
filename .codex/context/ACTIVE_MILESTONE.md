@@ -1,6 +1,41 @@
 # Active milestone
 
-## MA-002d - Preserve and validate roster membership
+## MA-002e - Draft position-limit evidence and room admission
+
+Authorized by the user's September 26 request to continue after merging PR #38.
+Implement a bounded #31 follow-up: establish the meaning/evidence boundary of
+Sleeper's draft position-limit setting, represent supported/unknown/unsupported
+rule assessments separately from readiness, and gate room-backed Draft
+recommendation entry points before computation or reuse of a cached recommendation.
+Requirements MR-01, MR-05, MR-10; architecture sections 3 and 5.
+
+Allowed: neutral capability records, Sleeper-specific position-limit translation,
+offline rule inspection, the recommend command and mock-watcher admission,
+synthetic regressions and handoff evidence. Missing or undocumented cap evidence
+must not become unlimited capacity. Preserve source values for diagnosis, and
+keep app acquisition preferences separate from platform rules. Do not guess API
+field defaults or encourage changes to league settings to bypass admission.
+
+Preserve pure offline Draft calculations, MA-001 parser/output goldens, scoring,
+ranking weights, acquisition caps, user configuration and Trade/Waiver policy.
+No provider refresh, paid calls, live simulation, league mutation or Draft
+season reopening. Full feature support admission and provider cap-schema
+verification remain separate slices; this check alone cannot establish readiness.
+
+Gates: independent absent/disabled/enabled/malformed rule cases, both reference
+profiles, blocked commands before decision work, per-poll revalidation including
+cached recommendations, unchanged semantic goldens, bounded preflight timing,
+full suite/Ruff/context/privacy and required CI. Stop at a tested PR against
+main; #31 and MA-002 remain open.
+
+Implementation complete: 888 tests pass, including unchanged parser and all
+24 reference output goldens. Before-fix regressions prove both admission gaps;
+cache invalidation and fresh-room requests are covered. Local assessment costs
+approximately 3–6 microseconds; Ruff, compilation, context and privacy gates pass.
+Evidence: `docs/MODULAR_DRAFT_RULE_ADMISSION.md`. Required CI/review remain the
+merge gate. No live/provider operation or Draft reopening was performed.
+
+## Previous MA-002d - Preserve and validate roster membership (merged PR #38)
 
 Authorized by the user's request to continue after merging PR #37 on September
 26. Implement the membership slice of #31: explicit taxi membership in normalized
