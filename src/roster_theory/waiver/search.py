@@ -1025,6 +1025,9 @@ def search_waiver_candidates(
         "All eligible adds are evaluated against all supported legal drops unless an explicit budget is supplied; no add-only dominance is assumed",
         "No FAAB bid or claim-success probability was generated",
     }
+    news_scope = (ros_panel_evidence or {}).get('news_coverage')
+    if news_scope and not news_scope.get('per_player_complete'):
+        warnings.add('News is a limited global feed, not complete per-player coverage; absence is not an all-clear')
     if emergence_evidence is None:
         warnings.add("Role and volume emergence evidence was not provided")
     else:
@@ -1125,6 +1128,23 @@ def search_waiver_candidates(
     )
     assert_current(snapshot, now=now)
     return replace(base, evidence_hash=stable_hash(asdict(base)))
+
+
+def waiver_readiness(search):
+    # Empty exhaustive results are valid. Scope exclusions are not input gaps.
+    scope_exclusions = {'OUT_OF_SCOPE_POSITION', 'LEAGUE_MOVES_LOCKED',
+                        'ACQUISITION_LOCKED', 'ACQUISITION_UNAVAILABLE',
+                        'NO_PROVED_LEGAL_DROP', 'EXACT_BUDGET_NOT_EVALUATED'}
+    missing = [row for row in search.omissions if row.reason not in scope_exclusions]
+    return {
+        'inputs_complete': not missing, 'input_gaps': missing,
+        'search_complete': not search.budget_excluded_player_ids,
+        'candidate_confidence': {row.add_player_id: {
+            'status': 'UNQUANTIFIED', 'decision_label': row.decision_label,
+            'strongest_uncertainty': row.strongest_uncertainty,
+        } for row in search.exact_evaluations},
+        'informational_warnings': list(search.warnings),
+    }
 
 
 def save_waiver_search(search: WaiverSearch, path: str | Path) -> Path:

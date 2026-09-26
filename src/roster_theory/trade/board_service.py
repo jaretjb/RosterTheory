@@ -210,6 +210,8 @@ class BoardRefreshResult:
     current_experts: tuple[CurrentExpert, ...] = ()
     missing_rostered_player_ids: tuple[str, ...] = ()
     ranking_format: RankingFormat | None = None
+    source_evidence: tuple[Mapping[str, Any], ...] = ()
+    news_coverage: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -220,6 +222,8 @@ class ValueInputs:
     current_experts: tuple[CurrentExpert, ...]
     news: tuple[NewsRecord, ...]
     call_plan: CallPlan
+    source_evidence: tuple[Mapping[str, Any], ...] = ()
+    news_coverage: Mapping[str, Any] | None = None
 
 
 def _ros_market_is_complete(datasets: Sequence[RankingDataset]) -> bool:
@@ -396,7 +400,7 @@ def _input_calls(
             "material_news",
             "/nfl/news",
             {"limit": 100},
-            timedelta(hours=2),
+            timedelta(hours=1),
         )
     )
     for projection_week in weeks:
@@ -468,6 +472,7 @@ def _fetch_value_inputs(
         if last_request and elapsed < 1.05:
             time.sleep(1.05 - elapsed)
         parameters = dict(call.parameters)
+        observed_at = datetime.now(timezone.utc).isoformat()
         if call.name.startswith("rankings_") or call.name.startswith("ros_rankings_"):
             payload = client.consensus_rankings(snapshot.league.season, **parameters)
         elif call.name == "ros_experts":
@@ -477,7 +482,7 @@ def _fetch_value_inputs(
         else:
             payload = client.projections(snapshot.league.season, **parameters)
         captured_at = datetime.now(timezone.utc).isoformat()
-        record = {"captured_at": captured_at, "payload": payload}
+        record = {"captured_at": observed_at, "fetched_at": captured_at, "payload": payload}
         atomic_write_json(cache_paths[call.name], record)
         values[call.name] = record
         last_request = time.monotonic()
@@ -569,6 +574,27 @@ def _fetch_value_inputs(
         current_experts=current_experts,
         news=news,
         call_plan=plan,
+        source_evidence=tuple({
+            "name": call.name, "endpoint": call.endpoint,
+            "parameters": dict(call.parameters),
+            "captured_at": values[call.name]['captured_at'],
+            "fetched_at": values[call.name].get('fetched_at'),
+            "cache_status": 'hit' if call.fresh_cache_hit else 'miss',
+            "payload_hash": cache_key('payload', values[call.name]['payload']),
+            "maximum_age_seconds": int((
+                timedelta(hours=1) if call.name == 'material_news' else
+                ros_experts_max_age if call.name == 'ros_experts' else
+                ros_ranking_max_age if call.name.startswith('ros_rankings_') else
+                weekly_ranking_max_age if call.name.startswith('rankings_') else
+                timedelta(hours=12)
+            ).total_seconds()),
+        } for call in plan.calls),
+        news_coverage={
+            'scope': 'FINITE_GLOBAL_FEED', 'limit': 100, 'records': len(news),
+            'captured_at': values['material_news']['captured_at'],
+            'per_player_complete': False,
+            'limitation': 'A recent global feed is not complete per-player news coverage; absence is not an all-clear.',
+        },
     )
 
 
@@ -1601,6 +1627,8 @@ def refresh_value_boards(
             ],
             "scoring_capability": asdict(scoring_capability),
             "ranking_format": asdict(format_evidence),
+            "source_evidence": inputs.source_evidence,
+            "news_coverage": inputs.news_coverage,
             "missing_rostered_player_ids": list(missing_rostered_player_ids),
             "draft_anchor": {
                 "league_key": league_key,
@@ -1633,6 +1661,8 @@ def refresh_value_boards(
         current_experts=inputs.current_experts,
         missing_rostered_player_ids=missing_rostered_player_ids,
         ranking_format=format_evidence,
+        source_evidence=inputs.source_evidence,
+        news_coverage=inputs.news_coverage,
     )
 
 

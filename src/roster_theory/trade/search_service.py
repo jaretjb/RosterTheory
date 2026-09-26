@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import csv
 import json
+from datetime import datetime, timezone
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from roster_theory.core.provenance import stable_hash
+from roster_theory.core.run_contract import evaluate_at
 from roster_theory.fantasypros import FantasyProsClient
 from roster_theory.providers.cache import atomic_write_json
 from roster_theory.sleeper import resolve_league_policy_path
@@ -18,7 +20,7 @@ from roster_theory.trade.evaluation import (
     build_weekly_projection_matrix,
     evaluate_trade,
 )
-from roster_theory.trade.evaluation_service import _options_from_policy
+from roster_theory.trade.evaluation_service import _options_from_policy, finish_trade_run
 from roster_theory.trade.search import LeagueSearchResult, SearchConfig, search_league
 
 
@@ -53,6 +55,7 @@ class SearchRunResult:
     board_refresh: BoardRefreshResult
     output_path: Path
     csv_path: Path | None
+    run_manifest: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +72,7 @@ class CompareRunResult:
     board_refresh: BoardRefreshResult
     output_path: Path
     evidence_hash: str
+    run_manifest: dict[str, Any] | None = None
 
 
 def _refresh(
@@ -230,7 +234,8 @@ def run_league_search(
     )
     normalized_options = _options_from_policy(options, resolved_policy)
     normalized_config = _config_from_policy(config, resolved_search_policy)
-    result = search_league(
+    as_of = datetime.now(timezone.utc)
+    result = evaluate_at(as_of, search_league,
         refresh.refresh.snapshot,
         projections=refresh.weekly_projections,
         selected_board=refresh.selected_final,
@@ -243,6 +248,12 @@ def run_league_search(
         output_path
         or refresh.output_path.with_name(f"trade_search_{result.evidence_hash[:16]}.json")
     )
+    manifest = finish_trade_run(target, refresh, as_of=as_of,
+        inputs={'operation': 'search', 'gaps': refresh.gaps, 'result_hash': result.evidence_hash},
+        policy={'options': normalized_options, 'search': normalized_config},
+        readiness={'inputs_complete': not result.roster_exclusions, 'search_complete': False,
+                   'candidate_confidence': {row.evaluation.evidence_hash: row.evaluation.decision.confidence
+                                            for row in result.opportunities}, 'informational_warnings': ()})
     atomic_write_json(target, asdict(result))
     csv_target = Path(csv_path) if csv_path else None
     if csv_target:
@@ -272,7 +283,7 @@ def run_league_search(
                 for row in result.opportunities
             ),
         )
-    return SearchRunResult(result, refresh, target, csv_target)
+    return SearchRunResult(result, refresh, target, csv_target, manifest)
 
 
 def run_package_comparison(
@@ -308,10 +319,11 @@ def run_package_comparison(
     projection_matrix = build_weekly_projection_matrix(
         refresh.refresh.snapshot, refresh.weekly_projections
     )
+    as_of = datetime.now(timezone.utc)
     evaluations = tuple(
-        evaluate_trade(
+        evaluate_at(as_of, evaluate_trade,
             refresh.refresh.snapshot,
-            build_entered_package(
+            evaluate_at(as_of, build_entered_package,
                 refresh.refresh.snapshot,
                 send=tuple(package.get("send", ())),
                 receive=tuple(package.get("receive", ())),
@@ -347,8 +359,14 @@ def run_package_comparison(
         output_path
         or refresh.output_path.with_name(f"trade_compare_{evidence_hash[:16]}.json")
     )
+    manifest = finish_trade_run(target, refresh, as_of=as_of,
+        inputs={'operation': 'compare', 'packages': packages,
+                'result_hashes': [row.evidence_hash for row in evaluations]}, policy=options,
+        readiness={'inputs_complete': all(row.decision.confidence != 'INCOMPLETE' for row in evaluations),
+                   'search_complete': None, 'candidate_confidence': [row.decision.confidence for row in evaluations],
+                   'informational_warnings': ()})
     atomic_write_json(target, {**payload, "evidence_hash": evidence_hash})
-    return CompareRunResult(evaluations, refresh, target, evidence_hash)
+    return CompareRunResult(evaluations, refresh, target, evidence_hash, manifest)
 
 
 def load_search_evidence(path: str | Path) -> dict[str, Any]:
