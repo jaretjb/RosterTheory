@@ -71,7 +71,7 @@ use weekly, ROS, and league-scored season/recent ranks when projections do not
 settle the choice. Search schema 10 returns a nine-item claim plan with shared-
 drop alternatives identified.
 
-The fresh read-only `fourth_and_20` proof protected Caleb Williams and Rico
+The fresh read-only League Alpha proof protected Caleb Williams and Rico
 Dowdle and exactly reproduced the four requested skill moves and two kicker
 moves. Current defensive evidence changed after the user's dated list and now
 ranks Minnesota, New England, and Carolina; Cincinnati fell to DST17 for the
@@ -87,7 +87,7 @@ value comparison. Waiver Wire uses the three most accurate trustworthy current
 contributors when at least three are available; otherwise it uses FantasyPros
 Latest ECR. Trade expert policy remains unchanged.
 
-The read-only `fourth_and_20` proof selected Pat Fitzmaurice, Derek Brown, and
+The read-only League Alpha proof selected Pat Fitzmaurice, Derek Brown, and
 Andrew Erickson for Waiver Wire evidence and Pat Fitzmaurice, Derek Brown, and
 Scott Pianowski for ROS evidence. It evaluated 57 candidates exactly, pruned 75
 lower-valued candidates with audited bounds, and performed no Sleeper write.

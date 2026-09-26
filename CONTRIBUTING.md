@@ -30,6 +30,18 @@ Run the fast context-routing check after editing `.codex/context`, a backlog,
 or public repository metadata; CI runs the same gate on every push and pull
 request.
 
+Before committing, stage only the intended files and run
+`python scripts/release_gate.py repository --staged`. This scans the exact
+Git index, including force-added ignored files. Also run
+`python scripts/release_gate.py repository` to check the tracked working tree.
+CI runs both checks; neither uses documentation exclusions. Known private
+identity markers include case, separator, and wrapped-line variants. This
+regression check complements secret scanning and manual review; it cannot
+recognize every new user's private identifier. Never put real identifiers in
+test failure output, PR descriptions, issue text, or attached reports.
+Enable the local pre-commit check with `git config core.hooksPath .githooks`.
+The hook uses `python` from your active environment; CI remains the shared gate.
+
 ## Patches
 
 - Create a separate branch for every change. Direct commits and pushes to

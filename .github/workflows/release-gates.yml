@@ -71,6 +71,9 @@ jobs:
       - name: Reject unsafe tracked artifacts
         run: python scripts/release_gate.py repository
 
+      - name: Reject private identities in exact committed contents
+        run: python scripts/release_gate.py repository --staged
+
       - name: Gate CLI discovery and output contracts
         run: >-
           python -m unittest

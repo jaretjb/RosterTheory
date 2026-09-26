@@ -1,0 +1,3 @@
+#!/bin/sh
+# Inspect the exact index; unstaged sanitization cannot conceal staged data.
+exec python scripts/release_gate.py repository --staged
