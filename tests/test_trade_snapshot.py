@@ -487,6 +487,48 @@ class ScheduleAndSnapshotTests(unittest.TestCase):
                 replace(first, captured_at=datetime.now(timezone.utc) - timedelta(hours=1))
             )
 
+    def test_snapshot_identity_survives_wall_clock_second_boundary(self) -> None:
+        captured = datetime(2026, 9, 4, 12, tzinfo=timezone.utc)
+        bundle = replace(self._bundle(), captured_at=captured)
+        with patch("roster_theory.trade.snapshot.datetime", wraps=datetime) as clock:
+            snapshots = []
+            for elapsed in (0.999, 1.001):
+                clock.now.return_value = captured + timedelta(seconds=elapsed)
+                snapshots.append(build_trade_snapshot(
+                    league_key="fixture", user_id="u1", ranking_horizon="WEEKLY-PROXY",
+                    sleeper=bundle, schedule=schedule_fixture(),
+                ))
+        first, second = snapshots
+        self.assertEqual(first.manifest.analysis_id, second.manifest.analysis_id)
+        self.assertEqual(first.manifest.scenario_seed, second.manifest.scenario_seed)
+        self.assertEqual(first, second)
+        self.assertEqual(first.stamps[-1].freshness_seconds, 12 * 60 * 60)
+        # Stable historical identity is not permission to use stale ownership.
+        with self.assertRaises(StaleData):
+            assert_current(first, now=captured + timedelta(minutes=6))
+
+    def test_schedule_freshness_is_measured_at_snapshot_capture(self) -> None:
+        bundle = self._bundle()
+        schedule_captured = datetime(2026, 9, 4, tzinfo=timezone.utc)
+        for elapsed, expected_age, fresh in (
+            (-1, 0, True), (0, 0, True), (86400, 86400, True),
+            (86401, 86401, False),
+        ):
+            with self.subTest(elapsed=elapsed):
+                captured = schedule_captured + timedelta(seconds=elapsed)
+                with patch("roster_theory.trade.snapshot.datetime", wraps=datetime) as clock:
+                    clock.now.return_value = schedule_captured + timedelta(days=30)
+                    snapshot = build_trade_snapshot(
+                        league_key="fixture", user_id="u1", ranking_horizon="WEEKLY-PROXY",
+                        sleeper=replace(bundle, captured_at=captured),
+                        schedule=schedule_fixture(),
+                    )
+                stamp = snapshot.stamps[-1]
+                self.assertEqual(stamp.captured_at, schedule_captured)
+                self.assertEqual(snapshot.captured_at, captured)
+                self.assertEqual(stamp.freshness_seconds, expected_age)
+                self.assertEqual(stamp.fresh, fresh)
+
     def test_special_team_identity_directory_does_not_expand_tradeable_players(self) -> None:
         bundle = self._bundle()
         bundle = replace(

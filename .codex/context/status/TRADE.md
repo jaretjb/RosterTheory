@@ -1,6 +1,12 @@
 # Trade Assistant current status
 
-Updated: September 25, 2026 (America/Los_Angeles)
+Updated: September 26, 2026 (America/Los_Angeles)
+
+Snapshot-clock repair: schedule provenance age now uses the recorded snapshot
+capture time, preserving IDs/seeds across rebuilds. Regression tests cover a
+second boundary, the 24-hour schedule cutoff, and stale ownership rejection.
+All 813 tests, Ruff, and privacy gates pass; the formerly flaky test passed 100
+repeats. PR delivery is pending. No provider calls or decision-policy change.
 
 TA-1313 implementation is complete; delivery is through PR #25. Trade
 weekly projections now retain the provider's declared STD/HALF/PPR label while
@@ -18,6 +24,6 @@ AC-001–AC-008/#7–#14 are merged through PR #23. Their shared exact gates,
 ranking caps, scoring formats, freshness contracts and bounded-search proofs
 remain in force. Completed evidence is in the matching
 `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_*.md` records. The audit remains open;
-No further implementation milestone is active. TA-1310 empirical
+No other Trade implementation milestone is active. TA-1310 empirical
 calibration remains unpromoted pending sufficient dated evidence. Trade is
 read-only.
