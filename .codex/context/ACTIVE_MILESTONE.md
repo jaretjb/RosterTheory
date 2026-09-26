@@ -1,6 +1,32 @@
 # Active milestone
 
-## MA-001 - Reference profiles and migration baseline
+## MA-002a - Explicit scoring rule and evidence contracts
+
+Active by user authorization on September 26, 2026. Start MA-002 with one
+bounded, additive shared-contract slice, based on MA-001 PR #34 (still open).
+MA-002a is implementation-complete: 828 tests, Ruff and context checks pass.
+Await dependent PR review/CI. Evidence: `docs/MODULAR_SCORING_CONTRACT.md`.
+Requirements: MR-01, MR-02, MR-04, MR-06, MR-09, MR-10; architecture sections
+3.1 and 5-6; migration plan MA-002 row. Follow-up integration is tracked in #30.
+
+Allowed: pure versioned scoring-rule/evidence records and calculations under
+`src/roster_theory/core/`, independent synthetic contract tests, explicit
+reference-rule inventory and handoff documentation. Separate rule support from
+per-player evidence completeness. Preserve observed zero, documented structural
+zero, missing/invalid values, unsupported rules, position and source/horizon.
+
+Do not wire the contract into existing providers or feature decisions in this
+slice. Those behavior fixes require their own reviewed before/after evidence.
+No new dependencies, providers, live simulation, calibration, roster-membership
+changes (#31), Draft policy changes, or league mutations. Existing CLI/artifact
+contracts and MA-001 semantic goldens must stay unchanged.
+
+Gates: independent arithmetic and missing/invalid/unsupported cases; both
+reference scoring inventories; deterministic serialization; full compact unit
+suite, Ruff, context/privacy checks and required CI. Stop at a tested dependent
+PR for MA-002a; do not claim #30 or the overall MA-002 milestone complete.
+
+## Previous MA-001 handoff (not active)
 
 Active by user authorization on September 25, 2026. Planning PR #27 is merged.
 MA-001 implementation is complete and locally validated; awaiting PR review/merge.

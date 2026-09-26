@@ -1,12 +1,15 @@
 # Modular migration handoff
 
-Updated: September 25, 2026 (America/Los_Angeles)
+Updated: September 26, 2026 (America/Los_Angeles)
 
-Planning PR #27 is merged. MA-001 is implementation-complete under issue #29: additive reference
-fixtures, compatibility evidence, defect reproductions and offline measurements.
-No production behavior or user policy changes. Await PR review/merge; remote CI
-is the merge gate. Local validation: 811 tests, Ruff, context and both privacy
-gates passed. All 24 workloads reproduced across five timed repetitions.
+Planning PR #27 is merged. MA-001 PR #34 remains open, with 811 tests and all
+20 CI checks passed. Its baseline is the base for the dependent MA-002a branch.
+
+MA-002 is authorized on September 26; its first slice MA-002a is implementation-complete: versioned
+scoring-rule and statistic-evidence contracts, independent tests and an explicit
+reference-rule inventory. Existing feature/provider paths remain unchanged.
+All 828 tests, Ruff and context checks pass; awaiting dependent PR review/CI.
+Evidence and next integration slice: `docs/MODULAR_SCORING_CONTRACT.md`.
 
 Read `docs/MODULAR_BASELINE.md` only for baseline evidence; implementation loads
 the active milestone and `IMPLEMENTATION_POLICY.md`. Requirements/architecture
@@ -19,5 +22,6 @@ explicit skill-player evaluation boundary. The 12-format matrix remains future
 validation, not an existing support claim.
 
 Known behavior issues: #30 scoring completeness, #31 roster membership, #32
-process-safe provider limits, #33 Draft cap/season assumptions. These are inactive
-follow-ups. MA-002 requires its own bounded activation after MA-001 review.
+process-safe provider limits, #33 Draft cap/season assumptions. MA-002a prepares
+#30 but does not close it; adapter/feature integration and the other issues stay
+outside this slice. Stop at a tested dependent PR; overall MA-002 remains open.
