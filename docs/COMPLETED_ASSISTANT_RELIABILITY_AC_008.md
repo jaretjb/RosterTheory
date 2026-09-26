@@ -1,8 +1,8 @@
 # AC-008 — End-to-end release gates and measured optimization
 
-Status: implemented in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23);
-merge pending. Issue #14.
-The reliability audit remains open pending merge and any future dated calibration.
+Status: merged in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23)
+(commit `63f77f7b2b470c0a1cc795782fe39abbf8c1295b`); all 20 checks passed and
+issue #14 is closed. The reliability audit remains open for future dated calibration.
 No live provider refresh, league action, or Sleeper mutation was run.
 
 ## Decision and release gates
