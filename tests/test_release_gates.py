@@ -73,6 +73,14 @@ class ReleaseGateTests(unittest.TestCase):
             self.assertTrue(any("tracked path #" in value for value in findings))
             self.assertNotIn(private, repr(findings))
 
+    def test_split_numeric_identifiers_are_detected_without_echoing_them(self):
+        synthetic_id = "987654321012345678"
+        digests = frozenset({hashlib.sha256(synthetic_id.encode()).hexdigest()})
+        for text in (synthetic_id, '"9876543210" + "12345678"', '9876543210\n12345678'):
+            findings = identity_findings(text.encode(), "synthetic fixture", digests)
+            self.assertTrue(findings)
+            self.assertNotIn(synthetic_id, repr(findings))
+
     def test_ci_matrix_and_release_tools_are_declared_and_blocking(self):
         root = Path(__file__).resolve().parents[1]
         workflow = (root / ".github/workflows/release-gates.yml").read_text(encoding="utf-8")

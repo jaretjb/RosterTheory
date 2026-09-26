@@ -68,11 +68,13 @@ These judgments are intentionally not automated and remain required in OS-007:
 - obtain explicit user approval before tagging, publishing a release, making a
   repository public, or pushing rewritten history.
 
-After a privacy incident, keep the repository private until current files,
-all retained branches/tags, history, PR/issue text, release assets, and workflow
-artifacts have been reviewed. Current-tree checks do not certify history or
-GitHub metadata. Record any unreviewed surfaces as blockers. Re-publication
-requires fresh explicit approval; completing a cleanup PR does not authorize it.
+After a privacy incident, agree the containment and cleanup scope with the
+maintainer, including whether a visibility change is warranted. Review current
+files, retained branches/tags, history, PR/issue text, release assets, and workflow
+artifacts within that scope. Current-tree checks do not certify history or
+GitHub metadata. Record unreviewed surfaces and explicitly accepted historical
+content separately. Visibility changes require explicit approval; completing a
+cleanup PR does not authorize them.
 History replacement must be separately planned with a private backup and clone
 recovery instructions, without bypassing branch protection.
 

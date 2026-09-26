@@ -20,6 +20,10 @@ FORBIDDEN_CREDENTIAL_SUFFIXES = {".key", ".pem", ".p12", ".pfx"}
 # Regression fingerprints, not a complete inventory of personal data. Do not
 # store the original identifiers here, even as concatenated string fragments.
 PRIVATE_IDENTITY_DIGESTS = frozenset({
+    "c7e7e1dbf939bd2ea3e6fff061a2f61152a0b713ccd5120fcfa74d2e540089cb",
+    "0c3e062490ad097d2aafbe01910e363405ee5a7de7d52bfef2e5f549cd6ac4ee",
+    "66ef5ce65713b7ad7af892255bfeb185a6a70a0de2b56bddf4c790160457ae79",
+    "b737598aed6e33e4d7c33e07fad7e7331640d8461d91ee034253c514ab05a31c",
     "16f45b99abfda6364208cc5d3308269813641fab3ed9ad56affa18b1783280b7",
     "d119aabe138facc09d5ae4d73ce8ceb9125fc664163e42d1773ca5a4e83e759b",
     "f64d869c1635fe3077572cae2ef3f324613eead9f8721c1d2768975e053d1746",
