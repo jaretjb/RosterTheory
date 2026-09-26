@@ -18,7 +18,7 @@ No live report, provider refresh or Sleeper write occurred.
 AC-005 merged in PR #19. AC-006/#12 merged in PR #21; issue #12 is closed.
 Format mapping, custom-scoring disclosures, premium raw-stat scoring and season-aware
 resources are covered by `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_006.md`.
-AC-007/#13 adds frozen evaluation time, final live-fact revalidation, source expiry
+AC-007/#13 is implemented in PR #22. It adds frozen evaluation time, final live-fact revalidation, source expiry
 checks, honest hourly global-news coverage and hashed replay manifests. Exact,
 comparison, legacy search and target/search workflows preserve independent
 readiness/confidence axes; informational warnings alone do not degrade readiness.

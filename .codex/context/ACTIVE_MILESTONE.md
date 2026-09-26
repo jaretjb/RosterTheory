@@ -6,11 +6,12 @@ Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md`.
 AC-006 — Supported scoring formats and season portability (issue #12) merged in
 PR #21 with all 20 checks passing. Tracking reconciliation merged in PR #20.
 AC-007 — Freshness, readiness, provenance, and handoff contracts (issue #13) is
-active, authorized by the user's request to merge #21 and start #13.
+implemented in PR #22; GitHub records its merge state. Authorized by the user's
+request to merge #21 and start #13.
 Load only AC-007 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
 Preserve source timestamps, label finite news coverage honestly, revalidate volatile
 facts before actionable output, and record replayable provenance and readiness axes.
-Add regressions before fixes, run the full suite and Ruff, and stop at a tested PR handoff.
+Regressions, full suite, and Ruff passed; stop at the tested PR #22 handoff.
 
 AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
 all CI checks. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
