@@ -301,7 +301,7 @@ Stop: terminal output is clearer without changing the underlying decisions.
 ## OS-005 — Installable package and public documentation
 
 Goal: make the documented install work outside a repository checkout and give a
-new contributor an accurate path from clone to first safe result.
+new user an accurate path from clone to first safe result.
 
 Acceptance:
 
@@ -319,10 +319,11 @@ Acceptance:
 - Update the README for Draft, Trade, and Waiver behavior, including current
   limitations, FantasyPros requirements, sample-only restrictions, and the
   read-only safety promise.
-- Add `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and `CHANGELOG.md`.
+- Maintain `SECURITY.md`, `CHANGELOG.md`, and owner-maintenance guidance in the
+  README. The repository is public for use, with owner-managed changes only.
 
 Stop: a new user can install, configure a synthetic league, run help and a safe
-offline example, and understand support and contribution expectations.
+offline example, and understand support and maintenance expectations.
 
 ## OS-014 — Command-driven runtime-input inventory and authority contract
 

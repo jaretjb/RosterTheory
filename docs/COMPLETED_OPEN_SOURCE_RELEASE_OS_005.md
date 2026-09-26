@@ -19,8 +19,9 @@ directory and are documented as such.
 The README now covers implemented Draft, Trade, and Waiver workflows, weekly
 and expert-horizon limits, FantasyPros HOF Premium and free-tier sample-only
 restrictions, offline setup, and the no-Sleeper-writes promise. Public
-`CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and `CHANGELOG.md` are
-included in the source archive.
+`SECURITY.md` and `CHANGELOG.md` are included in the source archive. The current
+README documents the owner-maintained policy; the public participation
+documents originally shipped with this milestone have since been retired.
 
 Verification: `python -m build --no-isolation` produced a wheel (74 archive
 entries) and source distribution (168 entries). Archive inspection found no

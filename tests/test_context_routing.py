@@ -83,10 +83,20 @@ class ContextRoutingTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/release-gates.yml").read_text(
             encoding="utf-8"
         )
-        contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
         command = "python -m unittest tests.test_context_routing"
         self.assertIn(command, workflow)
-        self.assertIn(command, contributing)
+        self.assertIn(command, readme)
+
+    def test_owner_maintained_public_policy_and_package_metadata(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
+        self.assertIn("not accepting outside patches or pull", readme)
+        self.assertIn("No account has a ruleset bypass exception", readme)
+        for filename in ("CONTRIBUTING.md", "CODE_OF_CONDUCT.md"):
+            self.assertFalse((ROOT / filename).exists())
+            self.assertNotIn(filename, readme)
+            self.assertNotIn(filename, manifest)
 
     def test_draft_handoff_closes_2026_and_requires_new_future_milestone(self):
         status = (ROOT / ".codex/context/status/DRAFT.md").read_text(encoding="utf-8")
