@@ -9,49 +9,14 @@ from math import isfinite
 from typing import Mapping
 
 from roster_theory.core.scoring_contract import (
-    LinearScoringRule, RuleAssessment, ScoredEvidence, StatEvidence,
+    RuleAssessment, ScoredEvidence, StatEvidence,
     StatObservation, score_evidence,
 )
+from roster_theory.providers.sleeper_scoring_rules import INDIVIDUALS, SLEEPER_LINEAR_RULES
 
 
 SCORING_CONTRACT_VERSION = "fantasypros-weekly-v1"
-INDIVIDUALS = ("QB", "RB", "WR", "TE", "K")
-_RULE_EVIDENCE = "Sleeper scoring categories; docs/MODULAR_PROVIDER_SCORING.md"
-
-# Passing/receiving are not restricted to the player's usual football role.
-# In particular, a missing WR passing forecast is not a documented zero.
-_INDIVIDUAL_SETTINGS = (
-    "pass_yd", "pass_td", "pass_int", "pass_2pt", "rush_yd", "rush_td",
-    "rush_2pt", "rec", "rec_yd", "rec_td", "rec_2pt", "fum_lost",
-    "fum_rec_td", "st_td", "st_ff", "st_fum_rec",
-)
-_DEFENSE_SETTINGS = (
-    "int", "sack", "safe", "blk_kick", "ff", "def_td",
-    "def_st_td", "def_st_ff", "def_st_fum_rec", "pts_allow_0",
-    "pts_allow_1_6", "pts_allow_7_13", "pts_allow_14_20", "pts_allow_21_27",
-    "pts_allow_28_34", "pts_allow_35p",
-)
-_KICKING_SETTINGS = (
-    "fgm", "fgm_0_19", "fgm_20_29", "fgm_30_39", "fgm_40_49",
-    "fgm_50_59", "fgm_50p", "fgm_60p", "fgmiss", "fgmiss_0_19",
-    "fgmiss_20_29", "fgmiss_30_39", "fgmiss_40_49", "fgmiss_50_59",
-    "fgmiss_50p", "fgmiss_60p", "xpm", "xpmiss",
-)
-WEEKLY_RULES = tuple(
-    LinearScoringRule(setting, setting, positions, _RULE_EVIDENCE)
-    for settings, positions in (
-        (_INDIVIDUAL_SETTINGS, INDIVIDUALS),
-        (_DEFENSE_SETTINGS, ("DST",)),
-        (_KICKING_SETTINGS, ("K",)),
-    ) for setting in settings
-) + tuple(
-    LinearScoringRule(f"bonus_rec_{position.lower()}", "rec", (position,), _RULE_EVIDENCE)
-    for position in ("RB", "WR", "TE")
-) + (
-    # The existing skill projection path classifies this as limited. Do not
-    # guess a position boundary while migrating that unresolved mapping.
-    LinearScoringRule("fum_rec", "fum_rec", None, "Unresolved applicability; issue #30"),
-)
+WEEKLY_RULES = SLEEPER_LINEAR_RULES
 
 # Explicit aliases retained from the existing NFL adapter where category
 # identity is unambiguous. Canonical event keys are also accepted. This does
