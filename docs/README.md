@@ -4,7 +4,7 @@ Project documents live here. Agent operating context lives in [`.codex/context/`
 
 | Area | Start here | Other documents |
 | --- | --- | --- |
-| Modular redesign | [Supported scope and requirements](MODULAR_REQUIREMENTS.md), [architecture](MODULAR_ARCHITECTURE.md), [migration and validation plan](MODULAR_MIGRATION_PLAN.md) | [MA-001 baseline](MODULAR_BASELINE.md), [MA-002a scoring contract](MODULAR_SCORING_CONTRACT.md); implementation requires a selected active milestone. |
+| Modular redesign | [Supported scope and requirements](MODULAR_REQUIREMENTS.md), [architecture](MODULAR_ARCHITECTURE.md), [migration and validation plan](MODULAR_MIGRATION_PLAN.md) | [MA-001 baseline](MODULAR_BASELINE.md), [MA-002a scoring contract](MODULAR_SCORING_CONTRACT.md), [MA-002b provider coverage](MODULAR_PROVIDER_SCORING.md); implementation requires a selected active milestone. |
 | Draft | [Open tasks](OPEN_TASKS.md) | Draft analysis and completed records use `DRAFT` names. |
 | Trade | [Requirements](TRADE_ASSISTANT_REQUIREMENTS.md), [design](TRADE_ASSISTANT_DESIGN.md), [tasks](TRADE_ASSISTANT_TASKS.md) | Research uses `TRADE_*`; completed phases use `COMPLETED_TRADE_*`. |
 | Waiver | [Requirements](WAIVER_ASSISTANT_REQUIREMENTS.md), [design](WAIVER_ASSISTANT_DESIGN.md), [tasks](WAIVER_ASSISTANT_TASKS.md) | Current handoff is in [agent context](../.codex/context/status/WAIVER.md). |

@@ -1,9 +1,12 @@
 # MA-002a: explicit scoring evidence
 
-Status: implementation-complete; awaiting dependent PR review and CI. This is the first bounded MA-002 slice,
+Status: approved in PR #35 with all 20 CI checks passing. This is the first bounded MA-002 slice,
 dependent on [MA-001 PR #34](https://github.com/jaretjb/RosterTheory/pull/34).
 It prepares [issue #30](https://github.com/jaretjb/RosterTheory/issues/30); it
 does not close that issue or complete the overall MA-002 milestone.
+PR #35 merged into the former MA-001 base branch. MA-002b carries this approved
+contract onto main and adds [provider integration](MODULAR_PROVIDER_SCORING.md).
+The behavior and validation below describe the historical MA-002a slice.
 
 ## Scope and observable outcome
 

@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002 authorized; first contract slice MA-002a implementation-complete, awaiting dependent PR review
+Status: MA-002 authorized; MA-002a approved in PR #35; MA-002b provider integration active
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -24,8 +24,10 @@ change recommendation policy, activate later work, or merge itself.
 
 ## 2. Sequence and traceability
 
-The user authorized MA-002 on September 26. ACTIVE_MILESTONE selects MA-002a as
-the first bounded dependent slice based on MA-001 PR #34. Remaining MA-002
+The user authorized MA-002 on September 26 and requested continuation after
+merging PRs #34/#35. ACTIVE_MILESTONE selects MA-002b provider scoring coverage.
+PR #35 merged to the former MA-001 base; this follow-up carries it onto main.
+Remaining MA-002
 slices need their own detailed contracts and activation after the tested handoff;
 MA-003 onward remain **planned, not authorized**.
 
@@ -37,6 +39,9 @@ issues does not activate them.
 MA-002a's [scoring contract](MODULAR_SCORING_CONTRACT.md) defines the additive
 scope, independent expectations and later behavior integration for #30. This
 slice does not replace the broad MA-002 exit conditions below.
+MA-002b's [provider integration](MODULAR_PROVIDER_SCORING.md) exposes incomplete
+weekly projection scoring in shared Trade/Waiver preparation. It leaves #30
+open for unresolved provider evidence and the other scoring consumers.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |

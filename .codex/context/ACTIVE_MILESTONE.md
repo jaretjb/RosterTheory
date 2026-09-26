@@ -20,6 +20,12 @@ consistent direct/prepared results and downstream readiness; unchanged MA-001
 goldens; full compact tests, Ruff, context/privacy checks and required CI.
 Stop at a tested PR against main. Overall MA-002 and issue #30 remain open.
 
+Implementation complete: 847 tests pass, including unchanged MA-001 goldens;
+Ruff, compilation, context and privacy gates pass. Two original defects were
+reproduced before the fix. Evidence and measured preparation overhead:
+`docs/MODULAR_PROVIDER_SCORING.md`. Await required PR CI and review. Both reference
+maps remain LIMITED for unresolved `fum_rec`; provider coverage is unverified.
+
 ## Previous Trade snapshot clock regression repair (not active)
 
 Authorized by the user on September 26, 2026 after the intermittent post-merge
