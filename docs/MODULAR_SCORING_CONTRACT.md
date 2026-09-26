@@ -120,8 +120,8 @@ Validation: **828 tests passed in 100.840 seconds**, including 17 new contract
 tests and unchanged MA-001 semantic goldens. Configured Ruff, all 18 context
 checks and documentation-link checks passed. Tracked-tree and exact staged
 privacy gates passed; required remote CI remains the merge gate.
-The new contract has no runtime consumer, so existing workload performance is
-unchanged by construction; the integration PR must measure its actual preparation
+No production calculation path invokes the new contract, and no performance
+improvement is claimed. The integration PR must measure its actual preparation
 cost. A pinned static type-check gate remains part of establishing the integrated
 shared interfaces; this slice uses type hints and runtime shape/serialization
 checks without claiming static type-check coverage.
