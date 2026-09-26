@@ -8,6 +8,7 @@ from math import isfinite
 from pathlib import Path
 
 from roster_theory.core.provenance import stable_hash
+from roster_theory.core.decision_coverage import maximum_delta_bound
 from roster_theory.waiver.emergence import PlayerEmergenceEvidence
 from roster_theory.waiver.evaluation import (
     DropCandidateEvaluation,
@@ -1679,16 +1680,36 @@ def apply_waiver_policy(
         _apply_contingency_policy(candidate, policy)
         for candidate in evaluation.candidates
     )
-    assessments = tuple(
-        (candidate, *_assess_candidate(
+    def assess(candidate):
+        scoped = candidate
+        gaps = any(row.reason in {"INCOMPLETE_PROJECTION_EVIDENCE", "IDENTITY_UNAVAILABLE"}
+                   for row in evaluation.exclusions)
+        if gaps and candidate.projection_inputs_complete:
+            before = {s.nfl_team: -s.delta_from_central for s in candidate.risk.before.scenarios
+                      if s.kind == "OFFENSE_DOWNSIDE"}
+            after = {s.nfl_team: -s.delta_from_central for s in candidate.risk.after.scenarios
+                     if s.kind == "OFFENSE_DOWNSIDE"}
+            bound = maximum_delta_bound(before, after, rounding_allowance=0.004)
+            scoped = replace(candidate, risk=replace(candidate.risk, offense_downside_loss_delta=bound))
+            independent = bound <= policy.maximum_downside_increase
+        else:
+            independent = candidate.projection_inputs_complete
+        conditional = gaps and evaluation.value_inputs_complete and evaluation.projection_inputs_complete and not independent
+        decision, uncertainty = _assess_candidate(
             replace(evaluation, projection_inputs_complete=(
-                evaluation.projection_inputs_complete and candidate.projection_inputs_complete
-            )),
-            candidate,
-            policy,
-        ))
-        for candidate in policy_candidates
-    )
+                evaluation.projection_inputs_complete and (independent or conditional))), scoped, policy)
+        if conditional:
+            decision = replace(decision, label="WATCH", decision_path="CONDITIONAL_ROSTER_EVIDENCE",
+                gates=(*decision.gates, _gate("decision_dependencies_complete", False, "==", True, False,
+                    "Protected missing players may affect lineup, depth, holding or risk; comparison is conditional")))
+            uncertainty = "Conditional comparison assumes protected missing players do not change the result; resolve their evidence before acting"
+        elif gaps and independent:
+            decision = replace(decision, gates=(*decision.gates,
+                _gate("independent_roster_risk_bound", bound, "<=", policy.maximum_downside_increase, True,
+                      "Unchanged independent lineup components cancel; risk uses a conservative upper bound")))
+        return candidate, decision, uncertainty
+
+    assessments = tuple(assess(candidate) for candidate in policy_candidates)
     label_tier = {"ADD NOW": 0, "CLAIM": 0, "ACQUIRE": 0, "WATCH": 1, "PASS": 2}
     ordered = tuple(
         sorted(
@@ -1773,7 +1794,8 @@ def apply_waiver_policy(
         evaluation,
         selected_drop_player_id=selected.drop_player_id,
         projection_inputs_complete=(evaluation.projection_inputs_complete
-                                    and selected.projection_inputs_complete),
+                                    and selected.projection_inputs_complete
+                                    and decision.decision_path != "CONDITIONAL_ROSTER_EVIDENCE"),
         selection_basis=(
             "best Waiver decision tier, then sample-adjusted specialist production/rank "
             "advantage or normalized projection-only fallback" if evaluation.add_position in {"K", "DST"} else

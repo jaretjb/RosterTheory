@@ -103,7 +103,7 @@ or unavailable result rather than implying a complete valuation of every slot.
 | ID | Requirement | Observable acceptance |
 | --- | --- | --- |
 | MR-01 | Determine support from normalized actual rules, per feature and operation | Every setting is supported, explicitly irrelevant, unknown, or unsupported; rejected fixtures list affected rules before decision evaluation |
-| MR-02 | Separate format support, data readiness and policy validation | A supported half-PPR fixture with stale ranks remains stale; a supported profile with unvalidated thresholds remains uncalibrated; no state inherits another league's readiness |
+| MR-02 | Separate format support, decision-specific data readiness and policy validation | A supported half-PPR fixture with stale ranks remains stale; a supported profile with unvalidated thresholds remains uncalibrated; irrelevant missing players do not veto independent decisions; no state inherits another league's readiness |
 | MR-03 | Preserve canonical identities and roster membership | Active, starter and reserve sets reconcile; duplicate ownership and ambiguous identities are reported; taxi state is preserved and rejected as unsupported rather than counted as active bench |
 | MR-04 | Score from actual league rules with explicit stat coverage | Required missing statistics, invalid/nonfinite values and unsupported settings cannot yield a complete score; provider-documented structural zero is distinguishable from missing data |
 | MR-05 | Share legal mechanics, retain feature objectives | Eligibility, capacity and scoring agree on common fixtures; acquisition preferences are not platform limits; different lineup fill/empty-slot objectives and tie rules are declared and tested |
@@ -122,6 +122,53 @@ reasons and operation scope. It is independent of data readiness, search
 completeness, candidate confidence, informational warnings and policy validation.
 These are proposed internal fields, not permission to replace existing CLI
 statuses. Numerical readiness and recommendation quality are separate claims.
+
+### 3.1 Missing evidence must have decision-specific consequences
+
+User clarification, September 26: a player who does not materially affect a
+trade or waiver decision must not disable that decision or the whole tool.
+Scoring completeness (MR-04) describes evidence; it is not a roster-wide veto.
+
+For each candidate move, preserve three distinct outcomes:
+
+- **Independent:** the missing evidence cannot change the supported conclusion
+  within the declared horizon and dependencies. Continue the comparison and
+  disclose the excluded evidence. Do not claim complete whole-roster forecasts.
+- **Conditional:** the influence cannot yet be established. Retain useful
+  comparisons with explicit assumptions and affected metrics; do not present an
+  unconditional recommendation, exact win odds or a proved best option.
+- **Blocked candidate:** missing evidence is required to value the actual
+  acquired/traded/dropped asset, establish legality, or support the conclusion.
+  Block that candidate or claim while retaining independently supported options.
+
+An unknown player stays on the roster, consumes the correct capacity and remains
+protected from automatic trade/drop selection. Missing ranks never imply zero
+value. Being unchanged on a bench, absent from rankings, low-ranked or currently
+injured does not by itself prove irrelevance over future weeks.
+
+Relevance must consider lineup eligibility and shared FLEX slots, bye/return
+weeks, depth/replacement effects, secondary add/drop moves and the quantities
+actually being reported. Feature policy owns these dependencies. Use proved
+independence or documented evidence bounds; do not invent projections, a rank
+cutoff or a universal materiality threshold. If independence is unresolved, use
+the conditional outcome rather than silently discarding the player.
+
+Acceptance examples for the next implementation slice:
+
+1. Adding an unrelated missing-evidence player preserves an independently
+   supported comparison and its conclusion, with a visible exclusion.
+2. That player cannot become a free roster slot, cheap trade asset or drop target.
+3. If the same player becomes relevant through FLEX eligibility, a bye, a return
+   week or a secondary move, the affected candidate becomes conditional/blocked.
+4. A gap on one opponent's roster cannot suppress independent opponents.
+5. Material missing asset data still prevents an unconditional recommendation;
+   missing league-wide scoring terms need their own relevance/bounds evidence.
+6. All claims distinguish partial source coverage from candidate readiness and
+   search completeness, including saved results and user-facing explanations.
+
+These are acceptance requirements, not claims that the current runtime already
+satisfies them. Existing broad Trade roster exclusions and Waiver skill-position
+grouping require review before promoting stricter scoring gates.
 
 ## 4. Scoring and recommendation limits
 

@@ -43,17 +43,21 @@ class TradeCandidateCoverageTests(unittest.TestCase):
         self.assertEqual(partial.roster_exclusions[0].missing_player_weeks[0], ("unknown", 1))
         self.assertTrue(result.coverage)
 
-    def test_user_missing_evidence_has_no_targets_or_offers(self):
+    def test_user_missing_evidence_preserves_conditional_comparisons(self):
         targets, result = self.run_search(missing="u_rb")
-        self.assertFalse(targets.targets)
-        self.assertFalse(result.opportunities)
-        self.assertTrue(any("USER_ROSTER" in row.reason for row in targets.exclusions))
-
-    def test_missing_partner_excludes_only_that_partner(self):
-        targets, result = self.run_search(missing="o_fill")
-        self.assertFalse(any(t.roster.owner_roster_id == "2" for t in targets.targets))
+        self.assertTrue(targets.targets)
         self.assertTrue(targets.roster_exclusions)
-        self.assertFalse(result.opportunities)
+        self.assertTrue(result.evaluated_decisions)
+        self.assertTrue(all(not row.accepted for row in result.evaluated_decisions))
+        self.assertTrue(all("u_rb" not in row.sent_player_ids for row in result.evaluated_decisions))
+
+    def test_missing_partner_preserves_their_other_assets(self):
+        targets, result = self.run_search(missing="o_fill")
+        self.assertTrue(any(t.roster.owner_roster_id == "2" for t in targets.targets))
+        self.assertTrue(targets.roster_exclusions)
+        self.assertTrue(result.evaluated_decisions)
+        self.assertTrue(all(not row.accepted for row in result.evaluated_decisions))
+        self.assertTrue(all("o_fill" not in row.received_player_ids for row in result.evaluated_decisions))
 
     def test_partial_curves_preserve_expert_ranks_and_expose_exclusions(self):
         positions = {"a": "RB", "missing": "RB", "c": "RB", "te": "TE"}
@@ -100,6 +104,10 @@ class TradeCandidateCoverageTests(unittest.TestCase):
         evaluate_trade(unrelated, package, projections=projections, selected_board=selected,
                        market_board=market, options=permissive_options())
         affected = replace(snapshot, player_exclusions=(("u_rb", "PLAYER_IDENTITY_UNAVAILABLE"),))
+        conditional = evaluate_trade(affected, package, projections=projections, selected_board=selected,
+                                     market_board=market, options=permissive_options())
+        self.assertEqual(conditional.decision_label, "CONDITIONAL")
+        package = TradePackage("1", "2", (PlayerAsset("u_rb"),), (PlayerAsset("o_con"),))
         with self.assertRaisesRegex(CoverageIncomplete, "u_rb"):
             evaluate_trade(affected, package, projections=projections, selected_board=selected,
                            market_board=market, options=permissive_options())
@@ -110,5 +118,7 @@ class TradeCandidateCoverageTests(unittest.TestCase):
                            player_exclusions=(("u_rb", "PLAYER_IDENTITY_UNAVAILABLE"),))
         targets = discover_trade_targets(snapshot, projections=projections, selected_board=selected,
                                          market_ecr_board=market, trade_market=direct, config=config())
-        self.assertFalse(targets.targets)
+        self.assertTrue(targets.targets)
+        self.assertTrue(all(any("Conditional roster fit" in warning for warning in row.warnings)
+                            for row in targets.targets))
         self.assertEqual(targets.roster_exclusions[0].reason, "ROSTER_PLAYER_IDENTITY_OR_TEAM_UNAVAILABLE")

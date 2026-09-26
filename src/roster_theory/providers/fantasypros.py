@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import re
 from typing import Any, Mapping
 
 from roster_theory.core.models import Projection, RankObservation
-from roster_theory.core.errors import ProviderCapabilityMissing
+from roster_theory.core.errors import CoverageIncomplete, ProviderCapabilityMissing
 from roster_theory.core.provenance import DataStamp, stable_hash
-from roster_theory.core.scoring import POSITION_RECEPTION_BONUSES, score_stats
+from roster_theory.core.scoring_contract import ScoringScope, assess_scoring_rules
 from roster_theory.providers.formats import ranking_format, validate_provider_scope
+from roster_theory.providers.projection_scoring import (
+    SCORING_CONTRACT_VERSION, WEEKLY_RULES, score_projection_row, scoring_coverage,
+    statistic_number,
+)
 from roster_theory.fantasypros import FantasyProsClient
 
 
@@ -253,7 +257,7 @@ def normalize_projections(
             sorted(
                 (str(key), parsed)
                 for key, raw in stats.items()
-                if (parsed := _number(raw)) is not None
+                if (parsed := statistic_number(raw)) is not None
             )
         )
         projections.append(
@@ -265,7 +269,7 @@ def normalize_projections(
                 league_points=float((league_points or {}).get(identity.fantasypros_id, 0.0)),
                 source="FantasyPros consensus",
                 coverage_status=(coverage_by_player or {}).get(identity.fantasypros_id,
-                                  "complete" if numeric_stats else "missing_stats"),
+                                  "unverified_scoring_v1"),
             )
         )
     return ProjectionDataset(
@@ -289,6 +293,48 @@ def normalize_projections(
             export_restriction="personal HOF Premium data",
         ),
     )
+
+
+def normalize_scored_projections(
+    value: Mapping[str, Any], *, scoring_settings: Mapping[str, Any],
+    season: int, week: int, league_id: str = "unbound",
+    captured_at: datetime | None = None, endpoint: str = "/projections",
+    parameters: Mapping[str, Any] | None = None,
+) -> ProjectionDataset:
+    """One strict weekly scoring path for direct and cached provider inputs."""
+    declared_scoring = str(value.get("scoring") or "").upper()
+    if declared_scoring not in {"STD", "HALF", "PPR"}:
+        raise CoverageIncomplete("FantasyPros projection has unknown scoring scope")
+    validate_provider_scope(value, season=season, scoring=declared_scoring)
+    if str(value.get("week")) != str(week):
+        raise CoverageIncomplete(f"FantasyPros projection response did not match Week {week}")
+    rows = value.get("players")
+    if not isinstance(rows, list):
+        raise CoverageIncomplete("FantasyPros projection players must be a list")
+    assessment = assess_scoring_rules(scoring_settings,
+        scope=ScoringScope(league_id, season, "weekly_projection", "WEEKLY", week),
+        catalogue=WEEKLY_RULES, catalogue_version=SCORING_CONTRACT_VERSION)
+    scored = {}
+    for row in rows:
+        if not isinstance(row, Mapping) or row.get("fpid") in (None, ""):
+            raise CoverageIncomplete("FantasyPros projection row has no player identity")
+        player_id = str(row["fpid"])
+        if player_id in scored:
+            raise CoverageIncomplete("Duplicate FantasyPros projection player identity")
+        scored[player_id] = score_projection_row(row, assessment)
+    try:
+        dataset = normalize_projections(value, horizon="WEEKLY",
+            league_points={pid: result.diagnostic_points for pid, result in scored.items()},
+            coverage_by_player={pid: scoring_coverage(result) for pid, result in scored.items()},
+            captured_at=captured_at, endpoint=endpoint, parameters=parameters)
+    except ValueError as exc:
+        # Raw NaN/Inf cannot be hashed into a reproducible payload. Keep this a
+        # visible failed preparation; never sanitize its provenance into success.
+        raise CoverageIncomplete(f"Invalid FantasyPros projection payload: {exc}") from exc
+    return replace(dataset, stamp=replace(dataset.stamp, scoring_hash=assessment.scoring_hash,
+        parameter_hash=stable_hash({"provider_parameters": parameters or {},
+                                   "scoring_contract": SCORING_CONTRACT_VERSION,
+                                   "rules_hash": assessment.rules_hash})))
 
 
 def normalize_news(value: Mapping[str, Any]) -> tuple[NewsRecord, ...]:
@@ -387,31 +433,21 @@ class FantasyProsAdapter:
         week: int,
         position: str,
         scoring_settings: Mapping[str, Any],
+        *,
+        league_id: str = "unbound",
     ) -> ProjectionDataset:
         scoring_code = ranking_format(scoring_settings).scoring
         params = {"position": position, "scoring": scoring_code, "week": week}
         value = self.client.projections(season, **params)
         validate_provider_scope(value, season=season, scoring=scoring_code)
-        scored = {
-            str(row.get("fpid")): score_stats(row.get("stats") or {}, scoring_settings,
-                                             position=row.get("position_id"))
-            for row in value.get("players") or []
-            if isinstance(row, Mapping) and row.get("fpid") is not None
-        }
-        dataset = normalize_projections(
+        if str(value.get("week")) != str(week):
+            raise ProviderCapabilityMissing(f"FantasyPros projection response did not match Week {week}")
+        return normalize_scored_projections(
             value,
-            horizon="WEEKLY",
-            league_points={pid: row.points for pid, row in scored.items()},
-            coverage_by_player={pid: "missing_position_reception_stats" for pid, row in scored.items()
-                                if set(row.unsupported_settings) & set(POSITION_RECEPTION_BONUSES)},
+            scoring_settings=scoring_settings, season=season, week=week, league_id=league_id,
             endpoint=f"/nfl/{season}/projections",
             parameters=params,
         )
-        if dataset.week != week:
-            raise ProviderCapabilityMissing(
-                f"FantasyPros projection week {dataset.week} did not match {week}"
-            )
-        return dataset
 
     def injury_news(self, *, limit: int = 25) -> tuple[NewsRecord, ...]:
         return normalize_news(self.client.news(category="injury", limit=limit))

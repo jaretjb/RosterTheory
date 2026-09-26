@@ -917,7 +917,7 @@ class ProjectionAndEvaluationTests(unittest.TestCase):
         self.assertTrue(all(move.manual_legality for move in result.secondary_moves))
         self.assertTrue(any("manual Sleeper legality" in row for row in result.warnings))
 
-    def test_missing_week_stops_or_is_explicitly_partial(self) -> None:
+    def test_missing_unchanged_player_week_is_conditional(self) -> None:
         incomplete = tuple(
             row
             for row in self.projections
@@ -926,24 +926,16 @@ class ProjectionAndEvaluationTests(unittest.TestCase):
         package = build_entered_package(
             self.snapshot, send=("a_wr",), receive=("b_rb",)
         )
-        with self.assertRaises(CoverageIncomplete):
-            evaluate_trade(
-                self.snapshot,
-                package,
-                projections=incomplete,
-                selected_board=self.selected,
-                market_board=self.market,
-            )
         partial = evaluate_trade(
             self.snapshot,
             package,
             projections=incomplete,
             selected_board=self.selected,
             market_board=self.market,
-            options=EvaluationOptions(allow_partial_schedule=True),
         )
-        self.assertIn("SCHEDULE-PARTIAL", partial.modes)
-        self.assertTrue(any("missing projection" in row.casefold() for row in partial.warnings))
+        self.assertIn("DECISION-CONDITIONAL", partial.modes)
+        self.assertEqual(partial.decision.label, "CONDITIONAL")
+        self.assertTrue(any("remain owned" in row for row in partial.warnings))
         issue = next(
             row
             for row in partial.projection_coverage.issues

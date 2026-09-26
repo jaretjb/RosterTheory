@@ -24,7 +24,8 @@ from roster_theory.core.projections import (
     reconcile_current_inactive_omissions,
 )
 from roster_theory.core.replacement import positional_waiver_baselines
-from roster_theory.core.scoring import STAT_ALIASES, POSITION_RECEPTION_BONUSES, score_stats
+from roster_theory.core.scoring import STAT_ALIASES, POSITION_RECEPTION_BONUSES
+from roster_theory.providers.projection_scoring import SCORING_CONTRACT_VERSION
 from roster_theory.providers.formats import RankingFormat, ranking_format, validate_provider_scope
 from roster_theory.fantasypros import FantasyProsClient
 from roster_theory.providers.cache import (
@@ -39,7 +40,7 @@ from roster_theory.providers.fantasypros import (
     ProjectionDataset,
     RankingDataset,
     normalize_news,
-    normalize_projections,
+    normalize_scored_projections,
     normalize_rankings,
 )
 from roster_theory.trade.boards import (
@@ -544,49 +545,16 @@ def _fetch_value_inputs(
         name = f"projections_{week}"
         record = values[name]
         payload = record["payload"]
-        declared_scoring = str(payload.get("scoring") or "").upper()
-        if declared_scoring not in {"STD", "HALF", "PPR"}:
-            raise CoverageIncomplete(
-                f"FantasyPros projection Week {week} has unknown scoring {declared_scoring!r}"
-            )
         # Ranking scope remains exact. Projection points are independently
         # calculated from raw stats, so the provider's point label may differ.
-        validate_provider_scope(
-            payload, season=snapshot.league.season, scoring=declared_scoring
-        )
-        points: dict[str, float] = {}
-        premium_coverage: dict[str, str] = {}
-        for row in payload.get("players") or ():
-            if not isinstance(row, Mapping) or row.get("fpid") is None:
-                continue
-            stats = row.get("stats")
-            if not isinstance(stats, Mapping):
-                stats = {}
-            position = str(row.get("position_id") or "").upper()
-            scored = score_stats(stats, scoring, position=position)
-            points[str(row["fpid"])] = scored.points
-            if declared_scoring != scoring_code and not scored.used_settings:
-                premium_coverage[str(row["fpid"])] = "missing_league_scoring_raw_stats"
-            elif (
-                declared_scoring != scoring_code
-                and position in {"RB", "WR", "TE"}
-                and float(scoring.get("rec") or 0.0) != 0.0
-                and "rec" not in scored.used_settings
-            ):
-                premium_coverage[str(row["fpid"])] = "missing_reception_stats_for_rescore"
-            elif set(scored.unsupported_settings) & set(POSITION_RECEPTION_BONUSES):
-                premium_coverage[str(row["fpid"])] = "missing_position_reception_stats"
-        dataset = normalize_projections(
+        dataset = normalize_scored_projections(
             payload,
-            horizon="WEEKLY",
-            league_points=points,
-            coverage_by_player=premium_coverage,
+            scoring_settings=scoring, season=snapshot.league.season, week=week,
+            league_id=snapshot.league.league_id,
             captured_at=datetime.fromisoformat(record["captured_at"]),
             endpoint=f"/nfl/{snapshot.league.season}/projections",
             parameters={"position": "ALL", "scoring": scoring_code, "week": week},
         )
-        if dataset.week != week:
-            raise CoverageIncomplete(f"FantasyPros projection response did not match Week {week}")
         status = "hit" if name in cached else "miss"
         projection_datasets.append(replace(dataset, stamp=replace(dataset.stamp, cache_status=status)))
     return ValueInputs(
@@ -606,6 +574,9 @@ def _fetch_value_inputs(
             "projection_points_method": (
                 "RAW_STATS_LEAGUE_SCORED"
                 if call.name.startswith("projections_") else None
+            ),
+            "projection_scoring_contract": (
+                SCORING_CONTRACT_VERSION if call.name.startswith("projections_") else None
             ),
             "captured_at": values[call.name]['captured_at'],
             "fetched_at": values[call.name].get('fetched_at'),

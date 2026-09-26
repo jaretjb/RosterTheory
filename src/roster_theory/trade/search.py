@@ -254,6 +254,7 @@ def _candidate_pool(
     diagnosis: RosterDiagnosis,
     selected_values: Mapping[str, float],
     limit: int,
+    protected: frozenset[str] = frozenset(),
 ) -> tuple[str, ...]:
     team = next(team for team in snapshot.teams if team.roster_id == roster_id)
     player_by_id = {player.player_id: player for player in snapshot.players}
@@ -262,6 +263,7 @@ def _candidate_pool(
         player_id
         for player_id in team.player_ids
         if player_id not in set(team.reserve_ids)
+        and player_id not in protected
         and player_id in selected_values
         and (player := player_by_id.get(player_id)) is not None
         and bool(SKILL_POSITIONS.intersection(player.positions))
@@ -404,8 +406,12 @@ def _opportunity(
         + user_value.raw_projection_secondary_delta
     )
     partner_market = partner_value.market_package_delta + partner_value.market_secondary_delta
-    if evaluation.decision_label != "ACCEPTABLE":
+    conditional = evaluation.decision_label == "CONDITIONAL"
+    if evaluation.decision_label not in {"ACCEPTABLE", "CONDITIONAL"}:
         return None, "phase6_decision_gate"
+    if conditional and any(not gate.passed for gate in evaluation.decision.gates
+                           if gate.name != "complete_evidence"):
+        return None, "conditional_policy_gate"
     if user_team.weighted_delta <= 0.0:
         return None, "user_lineup_gate"
     redundant_positions = _redundant_one_starter_positions(
@@ -483,9 +489,11 @@ def _opportunity(
         sent_player_ids=sent,
         received_player_ids=received,
         package_size=_package_size(sent, received),
-        label="TARGET",
-        user_rationale=target_basis,
-        partner_rationale=partner_rationale,
+        label="CONDITIONAL" if conditional else "TARGET",
+        user_rationale=("Conditional on protected players not changing this comparison: " + target_basis
+                        if conditional else target_basis),
+        partner_rationale=("Known-player comparison only; " + partner_rationale
+                           if "ROSTER-EVIDENCE-PARTIAL" in evaluation.modes else partner_rationale),
         objective_tags=(),
         user_lineup_delta=user_team.weighted_delta,
         user_depth_delta=user_team.depth_delta,
@@ -502,6 +510,9 @@ def _opportunity(
 
 
 def _dominates(first: SearchOpportunity, second: SearchOpportunity) -> bool:
+    if any("ROSTER-EVIDENCE-PARTIAL" in row.evaluation.modes for row in (first, second)):
+        # An assumption-dependent estimate cannot eliminate a supported option.
+        return False
     first_values = (
         first.user_lineup_delta,
         first.user_selected_delta,
@@ -522,6 +533,11 @@ def _dominates(first: SearchOpportunity, second: SearchOpportunity) -> bool:
 
 
 def _pareto_frontier(opportunities: Sequence[SearchOpportunity]) -> tuple[SearchOpportunity, ...]:
+    partial = tuple(row for row in opportunities if "ROSTER-EVIDENCE-PARTIAL" in row.evaluation.modes)
+    if partial:
+        return (*_pareto_frontier(tuple(row for row in opportunities if "ROSTER-EVIDENCE-PARTIAL" not in row.evaluation.modes)),
+                *(replace(row, objective_tags=("CONDITIONAL" if row.label == "CONDITIONAL" else "SCOPED_COMPARISON",))
+                  for row in sorted(partial, key=lambda row: row.label == "CONDITIONAL")))
     retained = tuple(
         row
         for row in opportunities
@@ -582,7 +598,7 @@ def search_league(
     started = perf_counter()
     projection_matrix = build_weekly_projection_matrix(snapshot, projections)
     roster_exclusions = roster_projection_exclusions(snapshot, projection_matrix)
-    excluded_rosters = {row.roster_id for row in roster_exclusions}
+    protected = frozenset(pid for row in roster_exclusions for pid, _ in row.missing_player_weeks)
     diagnostics = tuple(
         diagnose_roster(
             snapshot,
@@ -590,9 +606,9 @@ def search_league(
             roster_id=team.roster_id,
             options=options,
             projection_matrix=projection_matrix,
+            protect_missing=True,
         )
         for team in sorted(snapshot.teams, key=lambda row: row.roster_id)
-        if team.roster_id not in excluded_rosters
     )
     diagnosis_by_id = {row.roster_id: row for row in diagnostics}
     selected_values = _board_values(selected_board)
@@ -605,6 +621,7 @@ def search_league(
         diagnosis_by_id[snapshot.user_roster_id],
         selected_values,
         config.small_pool_per_team,
+        protected,
     ) if snapshot.user_roster_id in diagnosis_by_id else ()
     setup_finished = perf_counter()
     exact_seconds = 0.0
@@ -615,16 +632,13 @@ def search_league(
         (team for team in snapshot.teams if team.roster_id != snapshot.user_roster_id),
         key=lambda row: row.roster_id,
     ):
-        if snapshot.user_roster_id in excluded_rosters or opponent.roster_id in excluded_rosters:
-            reason = "INCOMPLETE_ROSTER_PROJECTIONS"
-            rejection_counts[reason] = rejection_counts.get(reason, 0) + 1
-            continue
         opponent_pool = _candidate_pool(
             snapshot,
             opponent.roster_id,
             diagnosis_by_id[opponent.roster_id],
             selected_values,
             config.small_pool_per_team,
+            protected,
         )
         for group_index in range(2):
             if group_index == 0:
@@ -730,7 +744,7 @@ def search_league(
                         rejection_counts.get(exact_reason, 0) + 1
                     )
                     continue
-                coverage_counts[size][3] += 1
+                coverage_counts[size][3] += int(opportunity.label != "CONDITIONAL")
                 opportunities.append(opportunity)
     search_finished = perf_counter()
     frontier = _pareto_frontier(opportunities)[: config.max_results]

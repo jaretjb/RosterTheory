@@ -8,6 +8,7 @@ from roster_theory.inseason.evaluation import (
     team_impact,
 )
 from roster_theory.trade.evaluation import EvaluationOptions, TradeEvaluation
+from roster_theory.trade.coverage import comparison_roster
 from roster_theory.trade.snapshot import TradeSnapshot
 
 
@@ -90,8 +91,8 @@ def analyze_consolidation(
     user_id = evaluation.package.roster_a_id
     partner_id = evaluation.package.roster_b_id
     target_id = evaluation.package.from_b[0].player_id
-    user_final = _final_roster(snapshot, evaluation, user_id)
-    partner_final = _final_roster(snapshot, evaluation, partner_id)
+    user_final = comparison_roster(snapshot, matrix, _final_roster(snapshot, evaluation, user_id))
+    partner_final = comparison_roster(snapshot, matrix, _final_roster(snapshot, evaluation, partner_id))
     move_by_roster = {move.roster_id: move for move in evaluation.secondary_moves}
     user_move = move_by_roster[user_id]
     partner_move = move_by_roster[partner_id]
@@ -169,6 +170,8 @@ def analyze_consolidation(
 
     both_used = all(row.passes_use_gate for row in partner_uses)
     warnings = []
+    if "ROSTER-EVIDENCE-PARTIAL" in evaluation.modes:
+        warnings.append("Conditional consolidation metrics describe known players only; protected missing players may alter starter/depth use")
     if not secondary_complete:
         warnings.append("The user's add and partner's drop are not both resolved")
     if not starter_passed:
@@ -193,6 +196,6 @@ def analyze_consolidation(
         partner_asset_uses=tuple(partner_uses),
         secondary_moves_complete=secondary_complete,
         both_outgoing_assets_used=both_used,
-        passes=secondary_complete and starter_passed and both_used,
+        passes=secondary_complete and starter_passed and both_used and "ROSTER-EVIDENCE-PARTIAL" not in evaluation.modes,
         warnings=tuple(warnings),
     )

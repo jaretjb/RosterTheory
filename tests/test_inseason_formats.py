@@ -57,7 +57,8 @@ class InseasonFormatTests(unittest.TestCase):
         result = FantasyProsAdapter(Provider()).weekly_projections(
             2027, 1, "TE", {"rec": 1, "rec_yd": 0.1, "bonus_rec_te": 1}
         )
-        self.assertEqual(result.projections[0].coverage_status, "missing_position_reception_stats")
+        self.assertEqual(result.projections[0].coverage_status,
+                         "scoring_incomplete_v1:missing_statistic=bonus_rec_te;missing_statistic=rec")
 
     def test_default_anchor_requires_season_and_does_not_use_previous_year(self):
         with self.assertRaisesRegex(ValueError, "Season is required"):
@@ -120,7 +121,8 @@ class InseasonFormatTests(unittest.TestCase):
                 provider.reverse = reverse
                 snapshot = SimpleNamespace(
                     league=SimpleNamespace(
-                        season=season, scoring=(("rec", rec), ("rec_yd", 0.1), ("bonus_rec_te", 1))
+                        league_id="synthetic", season=season,
+                        scoring=(("rec", rec), ("rec_yd", 0.1), ("bonus_rec_te", 1))
                     ),
                     manifest=SimpleNamespace(current_week=1),
                     weeks=(SimpleNamespace(week=1),),
@@ -175,7 +177,8 @@ class InseasonFormatTests(unittest.TestCase):
 
         provider = Provider()
         snapshot = SimpleNamespace(
-            league=SimpleNamespace(season=2027, scoring=(("rec", 0.5), ("rec_yd", 0.1))),
+            league=SimpleNamespace(league_id="synthetic", season=2027,
+                                   scoring=(("rec", 0.5), ("rec_yd", 0.1))),
             manifest=SimpleNamespace(current_week=1),
             weeks=(SimpleNamespace(week=1),),
         )
@@ -191,12 +194,15 @@ class InseasonFormatTests(unittest.TestCase):
         self.assertEqual(result.projection_sets[0].stamp.scoring_label, "STD")
         self.assertEqual(rows["complete"].league_points, 4.0)
         self.assertEqual(rows["complete"].coverage_status, "complete")
-        self.assertEqual(rows["no_receptions"].coverage_status, "missing_reception_stats_for_rescore")
-        self.assertEqual(rows["points_only"].coverage_status, "missing_league_scoring_raw_stats")
+        self.assertEqual(rows["no_receptions"].coverage_status,
+                         "scoring_incomplete_v1:missing_statistic=rec")
+        self.assertEqual(rows["points_only"].coverage_status,
+                         "scoring_incomplete_v1:missing_statistic=rec;missing_statistic=rec_yd")
         source = next(row for row in result.source_evidence if row["name"] == "projections_1")
         self.assertEqual(source["parameters"]["scoring"], "HALF")
         self.assertEqual(source["declared_scoring"], "STD")
         self.assertEqual(source["projection_points_method"], "RAW_STATS_LEAGUE_SCORED")
+        self.assertEqual(source["projection_scoring_contract"], "fantasypros-weekly-v1")
 
     def test_trade_rejects_unknown_or_wrong_season_projection_scope(self):
         class Provider:
@@ -221,7 +227,7 @@ class InseasonFormatTests(unittest.TestCase):
                 return {"items": []}
 
         snapshot = SimpleNamespace(
-            league=SimpleNamespace(season=2027, scoring=(("rec", 0.5),)),
+            league=SimpleNamespace(league_id="synthetic", season=2027, scoring=(("rec", 0.5),)),
             manifest=SimpleNamespace(current_week=1),
             weeks=(SimpleNamespace(week=1),),
         )

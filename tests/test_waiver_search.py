@@ -714,9 +714,11 @@ class WaiverSearchTests(unittest.TestCase):
             enable_pruning=True,
             now=NOW,
         )
-        self.assertNotIn("free_k", result.eligible_candidate_ids)
-        omission = next(row for row in result.omissions if row.player_id == "free_k")
-        self.assertEqual(omission.reason, "ROSTER_POSITION_PROJECTION_UNAVAILABLE")
+        self.assertIn("free_k", result.eligible_candidate_ids)
+        kicker = next(row for row in result.exact_evaluations if row.add_player_id == "free_k")
+        self.assertEqual(kicker.decision_label, "WATCH")
+        self.assertEqual(kicker.decision.decision_path, "CONDITIONAL_ROSTER_EVIDENCE")
+        self.assertTrue(all(row.drop_player_id != "roster_k" for row in kicker.candidates))
         self.assertTrue(
             {"add", "fa_rb", "fa_wr", "fa_te"}.issubset(
                 result.eligible_candidate_ids

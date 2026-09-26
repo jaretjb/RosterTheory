@@ -1,12 +1,20 @@
 # Modular migration handoff
 
-Updated: September 25, 2026 (America/Los_Angeles)
+Updated: September 26, 2026 (America/Los_Angeles)
 
-Planning PR #27 is merged. MA-001 is implementation-complete under issue #29: additive reference
-fixtures, compatibility evidence, defect reproductions and offline measurements.
-No production behavior or user policy changes. Await PR review/merge; remote CI
-is the merge gate. Local validation: 811 tests, Ruff, context and both privacy
-gates passed. All 24 workloads reproduced across five timed repetitions.
+PRs #27/#34 are merged to main. PR #35 merged into its former MA-001 base;
+PR #37 carries that approved contract forward with PR #36's snapshot-clock repair.
+
+MA-002c implements decision-scoped Trade/Waiver coverage on PR #37. Unknown
+players remain owned and protected from automatic trades/drops. Independent
+moves continue; connected lineup, replacement, holding or secondary dependencies
+produce conditional comparisons. Conditional results cannot become accepted
+offers or affirmative claims. Full-roster forecasts stay incomplete.
+All 860 local tests pass, including unchanged MA-001 goldens. Required PR CI
+and review remain the merge gate. Evidence: `docs/MODULAR_DECISION_COVERAGE.md`.
+Strict source scoring from MA-002b remains: missing/invalid statistics and
+unsupported/unresolved rules block completeness. Source evidence:
+`docs/MODULAR_PROVIDER_SCORING.md`; contract: `docs/MODULAR_SCORING_CONTRACT.md`.
 
 Read `docs/MODULAR_BASELINE.md` only for baseline evidence; implementation loads
 the active milestone and `IMPLEMENTATION_POLICY.md`. Requirements/architecture
@@ -19,5 +27,7 @@ explicit skill-player evaluation boundary. The 12-format matrix remains future
 validation, not an existing support claim.
 
 Known behavior issues: #30 scoring completeness, #31 roster membership, #32
-process-safe provider limits, #33 Draft cap/season assumptions. These are inactive
-follow-ups. MA-002 requires its own bounded activation after MA-001 review.
+process-safe provider limits, #33 Draft cap/season assumptions. Both reference
+maps remain LIMITED (`fum_rec` applicability); actual provider coverage is not
+verified. Historical-stat/Draft scoring and remaining MA-002 contracts need
+separate slices. Stop at a tested PR against main; #30 and MA-002 remain open.

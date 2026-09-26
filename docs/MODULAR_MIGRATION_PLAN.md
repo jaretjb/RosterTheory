@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-000 merged in PR #27; MA-001 implementation-complete under issue #29, awaiting PR review/merge
+Status: MA-002 authorized; MA-002a approved in PR #35; MA-002b provider integration active
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -24,13 +24,34 @@ change recommendation policy, activate later work, or merge itself.
 
 ## 2. Sequence and traceability
 
-MA-001 is authorized in ACTIVE_MILESTONE. MA-002 onward remain **planned, not
-authorized**, to be refined against the preceding milestone's evidence.
+The user authorized MA-002 on September 26 and requested continuation after
+merging PRs #34/#35. ACTIVE_MILESTONE selects MA-002b provider scoring coverage.
+PR #35 merged to the former MA-001 base; this follow-up carries it onto main.
+Remaining MA-002
+slices need their own detailed contracts and activation after the tested handoff;
+MA-003 onward remain **planned, not authorized**.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
 follow-ups are #30/#31 (MA-002), #32 (MA-003), and #33 (MA-004); creating these
 issues does not activate them.
+
+MA-002a's [scoring contract](MODULAR_SCORING_CONTRACT.md) defines the additive
+scope, independent expectations and later behavior integration for #30. This
+slice does not replace the broad MA-002 exit conditions below.
+MA-002b's [provider integration](MODULAR_PROVIDER_SCORING.md) exposes incomplete
+weekly projection scoring in shared Trade/Waiver preparation. It leaves #30
+open for unresolved provider evidence and the other scoring consumers.
+
+September 26 acceptance correction: the user rejects blocking independent
+trade/waiver decisions because of irrelevant missing players. Before promoting
+the stricter MA-002b scoring gates, implement MR-02 section 3.1 with feature-owned
+dependency checks and explicit conditional results. PR #37 is held as a draft
+pending that work; its passing scoring tests do not establish decision relevance.
+Do not resolve this by disabling scoring checks or globally enabling partial
+schedule evaluation. The next bounded slice must test irrelevant-player
+invariance, protected unknown assets, relevant FLEX/bye/secondary-move changes
+and unaffected opponents; retain provider-definition work under #30.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |

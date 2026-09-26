@@ -205,13 +205,14 @@ def _csv_rows(result: TargetWorkflowResult) -> tuple[dict[str, Any], ...]:
                 "lane": row.lane,
                 "target_player_id": row.primary_target_player_id,
                 "owner_roster_id": row.opponent_roster_id,
-                "status": "OFFER_FOUND",
+                "status": "CONDITIONAL" if row.intrinsic_outcome == "CONDITIONAL" else "OFFER_FOUND",
                 "pricing_mode": result.targets.pricing_mode,
                 "send_player_ids": ";".join(row.sent_player_ids),
                 "receive_player_ids": ";".join(row.received_player_ids),
                 "intrinsic_outcome": row.intrinsic_outcome,
                 "package_verdict": row.evaluation.decision_label,
-                "recommendation_status": "PROVISIONAL_MARKET" if row.market_fairness.mode == "ECR-PROXY" else "SCREENED_OPPORTUNITY",
+                "recommendation_status": ("CONDITIONAL" if row.intrinsic_outcome == "CONDITIONAL" else
+                                          "PROVISIONAL_MARKET" if row.market_fairness.mode == "ECR-PROXY" else "SCREENED_OPPORTUNITY"),
                 "market_status": row.market_fairness.status,
                 "market_price_delta": row.market_fairness.user_price_delta,
                 "market_premium": row.market_fairness.consolidation_premium_value,
@@ -503,7 +504,7 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
     if result.targets.coverage_counts:
         lines.append("Coverage: " + "; ".join(f"{key}={value}" for key, value in result.targets.coverage_counts))
     for row in result.targets.roster_exclusions:
-        lines.append(f"Excluded roster {row.roster_id}: {row.reason}; " + ", ".join(
+        lines.append(f"Protected missing evidence on roster {row.roster_id}: {row.reason}; " + ", ".join(
             f"{names.get(pid, pid)}/W{week}" for pid, week in row.missing_player_weeks
         ))
     missing_values = result.board_refresh.selected_final.excluded_players
@@ -554,6 +555,8 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
             )
             lines.append(
                 f"  {row.rank_in_lane}. {row.player_name} ({row.position}) — "
+                + ("CONDITIONAL ROSTER FIT; " if any("Conditional roster fit" in warning for warning in row.warnings) else "")
+                +
                 f"{status.status if status else row.status}; owner {row.roster.owner_team_name} "
                 f"[{row.roster.owner_roster_id}]; selected p{row.intrinsic.percentile:.2f}, "
                 f"market-ECR p{row.market_ecr.percentile:.2f}, {price}; "
@@ -568,7 +571,9 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
                 f"performance {performance}"
             )
     if result.packages:
-        lines.append("OFFERS — intrinsic outcome and market fairness are separate")
+        lines.append("COMPARISONS — conditional estimates are not recommended offers"
+                     if any(row.intrinsic_outcome == "CONDITIONAL" for row in result.packages.opportunities)
+                     else "OFFERS — intrinsic outcome and market fairness are separate")
         for lane in TARGET_KINDS:
             for target in (row for row in result.targets.targets if row.kind == lane):
                 offers = tuple(
@@ -597,6 +602,8 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
                         lines.append("      PROVISIONAL MARKET: ECR proxy is not direct trade-chart fairness.")
                     impact = offer.evaluation.team_impacts[0]
                     risk = offer.evaluation.risk_impacts[0]
+                    if "ROSTER-EVIDENCE-PARTIAL" in offer.evaluation.modes:
+                        lines.append("      Known-player estimates only; absolute roster forecasts and downside totals are incomplete.")
                     lines.append(
                         f"      Best W{impact.best_week} {impact.best_week_delta:+.2f}; "
                         f"worst W{impact.worst_week} {impact.worst_week_delta:+.2f}; "

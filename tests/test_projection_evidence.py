@@ -226,11 +226,8 @@ class ProjectionEvidenceTests(unittest.TestCase):
         args = dict(projections=rows, selected_board=board_fixture(snapshot, "selected_final"),
                     market_board=board_fixture(snapshot, "market"))
         package = build_entered_package(snapshot, send=("a_wr",), receive=("b_rb",))
-        with self.assertRaises(CoverageIncomplete):
-            evaluate_trade(snapshot, package, **args)
-        partial = evaluate_trade(snapshot, package, **args,
-                                 options=EvaluationOptions(allow_partial_schedule=True))
-        self.assertIn("SCHEDULE-PARTIAL", partial.modes)
+        partial = evaluate_trade(snapshot, package, **args)
+        self.assertIn("DECISION-CONDITIONAL", partial.modes)
         self.assertNotEqual(partial.decision_label, "ACCEPTABLE")
         issue = next(p for p in partial.projection_coverage.issues if p.player_id == "a_bench")
         self.assertEqual(issue.missing_weeks, (2,))
