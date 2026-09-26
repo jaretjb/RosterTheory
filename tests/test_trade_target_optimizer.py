@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from dataclasses import replace
+from unittest.mock import patch
 
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.trade.evaluation import EvaluationOptions
@@ -56,6 +57,85 @@ def permissive_options(*, selected_floor: float = -100.0) -> EvaluationOptions:
 
 
 class TargetPackageOptimizerTests(unittest.TestCase):
+    def test_cross_lane_exact_packages_are_evaluated_once(self) -> None:
+        snapshot, projections, selected, market_ecr, market, targets = self._inputs()
+        from roster_theory.trade import target_optimizer
+
+        original = target_optimizer.evaluate_trade
+        calls: list[tuple[str, tuple[str, ...], tuple[str, ...]]] = []
+
+        def counted(*args, **kwargs):
+            package = args[1]
+            calls.append((
+                package.roster_b_id,
+                tuple(asset.player_id for asset in package.from_a),
+                tuple(asset.player_id for asset in package.from_b),
+            ))
+            return original(*args, **kwargs)
+
+        metrics: dict[str, object] = {}
+        with patch.object(target_optimizer, "evaluate_trade", side_effect=counted):
+            result = optimize_target_packages(
+                snapshot,
+                projections=projections,
+                selected_board=selected,
+                market_ecr_board=market_ecr,
+                trade_market=market,
+                target_result=targets,
+                config=optimizer_config(),
+                options=permissive_options(),
+                metrics=metrics,
+            )
+        decision_keys = [
+            (row.opponent_roster_id, row.sent_player_ids, row.received_player_ids)
+            for row in result.evaluated_decisions
+        ]
+        self.assertGreater(len(decision_keys), len(set(decision_keys)))
+        self.assertEqual(len(calls), len(set(calls)))
+        self.assertEqual(len(set(calls)), len(set(decision_keys)))
+        self.assertEqual(metrics["cache"]["exact_hits"], len(decision_keys) - len(calls))
+        self.assertEqual(metrics["coverage"]["evaluated"], len(decision_keys))
+        self.assertEqual(set(metrics["stage_ms"]), {"setup", "construction", "exact", "finalize"})
+        replay = optimize_target_packages(
+            snapshot,
+            projections=projections,
+            selected_board=selected,
+            market_ecr_board=market_ecr,
+            trade_market=market,
+            target_result=targets,
+            config=optimizer_config(),
+            options=permissive_options(),
+        )
+        self.assertEqual(replay.evidence_hash, result.evidence_hash)
+        self.assertEqual(replay.coverage, result.coverage)
+
+    def test_market_rejections_skip_lineup_work_but_keep_coverage(self) -> None:
+        snapshot, projections, selected, market_ecr, market, targets = self._inputs()
+        strict = replace(
+            optimizer_config(),
+            construction_market_band_ratio=0.0,
+            construction_market_band_floor=0.0,
+            fair_market_band_ratio=0.0,
+            fair_market_band_floor=0.0,
+        )
+        metrics: dict[str, object] = {}
+        result = optimize_target_packages(
+            snapshot,
+            projections=projections,
+            selected_board=selected,
+            market_ecr_board=market_ecr,
+            trade_market=market,
+            target_result=targets,
+            config=strict,
+            options=permissive_options(),
+            metrics=metrics,
+        )
+        self.assertEqual(metrics["coverage"]["enumerated"], 180)
+        self.assertEqual(metrics["coverage"]["prefiltered"], 169)
+        self.assertEqual(metrics["coverage"]["evaluated"], 11)
+        self.assertLess(metrics["cache"]["lineup_entries"], metrics["coverage"]["prefiltered"])
+        self.assertEqual(sum(row.enumerated for row in result.coverage), 180)
+
     def test_provisional_premium_sensitivity_changes_only_market_verdict(self) -> None:
         fairness = _fairness(
             ("sent",), ("received",), {"sent": 105.0, "received": 100.0},

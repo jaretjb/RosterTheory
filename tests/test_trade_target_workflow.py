@@ -24,6 +24,28 @@ from tests.test_trade_targets import config as target_config
 
 
 class TargetWorkflowTests(unittest.TestCase):
+    def test_report_links_duplicate_exact_evidence_without_changing_saved_evidence(self) -> None:
+        evaluation = {"evidence_hash": "exact-hash", "decision_label": "ACCEPTABLE", "proof": "x" * 1000}
+        payload = {
+            "evidence_hash": "workflow-hash",
+            "packages": {"opportunities": [
+                {"lane": "BUY_LOW", "evaluation": evaluation},
+                {"lane": "NEED_FIT", "evaluation": evaluation},
+            ]},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "workflow.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            report = target_workflow_report(SimpleNamespace(
+                output_path=path, run_manifest=None, performance=None,
+            ))
+            saved = json.loads(path.read_text(encoding="utf-8"))
+        opportunities = report["packages"]["opportunities"]
+        self.assertEqual(opportunities[0]["evaluation"], evaluation)
+        self.assertEqual(opportunities[1]["evaluation"], {"evidence_ref": "exact-hash"})
+        self.assertEqual(saved, payload)
+        self.assertLess(len(json.dumps(report)), len(json.dumps(saved)))
+
     def test_targets_and_search_share_cards_and_replay_with_separate_axes(self) -> None:
         snapshot, projections, selected, market_ecr, market = consolidation_fixture()
         with tempfile.TemporaryDirectory() as directory:
@@ -93,6 +115,10 @@ class TargetWorkflowTests(unittest.TestCase):
             self.assertIn("partner lineup", formatted)
             self.assertIn("Premium sensitivity", formatted)
             self.assertEqual(target_workflow_report(search)["evidence_hash"], search.evidence_hash)
+            self.assertEqual(
+                target_workflow_report(search)["performance"]["coverage"]["evaluated"],
+                len(search.packages.evaluated_decisions),
+            )
             self.assertNotIn("replay_mode", target_workflow_report(search))
             self.assertEqual(
                 load_target_workflow_evidence(search.output_path)["replay_mode"],

@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 from typing import Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, RosterIllegal
@@ -798,7 +799,9 @@ def search_waiver_candidates(
     enable_pruning: bool = True,
     exact_candidate_budget: int | None = None,
     now: datetime | None = None,
+    metrics: dict[str, object] | None = None,
 ) -> WaiverSearch:
+    started = perf_counter()
     assert_current(snapshot, now=now)
     if exact_candidate_budget is not None and (
         isinstance(exact_candidate_budget, bool) or not isinstance(exact_candidate_budget, int)
@@ -842,6 +845,7 @@ def search_waiver_candidates(
         input_bundle_hash=input_bundle_hash,
         availability_source=availability_source,
     )
+    validation_finished = perf_counter()
     acquisition_by_id = {row.player_id: row for row in snapshot.acquisitions}
     priority_by_id = (
         build_waiver_priority_scores(
@@ -889,6 +893,7 @@ def search_waiver_candidates(
         )
         for player_id in search_order
     )
+    ordering_finished = perf_counter()
 
     exact: list[WaiverEvaluation] = []
     pruned: list[WaiverSearchPruning] = []
@@ -925,6 +930,7 @@ def search_waiver_candidates(
             )
         )
 
+    exact_finished = perf_counter()
     ranked = tuple(sorted(exact, key=_evaluation_sort_key))
     claim_plan = _claim_plan(ranked, open_active_slots=next(
         row.open_active_slots for row in snapshot.roster_capacity
@@ -960,6 +966,7 @@ def search_waiver_candidates(
         matrix=build_weekly_projection_matrix(branch_context, projections),
         roster_player_ids=supported_roster, options=options, policy=policy,
     )
+    branch_finished = perf_counter()
     best = ranked[0] if ranked else None
     affirmative = best is not None and best.decision_label in AFFIRMATIVE_LABELS
     if best is not None:
@@ -1127,7 +1134,29 @@ def search_waiver_candidates(
         claim_branch_checks=claim_branch_checks,
     )
     assert_current(snapshot, now=now)
-    return replace(base, evidence_hash=stable_hash(asdict(base)))
+    result = replace(base, evidence_hash=stable_hash(asdict(base)))
+    if metrics is not None:
+        finished = perf_counter()
+        metrics.update({
+            "stage_ms": {
+                "validation": round((validation_finished - started) * 1000, 3),
+                "ordering": round((ordering_finished - validation_finished) * 1000, 3),
+                "exact": round((exact_finished - ordering_finished) * 1000, 3),
+                "branch_validation": round((branch_finished - exact_finished) * 1000, 3),
+                "finalize": round((finished - branch_finished) * 1000, 3),
+            },
+            "coverage": {
+                "eligible": len(eligible_ids),
+                "evaluated": len(exact),
+                "budget_excluded": len(budget_excluded),
+                "pruned": len(pruned),
+            },
+            "cache": {
+                "contingency_entries": len(contingency_cache),
+                "evaluation_entries": len(evaluation_cache),
+            },
+        })
+    return result
 
 
 def waiver_readiness(search):
