@@ -934,7 +934,8 @@ def command_fantasypros_board(args: argparse.Namespace) -> None:
     with interactive_progress("Refreshing Draft board"):
         result = build_fantasypros_board(
             FantasyProsClient(),
-            season=int(league.get("season") or 2026),
+            season=int(league["season"]),
+            league_id=league["league_id"],
             scoring_settings=league.get("scoring_settings", {}),
             roster_positions=league.get("roster_positions", []),
             team_count=int(league.get("total_rosters") or league.get("settings", {}).get("num_teams") or 0),
@@ -949,11 +950,13 @@ def command_fantasypros_board(args: argparse.Namespace) -> None:
     metadata_output = output.with_suffix(".metadata.json")
     metadata_output.write_text(json.dumps(result.metadata, indent=2, sort_keys=True), encoding="utf-8")
     limited = bool(result.metadata["public_api_limited"])
+    ready = bool(result.metadata["draft_ready"])
     _print_human_report(args, "FantasyPros board import complete.", ReportFrame(
         product="Draft FantasyPros board", league=args.league, horizon="preseason draft",
-        readiness="INCOMPLETE" if limited else "READY",
-        result=f"{len(result.players)} players; {'sample only' if limited else 'board built'}",
-        warnings=("Free-tier sample mode; this board is not draft-ready.",) if limited else (),
+        readiness="READY" if ready else "INCOMPLETE",
+        result=f"{len(result.players)} players; {'draft-ready' if ready else 'not draft-ready'}",
+        warnings=("Free-tier sample mode; this board is not draft-ready.",) if limited else
+                 ("Incomplete preseason projection scoring or board coverage; see metadata.",) if not ready else (),
         limitations=("Expert rankings apply only to their declared draft horizon.",),
         saved_paths=(str(output), str(metadata_output)),
     ))

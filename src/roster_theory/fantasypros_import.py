@@ -3,12 +3,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
+from roster_theory.core.scoring_contract import ScoringScope, assess_scoring_rules
 from roster_theory.fantasypros import FantasyProsClient
+from roster_theory.providers.projection_scoring import (
+    DRAFT_SCORING_CONTRACT_VERSION,
+    WEEKLY_RULES,
+    score_draft_projection_row,
+    scoring_coverage,
+)
 from roster_theory.rankings import (
     AccuracyRecord,
     add_vbd,
     normalize_name,
-    score_projection,
     starter_baselines,
     weighted_consensus,
 )
@@ -94,10 +100,21 @@ def _sleeper_name_index(players: Mapping[str, Mapping[str, Any]] | None) -> dict
     return index
 
 
+def _projection_response_scope_issues(response: Mapping[str, Any], season: int) -> list[str]:
+    issues = []
+    for field in ("season", "year"):
+        if response.get(field) not in (None, "") and str(response[field]) != str(season):
+            issues.append(f"{field}_mismatch={response[field]}")
+    if response.get("week") not in (None, "", 0, "0"):
+        issues.append(f"weekly_response={response['week']}")
+    return issues
+
+
 def build_fantasypros_board(
     client: FantasyProsClient,
     *,
     season: int,
+    league_id: str,
     scoring_settings: Mapping[str, Any],
     roster_positions: Iterable[str],
     team_count: int,
@@ -125,16 +142,81 @@ def build_fantasypros_board(
         for player in player_response.get("players", [])
         if player.get("player_id") is not None
     }
+    scope = ScoringScope(league_id, season, "DRAFT-API-IMPORT", "SEASON", None)
+    assessment = assess_scoring_rules(
+        scoring_settings, scope=scope, catalogue=WEEKLY_RULES,
+        catalogue_version=DRAFT_SCORING_CONTRACT_VERSION,
+    )
     projections_by_id: dict[str, float] = {}
+    projection_issues: list[dict[str, str]] = []
+    projection_sources: list[dict[str, Any]] = []
+    seen_projection_ids: set[str] = set()
     for position in ("QB", "RB", "WR", "TE"):
         projection_response = client.projections(season, position=position)
-        projections_by_id.update(
-            {
-                str(player.get("fpid")): score_projection(player.get("stats") or {}, scoring_settings)
-                for player in projection_response.get("players", [])
-                if player.get("fpid") is not None
-            }
-        )
+        scope_issues = _projection_response_scope_issues(projection_response, season)
+        projection_sources.append({
+            "position": position,
+            "declared_season": projection_response.get("season"),
+            "declared_year": projection_response.get("year"),
+            "declared_week": projection_response.get("week"),
+            "declared_scoring": projection_response.get("scoring"),
+            "scope_issues": scope_issues,
+        })
+        if "players" not in projection_response:
+            projection_issues.append({"position": position, "reason": "missing_players_field"})
+            continue
+        players = projection_response.get("players", [])
+        if not isinstance(players, list):
+            projection_issues.append({"position": position, "reason": "invalid_players_shape"})
+            continue
+        for index, player in enumerate(players):
+            if not isinstance(player, Mapping):
+                projection_issues.append({
+                    "position": position, "row": str(index), "reason": "invalid_player_shape",
+                })
+                continue
+            raw_id = player.get("fpid")
+            if raw_id in (None, ""):
+                projection_issues.append({
+                    "position": position, "row": str(index), "reason": "missing_fpid",
+                })
+                continue
+            player_id = str(raw_id)
+            if player_id in seen_projection_ids:
+                projections_by_id.pop(player_id, None)
+                projection_issues.append({
+                    "position": position, "fpid": player_id, "reason": "duplicate_fpid",
+                })
+                continue
+            seen_projection_ids.add(player_id)
+            if scope_issues:
+                projection_issues.append({
+                    "position": position, "fpid": player_id,
+                    "reason": "source_scope_mismatch:" + ";".join(scope_issues),
+                })
+                continue
+            declared_position = player.get("position_id") or player.get("player_position_id")
+            if declared_position and str(declared_position).upper() != position:
+                projection_issues.append({
+                    "position": position, "fpid": player_id,
+                    "reason": f"position_mismatch={declared_position}",
+                })
+                continue
+            if not isinstance(player.get("stats"), Mapping):
+                projection_issues.append({
+                    "position": position, "fpid": player_id, "reason": "invalid_stats_shape",
+                })
+                continue
+            scored = score_draft_projection_row(
+                {"position_id": position, "stats": player["stats"]}, assessment,
+            )
+            if scored.complete:
+                projections_by_id[player_id] = scored.require_points()
+            else:
+                projection_issues.append({
+                    "position": position, "fpid": player_id,
+                    "reason": scoring_coverage(scored),
+                })
     sleeper_by_name = _sleeper_name_index(sleeper_players)
 
     rows: list[dict[str, Any]] = []
@@ -192,12 +274,31 @@ def build_fantasypros_board(
         shrink_to_ecr=shrink_to_ecr,
         max_expert_share=max_expert_share,
     )
+    ranked_ids = {str(player["fantasypros_id"]) for player in board if player.get("fantasypros_id")}
+    for player_id in sorted(projections_by_id.keys() - ranked_ids):
+        projection_issues.append({"fpid": player_id, "reason": "unmatched_projection_id"})
+    for player_id in sorted(ranked_ids - seen_projection_ids):
+        projection_issues.append({"fpid": player_id, "reason": "missing_projection_row"})
+    top_players = board[:180]
+    projection_coverage = (
+        sum(player.get("projected_points") is not None for player in top_players) / len(top_players)
+        if top_players else 0.0
+    )
     projected_board = [player for player in board if player.get("projected_points") is not None]
     baselines = starter_baselines(projected_board, roster_positions, team_count)
     board = add_vbd(board, baselines) if baselines else board
+    checks = {
+        "premium_api": expert_response.get("public_api_limited") is False,
+        "multi_year_accuracy": weight_source == "multi_year_2021_2025",
+        "at_least_five_current_experts": sum(count > 0 for count in returned_counts.values()) >= 5,
+        "at_least_150_ranked_skill_players": len(board) >= 150,
+        "all_replacement_baselines": set(("QB", "RB", "WR", "TE")).issubset(baselines),
+        "top_180_projection_coverage_at_least_90_percent": projection_coverage >= 0.90,
+    }
     return FantasyProsBoard(
         players=board,
         metadata={
+            "league_id": league_id,
             "season": season,
             "scoring": scoring,
             "weight_source": weight_source,
@@ -208,5 +309,14 @@ def build_fantasypros_board(
             "player_count": len(board),
             "players_with_projections": len(projected_board),
             "replacement_baselines": baselines,
+            "draft_ready": all(checks.values()),
+            "checks": checks,
+            "top_180_projection_coverage": round(projection_coverage, 4),
+            "projection_scoring_contract": DRAFT_SCORING_CONTRACT_VERSION,
+            "projection_scoring_hash": assessment.scoring_hash,
+            "projection_rules_hash": assessment.rules_hash,
+            "projection_rule_support": assessment.support,
+            "projection_sources": projection_sources,
+            "projection_issues": projection_issues,
         },
     )

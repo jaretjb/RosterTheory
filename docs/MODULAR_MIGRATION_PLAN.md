@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002 authorized; PR #42 emerging scoring merged; MA-002i Draft manual scoring active
+Status: MA-002 authorized; PR #43 manual scoring merged; MA-002j Draft API scoring active
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -25,8 +25,8 @@ change recommendation policy, activate later work, or merge itself.
 ## 2. Sequence and traceability
 
 The user authorized MA-002 on September 26 and requested continuation after
-merging PR #42. ACTIVE_MILESTONE selects MA-002i Draft manual projection
-scoring evidence, a bounded #30 follow-up. PRs #37–#42 brought scoring, decision-scoped
+merging PR #43. ACTIVE_MILESTONE selects MA-002j Draft API projection
+scoring evidence, a bounded #30 follow-up. PRs #37–#43 brought scoring, decision-scoped
 coverage, membership, Draft rule admission and operation capacity onto main. Remaining MA-002
 slices need their own detailed contracts and activation after the tested handoff;
 MA-003 onward remain **planned, not authorized**.
@@ -82,6 +82,11 @@ MA-002i's [Draft manual scoring evidence](MODULAR_DRAFT_MANUAL_SCORING.md)
 preserves missing-versus-zero evidence in preseason CSV exports and excludes
 incomplete point totals from replacement baselines and readiness. Expert ranks
 remain available; the live API import remains separate under #30.
+
+MA-002j's [Draft API scoring evidence](MODULAR_DRAFT_API_SCORING.md) routes the
+remaining production Draft scorer through complete, season-scoped evidence and
+checks top-board coverage before reporting import readiness. Provider field
+semantics and ranking-horizon authority remain unresolved under #30.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |
