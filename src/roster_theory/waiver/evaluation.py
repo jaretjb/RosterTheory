@@ -1669,6 +1669,8 @@ def evaluate_waiver(
                 else None
             ),
             scoring=dict(snapshot.league.scoring),
+            league_id=snapshot.league.league_id,
+            season=snapshot.league.season,
             current_week=snapshot.manifest.current_week,
             options=options,
             named_teammate_acquisition_ceiling=contingency.acquisition_option_ceiling,
