@@ -1,6 +1,29 @@
 # Active milestone
 
-## MA-002g - Waiver historical scoring evidence
+## MA-002h - Waiver emerging-scenario scoring evidence
+
+Authorized by the user's September 26 request to continue after merging PR #41.
+Implement a bounded #30 follow-up: value Waiver breakout scenarios only when
+their modeled statistics cover every applicable nonzero Sleeper scoring rule.
+Requirements MR-01, MR-02, MR-04, MR-06 and MR-10; architecture sections 3.1
+and 5. Missing, invalid, unsupported and unknown-applicability rules must block
+the scenario comparison with specific reasons, while unrelated players and the
+base Waiver evaluation remain available. Explicit disabled rules require no
+statistic. Position reception bonuses use the modeled reception count.
+
+Allowed: the Waiver scenario scorer and its scoped rule/evidence translation,
+synthetic regressions and handoff evidence. Keep existing complete-case points,
+saved result shape, Draft/Trade policy and Waiver decision policy. Do not infer
+off-role zero events, change football priors, calibrate, call providers, simulate
+live leagues or mutate league state. Gates: missing-versus-disabled and
+position-bonus cases, unchanged MA-001 complete-data goldens, full suite/Ruff/
+context/privacy/CI. Stop at a tested PR against main; #30 and MA-002 remain open.
+
+Implementation complete: 905 tests pass with unchanged reference goldens;
+Ruff, compilation, context and tracked-tree privacy gates pass. Evidence:
+`docs/MODULAR_EMERGING_SCORING.md`. Required CI and review remain the merge gate.
+
+## Previous MA-002g - Waiver historical scoring evidence (merged PR #41)
 
 Authorized by the user's September 26 request to continue after PR #40 merged.
 Implement a bounded #30 follow-up: score Sleeper season and recent-week

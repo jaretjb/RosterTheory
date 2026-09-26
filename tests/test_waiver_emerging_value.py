@@ -351,6 +351,54 @@ class EmergingScenarioEvaluationTests(unittest.TestCase):
         self.assertEqual(value.status, "SCORING_OR_ADD_INPUT_INCOMPLETE")
         self.assertIn("bonus_first_down", value.strongest_uncertainty)
 
+    def test_missing_applicable_statistic_blocks_only_scenario_value(self):
+        snapshot = scored_snapshot()
+        missing = replace(
+            snapshot,
+            league=replace(
+                snapshot.league,
+                scoring=(*snapshot.league.scoring, ("pass_td", 4.0)),
+            ),
+        )
+        baseline, _ = evaluate_move(emergence_bundle(), snapshot=snapshot)
+        result, _ = evaluate_move(emergence_bundle(), snapshot=missing)
+        value = result.candidates[0].emerging_upside
+        self.assertEqual(value.status, "SCORING_OR_ADD_INPUT_INCOMPLETE")
+        self.assertIn("missing_statistic=pass_td", value.strongest_uncertainty)
+        self.assertEqual(value.scenario_comparisons, ())
+        self.assertEqual(len(result.candidates), 1)
+        self.assertEqual(result.decision_label, baseline.decision_label)
+
+    def test_disabled_rule_does_not_require_absent_statistic(self):
+        snapshot = scored_snapshot()
+        disabled = replace(
+            snapshot,
+            league=replace(
+                snapshot.league,
+                scoring=(*snapshot.league.scoring, ("pass_td", 0.0)),
+            ),
+        )
+        result, _ = evaluate_move(emergence_bundle(), snapshot=disabled)
+        self.assertEqual(result.candidates[0].emerging_upside.status, "COMPLETE")
+
+    def test_position_reception_bonus_uses_scenario_receptions(self):
+        snapshot = scored_snapshot()
+        bonus = replace(
+            snapshot,
+            league=replace(
+                snapshot.league,
+                scoring=(*snapshot.league.scoring, ("bonus_rec_rb", 0.5)),
+            ),
+        )
+        base, _ = evaluate_move(emergence_bundle(), snapshot=snapshot)
+        adjusted, _ = evaluate_move(emergence_bundle(), snapshot=bonus)
+        base_projection = base.candidates[0].emerging_upside.scenario_comparisons[1].act_now.scenario_projections[0]
+        adjusted_projection = adjusted.candidates[0].emerging_upside.scenario_comparisons[1].act_now.scenario_projections[0]
+        self.assertAlmostEqual(
+            adjusted_projection.league_points - base_projection.league_points,
+            dict(adjusted_projection.raw_stats)["rec"] * 0.5,
+        )
+
     def test_hash_verified_offline_replay_preserves_scenario_values(self):
         result, _ = evaluate_move(emergence_bundle())
         expected = result.candidates[0].emerging_upside.valuation_hash
@@ -431,6 +479,8 @@ class BreakEvenAndSymmetryTests(unittest.TestCase):
             add_input=add_input,
             drop_input=drop_input,
             scoring=dict(snapshot.league.scoring),
+            league_id=snapshot.league.league_id,
+            season=snapshot.league.season,
             current_week=1,
             options=options,
         )
@@ -445,6 +495,8 @@ class BreakEvenAndSymmetryTests(unittest.TestCase):
             add_input=drop_input,
             drop_input=add_input,
             scoring=dict(snapshot.league.scoring),
+            league_id=snapshot.league.league_id,
+            season=snapshot.league.season,
             current_week=1,
             options=options,
         )

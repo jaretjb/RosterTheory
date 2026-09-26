@@ -5,7 +5,12 @@ from typing import Mapping, Sequence
 
 from roster_theory.core.models import Projection
 from roster_theory.core.provenance import stable_hash
-from roster_theory.core.scoring import score_stats
+from roster_theory.core.scoring_contract import (
+    ScoringScope,
+    assess_scoring_rules,
+    observed_statistics,
+    score_evidence,
+)
 from roster_theory.inseason.evaluation import (
     ImpactOptions,
     InSeasonContext,
@@ -16,6 +21,7 @@ from roster_theory.inseason.evaluation import (
     weighted_lineup_score,
 )
 from roster_theory.waiver.emergence import EmergenceEvidence, PlayerEmergenceEvidence
+from roster_theory.providers.sleeper_scoring_rules import SLEEPER_LINEAR_RULES
 
 
 FOOTBALL_PRIOR_VERSION = "wa-014-sustainable-efficiency-v1"
@@ -416,6 +422,9 @@ def _state_projections(
     value: EmergingScenarioInput,
     state: str,
     scoring: Mapping[str, float],
+    *,
+    league_id: str,
+    season: int,
 ) -> tuple[tuple[Projection, ...], tuple[str, ...]]:
     if stable_hash(_unsigned_input(value)) != value.input_hash:
         return (), ("Emerging scenario input hash is invalid",)
@@ -439,24 +448,35 @@ def _state_projections(
             )
             * prior.fumbles_lost_per_opportunity,
         }
-        scored = score_stats(raw_stats, scoring)
+        scope = ScoringScope(league_id, season, "WAIVER-EMERGING-SCENARIO", "WEEKLY", assumption.week)
+        assessment = assess_scoring_rules(
+            scoring, scope=scope, catalogue=SLEEPER_LINEAR_RULES,
+            catalogue_version="waiver-emerging-scenario-v1",
+        )
+        evidence = observed_statistics(
+            raw_stats, source="RosterTheory", source_schema="wa-014-scenario-v1",
+            season=season, horizon="WEEKLY", week=assumption.week,
+            position=value.position,
+        )
+        scored = score_evidence(assessment, evidence)
         if not scored.complete:
             warnings.append(
-                "Unsupported non-zero Sleeper scoring settings: "
-                + ", ".join(scored.unsupported_settings)
+                "Scenario scoring evidence incomplete: "
+                + ", ".join(sorted({f"{issue.category}={issue.setting}" for issue in scored.issues}))
             )
+            continue
         projections.append(
             Projection(
                 player_id=value.player_id,
                 horizon="WEEKLY",
                 week=assumption.week,
-                raw_stats=tuple((key, float(raw)) for key, raw in scored.raw_stats),
-                league_points=scored.points,
+                raw_stats=tuple(sorted((key, float(raw)) for key, raw in raw_stats.items())),
+                league_points=scored.require_points(),
                 source=(
                     f"{state_input.source}; {state}; {prior.source}; "
                     f"{state_input.opportunity_transformation}"
                 ),
-                coverage_status="complete" if scored.complete else "partial",
+                coverage_status="complete",
             )
         )
     return tuple(projections), tuple(sorted(set(warnings)))
@@ -657,6 +677,8 @@ def evaluate_emerging_upside(
     add_input: EmergingScenarioInput | None,
     drop_input: EmergingScenarioInput | None,
     scoring: Mapping[str, float],
+    league_id: str,
+    season: int,
     current_week: int,
     options: ImpactOptions,
     named_teammate_acquisition_ceiling: float = 0.0,
@@ -702,7 +724,9 @@ def evaluate_emerging_upside(
         )
     comparisons: list[ScenarioComparison] = []
     for state in SCENARIO_STATES:
-        add_projections, add_warnings = _state_projections(add_input, state, scoring)
+        add_projections, add_warnings = _state_projections(
+            add_input, state, scoring, league_id=league_id, season=season,
+        )
         if add_warnings:
             return _unavailable_valuation(
                 status="SCORING_OR_ADD_INPUT_INCOMPLETE",
@@ -720,7 +744,9 @@ def evaluate_emerging_upside(
             )
         drop_projections: tuple[Projection, ...] = ()
         if drop_input is not None:
-            drop_projections, drop_warnings = _state_projections(drop_input, state, scoring)
+            drop_projections, drop_warnings = _state_projections(
+                drop_input, state, scoring, league_id=league_id, season=season,
+            )
             if drop_warnings:
                 return _unavailable_valuation(
                     status="DROP_EVIDENCE_NOT_READY",
