@@ -5,16 +5,16 @@ Updated: September 26, 2026 (America/Los_Angeles)
 PRs #27/#34 are merged to main. PR #35 merged into its former MA-001 base;
 PR #37 carries that approved contract forward with PR #36's snapshot-clock repair.
 
-MA-002 is authorized on September 26. Active slice MA-002b integrates explicit
-scoring coverage into shared FantasyPros weekly projection preparation for Trade
-and Waiver. Missing/invalid statistics and unsupported/unresolved rules block
-completeness. All 847 tests and 20 CI checks passed at `ae07d4e`.
-PR #37 is held as a draft after the user's clarification: irrelevant missing
-players must not disable independent decisions. MR-02 section 3.1 now defines
-candidate relevance, protected unknown assets and conditional results. Runtime
-decision scoping remains the next implementation step before promotion.
-Evidence: `docs/MODULAR_PROVIDER_SCORING.md`; pure contract history:
-`docs/MODULAR_SCORING_CONTRACT.md`.
+MA-002c implements decision-scoped Trade/Waiver coverage on PR #37. Unknown
+players remain owned and protected from automatic trades/drops. Independent
+moves continue; connected lineup, replacement, holding or secondary dependencies
+produce conditional comparisons. Conditional results cannot become accepted
+offers or affirmative claims. Full-roster forecasts stay incomplete.
+All 860 local tests pass, including unchanged MA-001 goldens. Required PR CI
+and review remain the merge gate. Evidence: `docs/MODULAR_DECISION_COVERAGE.md`.
+Strict source scoring from MA-002b remains: missing/invalid statistics and
+unsupported/unresolved rules block completeness. Source evidence:
+`docs/MODULAR_PROVIDER_SCORING.md`; contract: `docs/MODULAR_SCORING_CONTRACT.md`.
 
 Read `docs/MODULAR_BASELINE.md` only for baseline evidence; implementation loads
 the active milestone and `IMPLEMENTATION_POLICY.md`. Requirements/architecture

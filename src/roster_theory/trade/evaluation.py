@@ -7,6 +7,8 @@ from itertools import combinations
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
+from roster_theory.core.decision_coverage import lineup_dependency_positions, maximum_delta_bound
+from roster_theory.trade.coverage import comparison_roster
 from roster_theory.core.errors import (
     CoverageIncomplete,
     IdentityIncomplete,
@@ -453,6 +455,10 @@ def _secondary_move(
     market_values = _board_map(market_board)
     player_by_id = {row.player_id: row for row in snapshot.players}
     evidenced_ids = valued_player_ids & (set(selected_values) if selected_board is not None else valued_player_ids)
+    if lineup_available:
+        # Unknown players still occupy their roster slots; they cannot become
+        # automatic drops/adds merely because they are absent from a forecast.
+        evidenced_ids &= comparison_roster(snapshot, matrix, evidenced_ids)
     exclusions: dict[str, str] = {}
     if dropping:
         exclusions.update((pid, "VALUE_EVIDENCE_UNAVAILABLE") for pid in roster - evidenced_ids)
@@ -501,8 +507,10 @@ def _secondary_move(
             failures.append("USER_SELECTED_VALUE")
         if not user and market_delta < options.partner_market_floor:
             failures.append("PARTNER_MARKET_VALUE")
-        impact = _team_impact(snapshot, matrix, roster_id, before_roster, candidate_roster, options) if lineup_available else None
-        risk = _risk_impact(snapshot, matrix, roster_id, before_roster, candidate_roster, options) if lineup_available else None
+        known_before = comparison_roster(snapshot, matrix, before_roster)
+        known_after = comparison_roster(snapshot, matrix, candidate_roster)
+        impact = _team_impact(snapshot, matrix, roster_id, known_before, known_after, options) if lineup_available else None
+        risk = _risk_impact(snapshot, matrix, roster_id, known_before, known_after, options) if lineup_available else None
         if user and impact is not None:
             if impact.weighted_delta < 0.0:
                 failures.append("USER_LINEUP_LOSS")
@@ -711,6 +719,7 @@ def diagnose_roster(
     roster_id: str | None = None,
     options: EvaluationOptions = EvaluationOptions(),
     projection_matrix: WeeklyProjectionMatrix | None = None,
+    protect_missing: bool = False,
 ) -> RosterDiagnosis:
     assert_current(snapshot)
     target_id = roster_id or snapshot.user_roster_id
@@ -720,6 +729,8 @@ def diagnose_roster(
     matrix = projection_matrix or build_weekly_projection_matrix(snapshot, projections)
     team = team_by_id[target_id]
     roster = set(team.player_ids) - set(team.reserve_ids)
+    if protect_missing:
+        roster = comparison_roster(snapshot, matrix, roster)
     player_by_id = {player.player_id: player for player in snapshot.players}
     lineups = {
         week.week: _lineup(
@@ -969,6 +980,7 @@ def _decision_assessment(
     modes: Sequence[str],
     options: EvaluationOptions,
     moves: Sequence[SecondaryMove] = (),
+    downside_upper_bound: float | None = None,
 ) -> DecisionAssessment | None:
     if not impacts or not risk_impacts or len(ownership) != 2:
         return None
@@ -984,8 +996,10 @@ def _decision_assessment(
     partner_market_total = (
         partner_value.market_package_delta + partner_value.market_secondary_delta
     )
-    blocking_modes = {"RANK-ONLY", "SCHEDULE-PARTIAL", "MANUAL-LEGALITY"}
+    blocking_modes = {"RANK-ONLY", "SCHEDULE-PARTIAL", "MANUAL-LEGALITY", "DECISION-CONDITIONAL"}
     complete = not bool(blocking_modes.intersection(modes)) and user_selected_total is not None
+    downside_delta = (user_risk.offense_downside_loss_delta if downside_upper_bound is None
+                      else downside_upper_bound)
     # Value/lineup/depth/downside failures are already represented by their
     # individual axes below. Do not turn a partner-value failure into user loss.
     retention_or_asset_failures = {"INJURED_POSITIVE_OWNERSHIP_RETENTION", "RECEIVED_ASSET_DROPPED"}
@@ -1029,11 +1043,13 @@ def _decision_assessment(
         ),
         DecisionGate(
             "user_offense_downside_increase",
-            user_risk.offense_downside_loss_delta,
+            downside_delta,
             "<=",
             options.max_downside_increase,
-            user_risk.offense_downside_loss_delta <= options.max_downside_increase,
-            f"{options.risk_posture.upper()} posture limits added offense-wide downside",
+            downside_delta <= options.max_downside_increase,
+            ("Conservative upper bound on added offense downside; unchanged independent positions cancel"
+             if downside_upper_bound is not None else
+             f"{options.risk_posture.upper()} posture limits added offense-wide downside"),
         ),
         DecisionGate(
             "partner_market_delta",
@@ -1048,7 +1064,9 @@ def _decision_assessment(
             "Required roster moves must satisfy evidence, retention and roster-impact gates",
         ),
     )
-    if all(gate.passed for gate in gates):
+    if "DECISION-CONDITIONAL" in modes:
+        label = "CONDITIONAL"
+    elif all(gate.passed for gate in gates):
         label = "ACCEPTABLE"
     elif not complete or not secondary_safe:
         label = "DECLINE"
@@ -1067,12 +1085,13 @@ def _decision_assessment(
         posture=options.risk_posture.upper(),
         policy_version=options.risk_policy_version,
         gates=gates,
-        intrinsic_outcome=(
+        intrinsic_outcome="CONDITIONAL" if "DECISION-CONDITIONAL" in modes else (
             "WIN" if user_impact.weighted_delta > 0.0 else "NEUTRAL"
         ) if all(gate.passed for gate in gates if gate.name != "partner_market_delta") else "LOSS",
         partner_status="PASS" if partner_market_total >= options.partner_market_floor else "FAIL",
         legality_status="MANUAL_CHECK_REQUIRED" if "MANUAL-LEGALITY" in modes else "MODEL_VALIDATED",
-        confidence="INCOMPLETE" if not complete else (
+        confidence="CONDITIONAL" if "DECISION-CONDITIONAL" in modes else "INCOMPLETE" if not complete else (
+            "SCOPED_PROVISIONAL_MARKET" if "ROSTER-EVIDENCE-PARTIAL" in modes else
             "BUDGET_LIMITED_PROVISIONAL_MARKET" if "BOUNDED-SECONDARY-SEARCH" in modes else "PROVISIONAL_MARKET"
         ),
     )
@@ -1249,16 +1268,19 @@ def evaluate_trade(
     team_by_id = {team.roster_id: team for team in snapshot.teams}
     team_a = team_by_id[package.roster_a_id]
     team_b = team_by_id[package.roster_b_id]
-    relevant_missing = set(dict(snapshot.player_exclusions)) & (
-        (set(team_a.player_ids) - set(team_a.reserve_ids))
-        | (set(team_b.player_ids) - set(team_b.reserve_ids))
-        | {asset.player_id for asset in (*package.from_a, *package.from_b)}
-    )
+    package_ids = {asset.player_id for asset in (*package.from_a, *package.from_b)}
+    relevant_missing = set(dict(snapshot.player_exclusions)) & package_ids
     if relevant_missing:
         raise CoverageIncomplete("Evaluated rosters have unresolved player evidence: " + ", ".join(sorted(relevant_missing)))
-    evaluated_player_ids = {player.player_id for player in snapshot.players}
-    before_a = (set(team_a.player_ids) & evaluated_player_ids) - set(team_a.reserve_ids)
-    before_b = (set(team_b.player_ids) & evaluated_player_ids) - set(team_b.reserve_ids)
+    # Preserve every in-scope occupied slot, including explicitly unresolved
+    # identities. Known out-of-scope assets stay untouched by this feature.
+    roster_universe = {p.player_id for p in snapshot.players} | set(dict(snapshot.player_exclusions))
+    before_a = (set(team_a.player_ids) & roster_universe) - set(team_a.reserve_ids)
+    before_b = (set(team_b.player_ids) & roster_universe) - set(team_b.reserve_ids)
+    if projections and not options.allow_partial_schedule:
+        missing_assets = package_ids - comparison_roster(snapshot, matrix, package_ids)
+        if missing_assets:
+            raise CoverageIncomplete("Weekly projections missing for package assets: " + ", ".join(sorted(missing_assets)))
     sent_a = tuple(asset.player_id for asset in package.from_a)
     sent_b = tuple(asset.player_id for asset in package.from_b)
     after_exchange_a = (before_a - set(sent_a)) | set(sent_b)
@@ -1319,7 +1341,7 @@ def evaluate_trade(
         relevant_issues = tuple(
             row
             for row in projection_coverage.issues
-            if row.scope != "OUTSIDE_EVALUATION"
+            if row.scope in {"PACKAGE", "SECONDARY_MOVE", "SECONDARY_ALTERNATIVE"}
         )
         if relevant_issues and not options.allow_partial_schedule:
             raise CoverageIncomplete(
@@ -1340,13 +1362,17 @@ def evaluate_trade(
     else:
         projection_coverage = ProjectionCoverage(0, 0, 0, 0, 0, 0, ())
 
+    known_before_a = comparison_roster(snapshot, matrix, before_a)
+    known_before_b = comparison_roster(snapshot, matrix, before_b)
+    known_final_a = comparison_roster(snapshot, matrix, final_a)
+    known_final_b = comparison_roster(snapshot, matrix, final_b)
     impacts = (
-        _team_impact(snapshot, matrix, package.roster_a_id, before_a, final_a, options),
-        _team_impact(snapshot, matrix, package.roster_b_id, before_b, final_b, options),
+        _team_impact(snapshot, matrix, package.roster_a_id, known_before_a, known_final_a, options),
+        _team_impact(snapshot, matrix, package.roster_b_id, known_before_b, known_final_b, options),
     ) if projections else ()
     risk_impacts = (
-        _risk_impact(snapshot, matrix, package.roster_a_id, before_a, final_a, options),
-        _risk_impact(snapshot, matrix, package.roster_b_id, before_b, final_b, options),
+        _risk_impact(snapshot, matrix, package.roster_a_id, known_before_a, known_final_a, options),
+        _risk_impact(snapshot, matrix, package.roster_b_id, known_before_b, known_final_b, options),
     ) if projections else ()
     if risk_impacts:
         modes.append("SCENARIO-ONLY-RISK")
@@ -1368,7 +1394,46 @@ def evaluate_trade(
             market_board,
         ),
     )
-    decision = _decision_assessment(impacts, risk_impacts, ownership, modes, options, moves)
+    downside_bound = None
+    protected = (before_a - known_before_a) | (before_b - known_before_b)
+    if projections and protected:
+        modes.append("ROSTER-EVIDENCE-PARTIAL")
+        warnings.append("Protected players with missing evidence remain owned and cannot be traded/dropped: "
+                        + ", ".join(sorted(protected)))
+        warnings.append("Whole-roster totals, exposure shares and risk scenarios describe the known-player subset only")
+        players = {p.player_id: p for p in snapshot.players}
+        dependent = set()
+        for before, after, known in ((before_a, final_a, known_before_a),
+                                     (before_b, final_b, known_before_b)):
+            positions = lineup_dependency_positions(snapshot.league.roster_positions, snapshot.players, before ^ after)
+            dependent.update(pid for pid in before - known if pid not in players
+                             or not players[pid].positions or positions.intersection(players[pid].positions))
+            # Depth compares against replacements across open lineup slots.
+            # An omitted independent component can change that replacement
+            # floor when an unowned player can fill it.
+            missing_positions = lineup_dependency_positions(
+                snapshot.league.roster_positions, snapshot.players, before - known)
+            if any(missing_positions.intersection(players[pid].positions)
+                   for pid in snapshot.free_agent_ids if pid in players):
+                dependent.update(before - known)
+        if dependent or any(move.kind != "NONE" for move in moves):
+            modes.append("DECISION-CONDITIONAL")
+            warnings.append("Conditional comparison assumes protected players do not alter lineups, depth or secondary-move selection; resolve their evidence before treating this as a recommendation")
+        else:
+            # For independent lineup components, each unchanged component's
+            # offense-scenario loss is an unknown constant in both states.
+            # max(after losses)-max(before losses) <= max(per-offense deltas).
+            before_losses = {s.nfl_team: -s.delta_from_central for s in risk_impacts[0].before.scenarios
+                             if s.kind == "OFFENSE_DOWNSIDE"}
+            after_losses = {s.nfl_team: -s.delta_from_central for s in risk_impacts[0].after.scenarios
+                            if s.kind == "OFFENSE_DOWNSIDE"}
+            downside_bound = maximum_delta_bound(before_losses, after_losses, rounding_allowance=0.004)
+            warnings.append("Lineup/depth and asset-value deltas are independent of the protected players; absolute roster forecasts remain incomplete")
+            if downside_bound > options.max_downside_increase:
+                modes.append("DECISION-CONDITIONAL")
+                warnings.append("The conservative downside bound cannot establish the risk gate with missing roster evidence")
+    decision = _decision_assessment(impacts, risk_impacts, ownership, modes, options, moves,
+                                    downside_upper_bound=downside_bound)
     if impacts:
         summary = (
             f"Roster {package.roster_a_id} changes projected starter points by "
@@ -1382,6 +1447,10 @@ def evaluate_trade(
         )
     else:
         summary = "Ownership values are shown without projected lineup impact; no decision label is applied."
+    if "DECISION-CONDITIONAL" in modes:
+        summary = "Conditional known-player comparison; protected missing players may change the outcome. " + summary
+    elif "ROSTER-EVIDENCE-PARTIAL" in modes:
+        summary = "Independent move deltas; absolute whole-roster forecasts remain incomplete. " + summary
     source_times = tuple(
         sorted(
             {

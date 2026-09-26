@@ -1,7 +1,8 @@
 # MA-002b: explicit provider projection coverage
 
-Status: scoring integration tested (847 tests, all 20 CI checks at `ae07d4e`),
-but PR #37 is held as a draft pending decision-specific readiness acceptance.
+Status: scoring integration tested (847 tests, all 20 CI checks at `ae07d4e`).
+PR #37 now also implements [decision-scoped readiness](MODULAR_DECISION_COVERAGE.md)
+with 860 passing local tests; final PR checks remain the merge gate.
 Tracking: [issue #30](https://github.com/jaretjb/RosterTheory/issues/30).
 Requirements: MR-01, MR-02, MR-04, MR-06, MR-09.
 
@@ -39,11 +40,10 @@ issue #30 remain open; this slice does not solve league admission or membership.
 The user's subsequent clarification requires irrelevant missing players to stop
 blocking independent trade/waiver decisions. See
 [MR-02 section 3.1](MODULAR_REQUIREMENTS.md#31-missing-evidence-must-have-decision-specific-consequences).
-The existing roster-wide Trade gate and coarse Waiver position grouping do not
-yet establish that requirement. Preserve this scoring evidence work, but do not
-promote its stricter gates as a usable rollout until candidate relevance and
-conditional results are implemented and tested. This is an acceptance correction,
-not permission to assign zero to unknown players or missing scoring categories.
+MA-002c replaces the roster-wide Trade gate and coarse Waiver position grouping
+with protected assets, dependency checks and conditional comparisons. Its evidence
+and conservative limits are recorded in `MODULAR_DECISION_COVERAGE.md`. This never
+permits assigning zero to unknown players or missing scoring categories.
 
 ## Rule catalogue and source evidence
 

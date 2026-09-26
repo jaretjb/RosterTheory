@@ -16,7 +16,7 @@ from roster_theory.inseason.evaluation import (
     weighted_lineup_score,
 )
 from roster_theory.trade.boards import BoardPlayerValue, ValueBoard
-from roster_theory.trade.coverage import RosterCoverageExclusion, roster_projection_exclusions
+from roster_theory.trade.coverage import RosterCoverageExclusion, comparison_roster, roster_projection_exclusions
 from roster_theory.trade.evaluation import (
     EvaluationOptions,
     PositionDiagnosis,
@@ -445,8 +445,8 @@ def _roster_metrics(
     score_by_roster: dict[str, float],
 ) -> _RosterMetrics:
     user_id = snapshot.user_roster_id
-    user_roster = _active_roster(teams_by_id[user_id])
-    owner_roster = _active_roster(teams_by_id[owner_id])
+    user_roster = comparison_roster(snapshot, matrix, _active_roster(teams_by_id[user_id]))
+    owner_roster = comparison_roster(snapshot, matrix, _active_roster(teams_by_id[owner_id]))
     owner_after = owner_roster - {player_id}
     owner_lineup_cost = round(
         score_by_roster[owner_id] - weighted_lineup_score(context, matrix, owner_after, options),
@@ -763,7 +763,6 @@ def discover_trade_targets(
     context = _context(snapshot)
     matrix = build_weekly_projection_matrix(context, projections)
     roster_exclusions = roster_projection_exclusions(snapshot, matrix)
-    excluded_rosters = {row.roster_id for row in roster_exclusions}
     diagnoses = {
         team.roster_id: diagnose_roster(
             snapshot,
@@ -771,16 +770,15 @@ def discover_trade_targets(
             roster_id=team.roster_id,
             options=options,
             projection_matrix=matrix,
+            protect_missing=True,
         )
         for team in sorted(snapshot.teams, key=lambda row: row.roster_id)
-        if team.roster_id not in excluded_rosters
     }
     score_by_roster = {
         roster_id: weighted_lineup_score(
-            context, matrix, _active_roster(teams_by_id[roster_id]), options
+            context, matrix, comparison_roster(snapshot, matrix, _active_roster(teams_by_id[roster_id])), options
         )
         for roster_id in teams_by_id
-        if roster_id not in excluded_rosters
     }
     candidates: dict[str, list[TradeTarget]] = {kind: [] for kind in TARGET_KINDS}
     for player_id in sorted(fully_valued):
@@ -788,13 +786,6 @@ def discover_trade_targets(
                for week in snapshot.weeks):
             exclusions.append(TargetExclusion(
                 player_id, owners[player_id], None, "TARGET_PROJECTIONS_INCOMPLETE"
-            ))
-            continue
-        if snapshot.user_roster_id in excluded_rosters or owners[player_id] in excluded_rosters:
-            exclusions.append(TargetExclusion(
-                player_id, owners[player_id], None,
-                "USER_ROSTER_PROJECTIONS_INCOMPLETE" if snapshot.user_roster_id in excluded_rosters
-                else "OWNER_ROSTER_PROJECTIONS_INCOMPLETE",
             ))
             continue
         if direct_board is not None and player_id not in price_by_id and player_id not in prior_prices:
@@ -903,6 +894,9 @@ def discover_trade_targets(
                 metrics=metrics,
                 performance=performance,
             )
+            if any(row.roster_id in {snapshot.user_roster_id, owner_id} for row in roster_exclusions):
+                card = replace(card, warnings=(*card.warnings,
+                    "Conditional roster fit: protected missing players are omitted from these estimates; package evaluation determines decision relevance"))
             candidates[kind].append(card)
 
     targets: list[TradeTarget] = []
@@ -929,7 +923,7 @@ def discover_trade_targets(
                 *snapshot.warnings,
                 *summarize_projection_warnings(matrix.warnings),
                 *market_warnings,
-                *(f"Roster {row.roster_id} excluded: {row.reason}; {len(row.missing_player_weeks)} unusable player-weeks"
+                *(f"Roster {row.roster_id} has protected missing evidence: {row.reason}; {len(row.missing_player_weeks)} unusable player-weeks; targets remain conditional"
                   for row in roster_exclusions),
                 "All targets are WATCH until package search clears both teams' exact gates",
                 "Owner disposability is modeled roster evidence, not opponent preference",
@@ -955,6 +949,6 @@ def discover_trade_targets(
         coverage_counts=(("rostered_tradeable", len(rostered_tradeable)),
                          ("fully_valued", len(fully_valued)),
                          ("rosters_total", len(teams_by_id)),
-                         ("rosters_excluded", len(excluded_rosters))),
+                         ("rosters_excluded", 0)),
     )
     return replace(base, evidence_hash=stable_hash(asdict(base)))

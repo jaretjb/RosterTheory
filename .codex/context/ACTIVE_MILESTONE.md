@@ -1,6 +1,30 @@
 # Active milestone
 
-## MA-002b - Provider projection scoring coverage
+## MA-002c - Decision-scoped missing player evidence
+
+Authorized by the user's request to implement MR-02 section 3.1 now.
+Continue on draft PR #37: retain strict source scoring, protect unknown assets
+and roster capacity, preserve independent comparisons and expose conditional
+Trade/Waiver results instead of rejecting an entire roster. Feature-owned
+readiness/search/report paths and neutral lineup dependency mechanics are in
+scope, with offline regression tests and handoff evidence. No invented ranks,
+zero-filled missing forecasts, arbitrary materiality cutoff, live simulation,
+provider refresh, calibration transfer or league action.
+
+Gates: independent comparison invariance; connected FLEX/bye/secondary-move
+dependencies; missing assets cannot be traded/dropped; conditional search and
+reports remain visibly conditional; full tests, unchanged complete-data MA-001
+goldens, measured bounded search overhead, Ruff/context/privacy and required CI.
+Stop at a tested PR handoff; provider schema questions and overall MA-002 remain open.
+
+Implementation complete: 860 tests pass, including unchanged MA-001 goldens;
+unknown assets/capacity, independent projection sweeps, connected future-week
+and secondary dependencies, conditional searches and reports are covered.
+Evidence and repeatable before/after search timings:
+`docs/MODULAR_DECISION_COVERAGE.md`. Final local gates pass; required PR CI and
+review remain the merge gate. No baseline artifacts were regenerated.
+
+## Previous MA-002b - Provider projection scoring coverage (not active)
 
 Active by the user's September 26 request to continue after merging PRs.
 Integrate MA-002a's approved contracts into shared FantasyPros weekly projection

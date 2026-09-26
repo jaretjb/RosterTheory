@@ -150,8 +150,8 @@ def evaluate_entered_trade(
     )
     manifest = finish_trade_run(target, board_refresh, as_of=as_of,
         inputs={'operation': 'exact', 'package': package, 'result_hash': evaluation.evidence_hash}, policy=normalized_options,
-        readiness={'inputs_complete': evaluation.decision.confidence != 'INCOMPLETE',
-                   'search_complete': None, 'candidate_confidence': evaluation.decision.confidence,
+        readiness={'inputs_complete': evaluation.decision is not None and evaluation.decision.confidence not in {'INCOMPLETE', 'CONDITIONAL', 'SCOPED_PROVISIONAL_MARKET'},
+                   'search_complete': None, 'candidate_confidence': evaluation.decision.confidence if evaluation.decision else 'UNAVAILABLE',
                    'informational_warnings': evaluation.warnings})
     save_trade_evaluation(evaluation, target)
     return EnteredEvaluationResult(evaluation, board_refresh, target, manifest)
@@ -360,6 +360,9 @@ def format_trade_evaluation(evaluation: TradeEvaluation) -> str:
             )
         )
     for risk in evaluation.risk_impacts:
+        if "ROSTER-EVIDENCE-PARTIAL" in evaluation.modes:
+            lines.append(f"Roster {risk.roster_id}: whole-roster risk/exposure unavailable; stored scenarios describe the known-player subset")
+            continue
         lines.append(
             f"Roster {risk.roster_id} risk: max offense share "
             f"{risk.before.max_offense_share:.1%}->{risk.after.max_offense_share:.1%} "

@@ -332,9 +332,12 @@ def evaluate_entered_waiver(
                 'request': {'operation': 'exact', 'add': add, 'drop': drop},
                 'result_hash': evaluation.evidence_hash}, policy=policy,
         revalidation=proof, sources=inputs.source_evidence, as_of=evaluation.evaluated_at,
-        readiness={'inputs_complete': evaluation.value_inputs_complete and evaluation.projection_inputs_complete,
+        readiness={'inputs_complete': evaluation.value_inputs_complete and evaluation.projection_inputs_complete
+                   and not any(row.reason in {'INCOMPLETE_PROJECTION_EVIDENCE', 'IDENTITY_UNAVAILABLE', 'INCOMPLETE_VALUE_EVIDENCE'}
+                               for row in evaluation.exclusions),
                    'search_complete': None, 'candidate_confidence': {
-                       'status': 'UNQUANTIFIED', 'decision_label': evaluation.decision_label,
+                       'status': ('CONDITIONAL' if evaluation.decision and evaluation.decision.decision_path == 'CONDITIONAL_ROSTER_EVIDENCE'
+                                  else 'UNQUANTIFIED'), 'decision_label': evaluation.decision_label,
                        'strongest_uncertainty': evaluation.strongest_uncertainty},
                    'informational_warnings': evaluation.warnings})
     save_waiver_evaluation(evaluation, target)
@@ -521,8 +524,10 @@ def _special_team_lines(
         )
         specialist = evaluation.decision.specialist_evidence if evaluation.decision else None
         basis = ""
+        if evaluation.decision and evaluation.decision.decision_path == "CONDITIONAL_ROSTER_EVIDENCE":
+            basis = " | CONDITIONAL: protected missing players may change this comparison"
         if specialist:
-            basis = f" | basis {specialist['basis']}"
+            basis += f" | basis {specialist['basis']}"
             if specialist["performance_complete"]:
                 basis += (f" | season {specialist['season_add_points']:.2f} vs {specialist['season_drop_points']:.2f} pts"
                           f" ({specialist['season_add_games']}/{specialist['season_drop_games']} games)")
@@ -616,6 +621,12 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
     if search.budget_excluded_player_ids:
         lines = [f"BUDGET LIMITED: {len(search.exact_evaluations)}/{len(search.eligible_candidate_ids)} adds evaluated; best overall move is unproved.",
                  "Not evaluated: " + ", ".join(names.get(pid, pid) for pid in search.budget_excluded_player_ids), *lines]
+    if any(row.decision and row.decision.decision_path == "CONDITIONAL_ROSTER_EVIDENCE"
+           for row in search.exact_evaluations):
+        lines = ["CONDITIONAL COMPARISONS: protected missing players may change some results; the best overall move is unproved.", *lines]
+    elif any(gap.reason in {"INCOMPLETE_PROJECTION_EVIDENCE", "IDENTITY_UNAVAILABLE", "INCOMPLETE_VALUE_EVIDENCE"}
+             for row in search.exact_evaluations for gap in row.exclusions):
+        lines = ["PARTIAL ROSTER EVIDENCE: recommendations cover proved-independent moves; the best overall move is unproved.", *lines]
 
     dst_lines = _special_team_lines(search.exact_evaluations, names, "DST")
     if dst_lines:

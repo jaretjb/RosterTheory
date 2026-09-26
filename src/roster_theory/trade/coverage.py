@@ -13,6 +13,20 @@ class RosterCoverageExclusion:
     reason: str = "INCOMPLETE_ROSTER_PROJECTIONS"
 
 
+def comparison_roster(snapshot: TradeSnapshot, matrix: WeeklyProjectionMatrix, roster: set[str]) -> set[str]:
+    """Known comparison subset only; never use this set for ownership/capacity."""
+    players = {player.player_id: player for player in snapshot.players}
+    excluded = dict(snapshot.player_exclusions)
+    # Snapshot construction explicitly records unknown identities. Other IDs
+    # absent from this feature's player universe are known out-of-scope assets
+    # (e.g. K/DST), already ignored by its lineup engine.
+    return {pid for pid in roster if pid not in excluded and (
+        pid not in players or not SKILL_POSITIONS.intersection(players[pid].positions)
+        or all((cell := matrix.cell(pid, week.week)) is not None and cell.points is not None
+               for week in snapshot.weeks)
+    )}
+
+
 def roster_projection_exclusions(
     snapshot: TradeSnapshot, matrix: WeeklyProjectionMatrix,
 ) -> tuple[RosterCoverageExclusion, ...]:

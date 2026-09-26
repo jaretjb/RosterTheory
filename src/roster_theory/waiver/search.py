@@ -428,39 +428,8 @@ def _validate_search_inputs(
                 )
             )
             continue
-        incumbent_special_ids = {
-            roster_id
-            for roster_id in supported_roster
-            if special_positions.intersection(
-                {
-                    "DST" if position.upper() == "DEF" else position.upper()
-                    for position in player_by_id[roster_id].positions
-                }
-            )
-        }
-        incumbent_special_keys = {
-            (roster_id, week.week)
-            for roster_id in incumbent_special_ids
-            for week in ordered_weeks
-        }
-        if special_positions and (
-            not incumbent_special_keys.issubset(projection_map)
-            or any(
-                not projection_is_complete(
-                    projection_map[key], current_week=snapshot.manifest.current_week
-                )
-                for key in incumbent_special_keys
-                if key in projection_map
-            )
-        ):
-            omissions.append(
-                WaiverSearchOmission(
-                    player_id,
-                    acquisition.state,
-                    "ROSTER_POSITION_PROJECTION_UNAVAILABLE",
-                )
-            )
-            continue
+        # Missing incumbents remain protected. The candidate-specific evaluator
+        # determines whether another legal comparison is independent/conditional.
         expected = {(player_id, week.week) for week in ordered_weeks}
         if not expected.issubset(projection_map):
             omissions.append(
@@ -1032,6 +1001,9 @@ def search_waiver_candidates(
         "All eligible adds are evaluated against all supported legal drops unless an explicit budget is supplied; no add-only dominance is assumed",
         "No FAAB bid or claim-success probability was generated",
     }
+    if any(gap.reason in {"INCOMPLETE_PROJECTION_EVIDENCE", "IDENTITY_UNAVAILABLE", "INCOMPLETE_VALUE_EVIDENCE"}
+           for row in ranked for gap in row.exclusions):
+        warnings.add("Protected missing players remain owned; comparisons cover known legal assets and do not establish the best overall move")
     news_scope = (ros_panel_evidence or {}).get('news_coverage')
     if news_scope and not news_scope.get('per_player_complete'):
         warnings.add('News is a limited global feed, not complete per-player coverage; absence is not an all-clear')
@@ -1166,10 +1138,13 @@ def waiver_readiness(search):
                         'NO_PROVED_LEGAL_DROP', 'EXACT_BUDGET_NOT_EVALUATED'}
     missing = [row for row in search.omissions if row.reason not in scope_exclusions]
     return {
-        'inputs_complete': not missing, 'input_gaps': missing,
+        'inputs_complete': not missing and not any(
+            gap.reason in {'INCOMPLETE_PROJECTION_EVIDENCE', 'IDENTITY_UNAVAILABLE', 'INCOMPLETE_VALUE_EVIDENCE'}
+            for row in search.exact_evaluations for gap in row.exclusions), 'input_gaps': missing,
         'search_complete': not search.budget_excluded_player_ids,
         'candidate_confidence': {row.add_player_id: {
-            'status': 'UNQUANTIFIED', 'decision_label': row.decision_label,
+            'status': ('CONDITIONAL' if row.decision and row.decision.decision_path == 'CONDITIONAL_ROSTER_EVIDENCE'
+                       else 'UNQUANTIFIED'), 'decision_label': row.decision_label,
             'strongest_uncertainty': row.strongest_uncertainty,
         } for row in search.exact_evaluations},
         'informational_warnings': list(search.warnings),

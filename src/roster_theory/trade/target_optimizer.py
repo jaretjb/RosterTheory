@@ -16,7 +16,7 @@ from roster_theory.inseason.evaluation import (
     weighted_lineup_score,
 )
 from roster_theory.trade.boards import ValueBoard
-from roster_theory.trade.coverage import RosterCoverageExclusion, roster_projection_exclusions
+from roster_theory.trade.coverage import RosterCoverageExclusion, comparison_roster, roster_projection_exclusions
 from roster_theory.trade.consolidation import ConsolidationEvidence, analyze_consolidation
 from roster_theory.trade.evaluation import (
     DecisionAssessment,
@@ -770,7 +770,9 @@ def _exact_decision(
     dropped = _received_asset_dropped(evaluation)
     forced_add = any(move.kind == "ADD" for move in evaluation.secondary_moves)
     forced_drop = any(move.kind == "DROP" for move in evaluation.secondary_moves)
-    if not complete:
+    if "DECISION-CONDITIONAL" in evaluation.modes:
+        reason = "CONDITIONAL_ROSTER_EVIDENCE"
+    elif not complete:
         reason = "INCOMPLETE_OR_ILLEGAL"
     elif not user_depth_passed:
         reason = "USER_DEPTH_GATE"
@@ -834,7 +836,7 @@ def _exact_decision(
         decision_axes=evaluation.decision,
         recommendation_status=(
             "PROVISIONAL_MARKET" if fairness.mode == "ECR-PROXY" else "SCREENED_OPPORTUNITY"
-        ) if accepted else "NOT_RECOMMENDED",
+        ) if accepted else "CONDITIONAL" if reason == "CONDITIONAL_ROSTER_EVIDENCE" else "NOT_RECOMMENDED",
     )
 
 
@@ -864,6 +866,13 @@ def _frontier(
     opportunities: Sequence[TargetPackageOpportunity],
     limit: int,
 ) -> tuple[TargetPackageOpportunity, ...]:
+    partial = tuple(row for row in opportunities if "ROSTER-EVIDENCE-PARTIAL" in row.evaluation.modes)
+    if partial:
+        supported = _frontier(tuple(row for row in opportunities if "ROSTER-EVIDENCE-PARTIAL" not in row.evaluation.modes), limit)
+        ordered = sorted(partial, key=lambda row: row.intrinsic_outcome == "CONDITIONAL")
+        return (*supported, *(replace(row, objective_tags=(
+            "CONDITIONAL" if row.intrinsic_outcome == "CONDITIONAL" else "SCOPED_COMPARISON",))
+            for row in ordered[:max(0, limit - len(supported))]))
     retained = tuple(
         row
         for row in opportunities
@@ -1065,7 +1074,14 @@ def optimize_target_packages(
     context = _context(snapshot)
     matrix = build_weekly_projection_matrix(context, projections)
     roster_exclusions = roster_projection_exclusions(snapshot, matrix)
-    excluded_rosters = {row.roster_id for row in roster_exclusions}
+    protected = {pid for row in roster_exclusions for pid, _ in row.missing_player_weeks}
+    current_eligible_by_team = {rid: tuple(pid for pid in ids if pid not in protected)
+                                for rid, ids in current_eligible_by_team.items()}
+    prior_eligible_by_team = {rid: tuple(pid for pid in ids if pid not in protected)
+                              for rid, ids in prior_eligible_by_team.items()}
+    comparison_teams = {rid: replace(team, player_ids=tuple(sorted(
+        comparison_roster(snapshot, matrix, set(team.player_ids)))))
+        for rid, team in teams_by_id.items()}
     diagnoses = {
         roster_id: diagnose_roster(
             snapshot,
@@ -1073,19 +1089,18 @@ def optimize_target_packages(
             roster_id=roster_id,
             options=options,
             projection_matrix=matrix,
+            protect_missing=True,
         )
         for roster_id in sorted(teams_by_id)
-        if roster_id not in excluded_rosters
     }
     base_scores = {
         roster_id: weighted_lineup_score(
             context,
             matrix,
-            _active_roster(teams_by_id[roster_id]),
+            _active_roster(comparison_teams[roster_id]),
             options,
         )
         for roster_id in teams_by_id
-        if roster_id not in excluded_rosters
     }
     metric_cache: dict[tuple[str, str, bool], _PlayerMetrics] = {}
     package_delta_cache: dict[tuple[str, tuple[str, ...], tuple[str, ...]], float] = {}
@@ -1097,7 +1112,7 @@ def optimize_target_packages(
                 context=context,
                 matrix=matrix,
                 options=options,
-                teams_by_id=teams_by_id,
+                teams_by_id=comparison_teams,
                 base_scores=base_scores,
                 roster_id=roster_id,
                 player_id=player_id,
@@ -1112,7 +1127,7 @@ def optimize_target_packages(
     ) -> float:
         key = (roster_id, tuple(sent), tuple(received))
         if key not in package_delta_cache:
-            roster = _active_roster(teams_by_id[roster_id])
+            roster = _active_roster(comparison_teams[roster_id])
             after = (roster - set(sent)) | set(received)
             package_delta_cache[key] = round(
                 weighted_lineup_score(context, matrix, after, options) - base_scores[roster_id],
@@ -1158,10 +1173,6 @@ def optimize_target_packages(
         else:
             opponent_ids = (target.roster.owner_roster_id,)
         for opponent_id in opponent_ids:
-            if snapshot.user_roster_id in excluded_rosters or opponent_id in excluded_rosters:
-                key = (target.kind, "TARGET", "INCOMPLETE_ROSTER_PROJECTIONS")
-                construction_rejections[key] = construction_rejections.get(key, 0) + 1
-                continue
             if opponent_id == snapshot.user_roster_id or opponent_id not in teams_by_id:
                 key = (target.kind, "TARGET", "INVALID_TARGET_OWNER")
                 construction_rejections[key] = construction_rejections.get(key, 0) + 1
@@ -1357,11 +1368,12 @@ def optimize_target_packages(
                     options=options,
                 )
                 decisions.append(decision)
-                if not decision.accepted:
+                if ((not decision.accepted and decision.reason != "CONDITIONAL_ROSTER_EVIDENCE")
+                        or decision.user_selected_delta is None or decision.partner_selected_delta is None):
                     key = (lane, package_size, decision.reason)
                     rejection_counts[key] = rejection_counts.get(key, 0) + 1
                     continue
-                accepted_count += 1
+                accepted_count += int(decision.accepted)
                 accepted_rows.append(
                     TargetPackageOpportunity(
                         lane=lane,
@@ -1416,6 +1428,8 @@ def optimize_target_packages(
     )
     passing_by_target: dict[tuple[str, str], int] = dict.fromkeys(target_keys, 0)
     for row in accepted_rows:
+        if row.intrinsic_outcome == "CONDITIONAL":
+            continue
         for target_id in row.generated_by_target_ids:
             key = (row.lane, target_id)
             if key in passing_by_target:

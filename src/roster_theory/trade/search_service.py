@@ -403,7 +403,9 @@ def format_search_result(result: SearchRunResult) -> str:
     names = {row.player_id: row.name for row in snapshot.players}
     lines = [
         f"TRADE ASSISTANT - {result.search.league_key} - {result.search.horizon} OPPORTUNITY SEARCH",
-        f"Returned {len(result.search.opportunities)} non-dominated opportunities; large-package search is bounded, not exhaustive.",
+        (f"Returned {len(result.search.opportunities)} comparisons, including conditional estimates; the best overall package is unproved."
+         if any("ROSTER-EVIDENCE-PARTIAL" in row.evaluation.modes for row in result.search.opportunities) else
+         f"Returned {len(result.search.opportunities)} non-dominated opportunities; large-package search is bounded, not exhaustive."),
         f"Policy {result.search.search_policy_version}: TARGET requires nonnegative selected, market, and raw-projection value; one-starter depth is roster-context limited.",
     ]
     for index, row in enumerate(result.search.opportunities, 1):
@@ -428,7 +430,7 @@ def format_search_result(result: SearchRunResult) -> str:
         )
     lines.append("Coverage (enumerated / pruned / exact / accepted):")
     for row in result.search.roster_exclusions:
-        lines.append(f"  Excluded roster {row.roster_id}: {row.reason}; " + ", ".join(
+        lines.append(f"  Protected missing evidence on roster {row.roster_id}: {row.reason}; " + ", ".join(
             f"{pid}/W{week}" for pid, week in row.missing_player_weeks
         ))
     lines.extend(

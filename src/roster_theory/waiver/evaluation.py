@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from roster_theory.core.decision_coverage import lineup_dependency_positions
+
 import json
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
@@ -1367,6 +1369,8 @@ def evaluate_waiver(
         and _normalized_positions(player_by_id[player_id]).intersection(WAIVER_POSITIONS)
     }
     roster_evidence_exclusion_map = dict(roster_evidence_exclusions or {})
+    unknown_identity_ids = {pid for pid in active_roster
+                            if pid not in player_by_id or not player_by_id[pid].positions}
     roster_evidence_excluded = {
         player_id
         for player_id in active_supported_roster
@@ -1396,10 +1400,11 @@ def evaluate_waiver(
         DropExclusion(player_id, "RESERVE")
         for player_id in sorted(team.reserve_ids)
     ]
+    exclusions.extend(DropExclusion(pid, "IDENTITY_UNAVAILABLE") for pid in sorted(unknown_identity_ids))
     exclusions.extend(
         DropExclusion(player_id, "OUT_OF_SCOPE_POSITION")
         for player_id in sorted(active_roster - active_supported_roster)
-        if player_id not in roster_evidence_excluded
+        if player_id not in roster_evidence_excluded and player_id not in unknown_identity_ids
     )
     exclusions.extend(
         DropExclusion(player_id, roster_evidence_exclusion_map[player_id])
@@ -1522,16 +1527,25 @@ def evaluate_waiver(
 
     candidates: list[DropCandidateEvaluation] = []
     for drop_id in drop_ids:
-        # Skill positions share FLEX/depth dependencies; K and DST are separate.
-        touched = {add_position}
-        if drop_id is not None:
-            touched.add(_waiver_position(player_by_id[drop_id]))
-        if touched.intersection(SKILL_POSITIONS):
-            touched.update(SKILL_POSITIONS)
+        # Resolve the actual slot graph, including superflex and multi-position
+        # eligibility. A standard QB is not automatically an RB/WR/TE dependency.
+        touched = lineup_dependency_positions(snapshot.league.roster_positions, snapshot.players,
+            (add_player.player_id, *((drop_id,) if drop_id is not None else ())))
         pair_projection_complete = not any(
             _normalized_positions(player_by_id[player_id]).intersection(touched)
             for player_id in roster_evidence_excluded
         )
+        missing_positions = lineup_dependency_positions(
+            snapshot.league.roster_positions, snapshot.players, roster_evidence_excluded)
+        if unknown_identity_ids or any(
+            missing_positions.intersection(_normalized_positions(player_by_id[pid]))
+            for pid in context.unowned_player_ids if pid in player_by_id
+        ):
+            pair_projection_complete = False
+        if "QB" in touched and any(_normalized_positions(player_by_id[pid]) & SKILL_POSITIONS
+                                   for pid in roster_evidence_excluded):
+            # QB holding values include the opportunity cost of a bench slot.
+            pair_projection_complete = False
         after = (supported_roster - ({drop_id} if drop_id else set())) | {add_player.player_id}
         lineup_impact = team_impact(
             context,
@@ -1907,11 +1921,11 @@ def evaluate_waiver(
             "excluded from automatic drop selection: "
             + ", ".join(sorted(drop_evidence_excluded))
         )
-    if roster_evidence_excluded:
+    if roster_evidence_excluded or unknown_identity_ids:
         warnings.append(
-            "Roster players with incomplete weekly projections were omitted from "
-            "the lineup calculation: "
-            + ", ".join(sorted(roster_evidence_excluded))
+            "Protected roster players with incomplete evidence remain owned; "
+            "whole-roster totals and risk describe the known-player subset only: "
+            + ", ".join(sorted(roster_evidence_excluded | unknown_identity_ids))
         )
     holding_omissions = tuple(
         sorted(
