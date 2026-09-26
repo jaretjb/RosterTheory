@@ -131,6 +131,8 @@ def search(
     ros_panel_evidence=None,
     drop_legality=None,
     exact_candidate_budget=None,
+    metrics=None,
+    policy_path=POLICY_PATH,
 ):
     return search_waiver_candidates(
         snapshot or complete_search_snapshot(),
@@ -145,10 +147,11 @@ def search(
         emergence_evidence=role_evidence,
         input_bundle_hash="controlled-bundle-hash",
         availability_source="controlled fixture",
-        policy=replace(load_waiver_policy(POLICY_PATH), priority_enabled=False),
+        policy=replace(load_waiver_policy(policy_path), priority_enabled=False),
         enable_pruning=enable_pruning,
         exact_candidate_budget=exact_candidate_budget,
         now=NOW,
+        metrics=metrics,
     )
 
 
@@ -215,6 +218,30 @@ def input_payload(*, league_key="league_alpha"):
 
 
 class WaiverSearchTests(unittest.TestCase):
+    def test_independent_league_coverage_and_metrics_do_not_change_decisions(self):
+        results = {}
+        for league_key in ("league_alpha", "league_beta"):
+            with self.subTest(league_key=league_key):
+                snapshot = complete_search_snapshot(league_key=league_key)
+                policy_path = POLICY_PATH.parent / f"{league_key}.decision-policy.json"
+                metrics = {}
+                measured = search(
+                    snapshot=snapshot, policy_path=policy_path, metrics=metrics,
+                )
+                unmeasured = search(snapshot=snapshot, policy_path=policy_path)
+                self.assertEqual(measured.evidence_hash, unmeasured.evidence_hash)
+                self.assertEqual(metrics["coverage"]["eligible"], len(measured.eligible_candidate_ids))
+                self.assertEqual(metrics["coverage"]["evaluated"], len(measured.exact_evaluations))
+                self.assertEqual(metrics["coverage"]["pruned"], 0)
+                self.assertEqual(metrics["coverage"]["budget_excluded"], 0)
+                self.assertEqual(
+                    set(metrics["stage_ms"]),
+                    {"validation", "ordering", "exact", "branch_validation", "finalize"},
+                )
+                results[league_key] = measured
+        self.assertNotEqual(results["league_alpha"].policy_version, results["league_beta"].policy_version)
+        self.assertNotEqual(results["league_alpha"].evidence_hash, results["league_beta"].evidence_hash)
+
     def test_waiver_value_pruning_keeps_the_highest_scored_target_exact(self):
         rank_by_id = {
             "add": 1,
@@ -1384,6 +1411,8 @@ class WaiverSearchServiceAndCliTests(unittest.TestCase):
             self.assertEqual(result.search.input_bundle_hash, input_payload()["input_hash"])
             machine_report = waiver_search_report(result)
             json.dumps(machine_report, allow_nan=False)
+            self.assertEqual(machine_report["performance"]["coverage"]["evaluated"], len(result.search.exact_evaluations))
+            self.assertEqual(machine_report["performance"]["evidence_bytes"], output_path.stat().st_size)
             self.assertIsInstance(
                 machine_report["exact_evaluations"][0]["evaluated_at"], str
             )

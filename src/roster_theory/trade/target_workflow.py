@@ -55,6 +55,7 @@ class TargetWorkflowResult:
     performance_history: PerformanceHistoryResult | None
     feedback_path: Path | None
     run_manifest: Mapping[str, Any] | None = None
+    performance: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,6 +363,7 @@ def run_target_workflow(
     )
     if search and policy.optimizer is None:
         raise ValueError("Search requires a league-scoped target optimizer policy")
+    performance: dict[str, Any] = {}
     packages = (
         evaluate_at(as_of, optimize_target_packages,
             snapshot,
@@ -372,6 +374,7 @@ def run_target_workflow(
             target_result=targets,
             config=policy.optimizer,
             options=normalized_options,
+            metrics=performance,
         ) if search else None
     )
     prior_board = market.prior_board or (
@@ -441,6 +444,7 @@ def run_target_workflow(
     result = TargetWorkflowResult(
         targets, packages, market, refresh, target, csv_target, evidence_hash,
         policy.status, policy.basis, performance_history, feedback_path, manifest,
+        performance if search else None,
     )
     _write_feedback_template(feedback_path, result)
     if csv_target:
@@ -461,7 +465,26 @@ def load_target_workflow_evidence(path: str | Path) -> dict[str, Any]:
 
 def target_workflow_report(result: TargetWorkflowResult) -> dict[str, Any]:
     value = json.loads(result.output_path.read_text(encoding="utf-8"))
+    # The saved, hash-verified evidence remains complete. The display report
+    # links repeated exact evaluations to their first full occurrence so a
+    # multi-lane package does not print the same large proof several times.
+    seen_evaluations: set[str] = set()
+    for opportunity in (value.get('packages') or {}).get('opportunities', ()):
+        evaluation = opportunity.get('evaluation')
+        if not isinstance(evaluation, dict):
+            continue
+        evaluation_hash = evaluation.get('evidence_hash')
+        if not isinstance(evaluation_hash, str) or not evaluation_hash:
+            continue
+        if evaluation_hash in seen_evaluations:
+            opportunity['evaluation'] = {'evidence_ref': evaluation_hash}
+        else:
+            seen_evaluations.add(evaluation_hash)
+    value['output_path'] = str(result.output_path)
+    value['report_evidence_linking'] = 'Repeated exact evaluations reference the first full occurrence by evidence hash; the saved file is complete.'
     value['run_manifest'] = manifest_summary(result.run_manifest)
+    if result.performance is not None:
+        value['performance'] = {**result.performance, 'evidence_bytes': result.output_path.stat().st_size}
     return value
 
 
