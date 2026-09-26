@@ -1,6 +1,6 @@
 # Modular RosterTheory: supported scope and requirements
 
-Status: Proposed for review; planning only
+Status: Approved planning baseline; implementation requires a separate active milestone
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -14,8 +14,8 @@ tested behavior and evidence safeguards while replacing inconsistent contracts
 and duplicated mechanics incrementally. This is not a rewrite or a universal
 fantasy-platform project.
 
-The user endorsed the staged scope in section 2 and authorized this planning
-package. Detailed contracts and delivery gates remain proposed until reviewed.
+The user approved this planning package and proceeding to the MA-001 baseline.
+Detailed implementation remains bounded by the selected milestone contract.
 Neither document approval, issue creation, nor merging a planning PR activates
 product implementation. Only a separately authorized entry in
 [ACTIVE_MILESTONE.md](../.codex/context/ACTIVE_MILESTONE.md) does that.
@@ -157,7 +157,7 @@ policy labels and promotion gates remain in force.
 
 ## 6. Reconciliation with existing specifications
 
-Upon approval, this package governs only the shared redesign and its validation
+This approved package governs only the shared redesign and its validation
 envelope. Existing product policy and completed reliability protections remain
 authoritative. A conflict not listed here must be resolved in the relevant issue
 before implementation; broad wording here does not override a stronger gate.

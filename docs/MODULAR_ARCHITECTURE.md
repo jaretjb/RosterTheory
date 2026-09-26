@@ -1,6 +1,6 @@
 # Modular RosterTheory: architecture and contracts
 
-Status: Proposed for review; no implementation authorized
+Status: Approved design baseline; implementation requires a separate active milestone
 
 Date: September 25, 2026 (America/Los_Angeles)
 

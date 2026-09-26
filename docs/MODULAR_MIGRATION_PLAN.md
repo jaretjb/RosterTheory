@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: Proposed for review; no product milestone active under this plan
+Status: Approved planning baseline; MA-001 awaits explicit active-milestone entry
 
 Date: September 25, 2026 (America/Los_Angeles)
 

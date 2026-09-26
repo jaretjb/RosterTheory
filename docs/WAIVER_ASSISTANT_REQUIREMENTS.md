@@ -5,10 +5,10 @@ Initial league: `league_alpha`
 Scope: Read-only waiver decision support; this document does not authorize a
 Sleeper roster transaction
 
-Proposed cross-feature redesign: [supported scope and requirements](MODULAR_REQUIREMENTS.md),
+Approved cross-feature redesign: [supported scope and requirements](MODULAR_REQUIREMENTS.md),
 section 6. The initial slice in sections 7-8 is historical scope; it does not
 remove subsequently delivered specialist and conditional-plan behavior recorded
-in [current Waiver status](../.codex/context/status/WAIVER.md). The proposal
+in [current Waiver status](../.codex/context/status/WAIVER.md). The approved plan
 preserves existing safety gates and does not activate new implementation.
 
 ## 1. Purpose

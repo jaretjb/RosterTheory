@@ -13,10 +13,10 @@ test, and unrelated work must not load it.
 Planned delivery tasks and their section-level context references are in
 `docs/TRADE_ASSISTANT_TASKS.md`.
 
-Proposed shared-boundary revision: [modular architecture](MODULAR_ARCHITECTURE.md).
+Approved shared-boundary revision: [modular architecture](MODULAR_ARCHITECTURE.md).
 It maps the extraction of responsibilities described in sections 2-5 and adds
 migration gates alongside sections 15-16. It does not replace Trade policy or
-authorize implementation before review and a separate active milestone.
+authorize implementation without a separate active milestone.
 
 ## 1. Design outcome
 

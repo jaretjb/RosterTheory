@@ -163,10 +163,10 @@ timestamp, and expert/market provenance remain visible.
 
 ## Shared architecture boundary
 
-The proposed [modular architecture](../../docs/MODULAR_ARCHITECTURE.md) and
+The approved [modular architecture](../../docs/MODULAR_ARCHITECTURE.md) and
 [scope reconciliation](../../docs/MODULAR_REQUIREMENTS.md#6-reconciliation-with-existing-specifications)
-refine this boundary for review. They do not activate implementation or replace
-existing feature policy before approval.
+refine this boundary. They do not activate implementation or replace existing
+feature decision policy.
 
 Provider access, canonical identities, league scoring, projections, lineup
 optimization, replacement value, risk, caching, provenance, and evidence may

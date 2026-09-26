@@ -11,10 +11,10 @@ Product-track boundaries and document precedence are defined in
 requirements-only work; load them only under the conditions in the steering
 matrix. None of these planning documents authorizes implementation.
 
-Proposed cross-feature redesign: [supported scope and requirements](MODULAR_REQUIREMENTS.md).
+Approved cross-feature redesign: [supported scope and requirements](MODULAR_REQUIREMENTS.md).
 Its section 6 reconciles this document's sections 2, 6.3, 8.4 and 10-13.
-Until reviewed, it is a proposal; Trade decision policy and existing safety gates
-remain in force. Planning does not activate implementation.
+Trade decision policy and existing safety gates remain in force. Planning does
+not activate implementation.
 
 ## 1. Purpose
 
