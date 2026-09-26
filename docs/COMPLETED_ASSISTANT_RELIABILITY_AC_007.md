@@ -1,8 +1,8 @@
 # AC-007 — Freshness, readiness, provenance, and handoff contracts
 
-Implemented for issue #13, September 25, 2026, in
-[PR #22](https://github.com/jaretjb/RosterTheory/pull/22); GitHub records its merge state.
-AC-008 remains planned; this does not close the reliability audit.
+Merged for issue #13, September 25, 2026, in
+[PR #22](https://github.com/jaretjb/RosterTheory/pull/22) (commit `35c76ba9ff105b196ba8e04b4eb09dce460e1b0d`); all 20 checks passed and issue #13 is closed.
+AC-008 is active on a separate branch; this does not close the reliability audit.
 
 ## Behavior and boundaries
 

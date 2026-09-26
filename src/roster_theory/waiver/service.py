@@ -73,6 +73,7 @@ class WaiverSearchResult:
     output_path: Path
     input_path: Path
     run_manifest: Mapping[str, Any] | None = None
+    performance: Mapping[str, Any] | None = None
 
 
 def _news_freshness(inputs, now):
@@ -382,6 +383,7 @@ def search_waivers(
         availability_by_player=dict(inputs.availability_by_player),
     )
     evaluation_time = now or wall_clock()
+    performance: dict[str, Any] = {}
     search = search_waiver_candidates(
         refresh.snapshot,
         weeks=inputs.weeks,
@@ -403,6 +405,7 @@ def search_waivers(
         # for several minutes, so individual candidates must not acquire
         # different effective timestamps while the search is in progress.
         now=evaluation_time,
+        metrics=performance,
     )
     final_check_time = wall_clock()
     if not is_fresh(inputs.captured_at, timedelta(minutes=10), now=final_check_time):
@@ -422,7 +425,7 @@ def search_waivers(
         revalidation=proof, sources=inputs.source_evidence, as_of=evaluation_time,
         readiness=waiver_readiness(search))
     save_waiver_search(search, target)
-    return WaiverSearchResult(search, refresh, target, input_path, manifest)
+    return WaiverSearchResult(search, refresh, target, input_path, manifest, performance)
 
 
 def waiver_search_report(result: WaiverSearchResult) -> dict[str, Any]:
@@ -431,6 +434,8 @@ def waiver_search_report(result: WaiverSearchResult) -> dict[str, Any]:
     value["input_path"] = str(result.input_path)
     value["refresh_call_plan"] = waiver_refresh_report(result.refresh)["call_plan"]
     value['run_manifest'] = manifest_summary(result.run_manifest)
+    if result.performance is not None:
+        value['performance'] = {**result.performance, 'evidence_bytes': result.output_path.stat().st_size}
     return value
 
 

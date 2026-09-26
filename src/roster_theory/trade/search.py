@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
 from itertools import combinations
+from time import perf_counter
 from typing import Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, RosterIllegal
 from roster_theory.trade.coverage import RosterCoverageExclusion, roster_projection_exclusions
 from roster_theory.core.lineup import lineup_slots
-from roster_theory.core.models import Projection
+from roster_theory.core.models import Player, Projection
 from roster_theory.core.provenance import stable_hash
 from roster_theory.trade.boards import ValuationGap, ValueBoard
 from roster_theory.trade.evaluation import (
@@ -321,7 +322,7 @@ def enumerate_candidate_packages(
 def _prefilter(
     package: TradePackage,
     *,
-    snapshot: TradeSnapshot,
+    player_by_id: Mapping[str, Player],
     diagnostics: Mapping[str, RosterDiagnosis],
     selected_values: Mapping[str, float],
     market_values: Mapping[str, float],
@@ -345,7 +346,6 @@ def _prefilter(
         config.market_band_floor, config.market_band_ratio * market_scale
     ):
         return False, "market_band", (0.0, 0.0, 0, sent, received)
-    player_by_id = {player.player_id: player for player in snapshot.players}
     user_needs, user_surplus = _diagnosis_maps(
         diagnostics[package.roster_a_id], config.near_waiver_need_margin
     )
@@ -577,7 +577,9 @@ def search_league(
     gaps: Sequence[ValuationGap],
     options: EvaluationOptions = EvaluationOptions(),
     config: SearchConfig = SearchConfig(),
+    metrics: dict[str, object] | None = None,
 ) -> LeagueSearchResult:
+    started = perf_counter()
     projection_matrix = build_weekly_projection_matrix(snapshot, projections)
     roster_exclusions = roster_projection_exclusions(snapshot, projection_matrix)
     excluded_rosters = {row.roster_id for row in roster_exclusions}
@@ -596,6 +598,7 @@ def search_league(
     selected_values = _board_values(selected_board)
     market_values = _board_values(market_board)
     gap_by_id = {row.player_id: row for row in gaps}
+    player_by_id = {player.player_id: player for player in snapshot.players}
     user_pool = _candidate_pool(
         snapshot,
         snapshot.user_roster_id,
@@ -603,6 +606,8 @@ def search_league(
         selected_values,
         config.small_pool_per_team,
     ) if snapshot.user_roster_id in diagnosis_by_id else ()
+    setup_finished = perf_counter()
+    exact_seconds = 0.0
     coverage_counts: dict[str, list[int]] = {}
     rejection_counts: dict[str, int] = {}
     opportunities: list[SearchOpportunity] = []
@@ -674,7 +679,7 @@ def search_league(
                 counts[0] += 1
                 keep, reason, sort_key = _prefilter(
                     package,
-                    snapshot=snapshot,
+                    player_by_id=player_by_id,
                     diagnostics=diagnosis_by_id,
                     selected_values=selected_values,
                     market_values=market_values,
@@ -696,6 +701,7 @@ def search_league(
             for _, package in retained[:exact_limit]:
                 size = _package_size(package.from_a, package.from_b)
                 coverage_counts[size][2] += 1
+                exact_started = perf_counter()
                 try:
                     evaluation = evaluate_trade(
                         snapshot,
@@ -710,6 +716,8 @@ def search_league(
                     key = type(exc).__name__
                     rejection_counts[key] = rejection_counts.get(key, 0) + 1
                     continue
+                finally:
+                    exact_seconds += perf_counter() - exact_started
                 opportunity, exact_reason = _opportunity(
                     evaluation,
                     gap_by_id,
@@ -724,6 +732,7 @@ def search_league(
                     continue
                 coverage_counts[size][3] += 1
                 opportunities.append(opportunity)
+    search_finished = perf_counter()
     frontier = _pareto_frontier(opportunities)[: config.max_results]
     coverage = tuple(
         SearchCoverage(size, *coverage_counts[size]) for size in sorted(coverage_counts)
@@ -743,4 +752,22 @@ def search_league(
         evidence_hash="",
         roster_exclusions=roster_exclusions,
     )
-    return replace(base, evidence_hash=stable_hash(asdict(base)))
+    result = replace(base, evidence_hash=stable_hash(asdict(base)))
+    if metrics is not None:
+        finished = perf_counter()
+        metrics.update({
+            "stage_ms": {
+                "setup": round((setup_finished - started) * 1000, 3),
+                "construction": round((search_finished - setup_finished - exact_seconds) * 1000, 3),
+                "exact": round(exact_seconds * 1000, 3),
+                "finalize": round((finished - search_finished) * 1000, 3),
+            },
+            "coverage": {
+                "enumerated": sum(row.enumerated for row in coverage),
+                "pruned": sum(row.pruned for row in coverage),
+                "attempted": sum(row.evaluated for row in coverage),
+                "accepted": sum(row.accepted for row in coverage),
+            },
+            "cache": {"exact_hits": 0, "exact_misses": sum(row.evaluated for row in coverage)},
+        })
+    return result

@@ -204,6 +204,22 @@ class LeagueSearchTests(unittest.TestCase):
             config=config,
         )
 
+    def test_stage_metrics_do_not_change_search_evidence(self) -> None:
+        metrics: dict[str, object] = {}
+        measured = search_league(
+            self.snapshot,
+            projections=projection_fixture(),
+            selected_board=self.selected,
+            market_board=self.market,
+            gaps=self.gaps,
+            metrics=metrics,
+        )
+        unmeasured = self._search(SearchConfig())
+        self.assertEqual(measured.evidence_hash, unmeasured.evidence_hash)
+        self.assertEqual(measured.coverage, unmeasured.coverage)
+        self.assertEqual(metrics["coverage"]["enumerated"], sum(row.enumerated for row in measured.coverage))
+        self.assertEqual(set(metrics["stage_ms"]), {"setup", "construction", "exact", "finalize"})
+
     def test_safe_small_pruning_retains_controlled_exhaustive_frontier(self) -> None:
         exhaustive = self._search(
             SearchConfig(
