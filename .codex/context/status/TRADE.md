@@ -11,26 +11,20 @@ bypass entered gates. Required secondary moves prioritize feasible whole-package
 outcomes, protect injured positive ownership value, and retain value on lineup
 ties. Received-asset drops are unsafe. Missing evidence stays locally disclosed;
 bounded secondary combinations are not claimed exhaustive. ECR-only pricing is
-visibly provisional. Verification: 776 tests, Ruff and diff checks pass.
+visibly provisional. Verification: 792 tests, Ruff and diff checks pass on the
+AC-007 branch.
 No live report, provider refresh or Sleeper write occurred.
 
-AC-005 merged in PR #19. AC-006/#12 is implemented in PR #21; GitHub records its merge state.
+AC-005 merged in PR #19. AC-006/#12 merged in PR #21; issue #12 is closed.
 Format mapping, custom-scoring disclosures, premium raw-stat scoring and season-aware
 resources are covered by `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_006.md`.
-The audit remains open: AC-007–AC-008 cover freshness and integration/performance.
+AC-007/#13 is implemented in PR #22. It adds frozen evaluation time, final live-fact revalidation, source expiry
+checks, honest hourly global-news coverage and hashed replay manifests. Exact,
+comparison, legacy search and target/search workflows preserve independent
+readiness/confidence axes; informational warnings alone do not degrade readiness.
+Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_007.md`.
+The audit remains open: AC-008 covers integration/performance.
 No next milestone is authorized.
-
-Prior work:
-
-- TA-1312 added ROS expert-panel resilience; see
-  `docs/COMPLETED_TRADE_ASSISTANT_TA_1312.md`.
-- TA-1309 isolated direct-chart coverage and indicative prior-week pricing;
-  see `docs/COMPLETED_TRADE_ASSISTANT_TA_1309.md`.
-- TA-1308 added provisional performance context and fairness sensitivity;
-  see `docs/COMPLETED_TRADE_ASSISTANT_TA_1308.md`.
-- TA-1303, TA-1306, and TA-1307 cover leakage-safe performance evidence,
-  consolidation, and target-first presentation; their completed records retain
-  historical acceptance evidence.
 
 TA-1310 empirical calibration remains unpromoted pending sufficient dated
 evidence. Prior fixture/local proofs do not establish general decision consistency;

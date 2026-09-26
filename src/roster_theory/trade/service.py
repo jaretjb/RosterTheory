@@ -33,7 +33,7 @@ def _player_cache_fresh(path: Path, now: datetime) -> bool:
 
         value = json.loads(path.read_text(encoding="utf-8"))
         captured_at = datetime.fromisoformat(str(value["captured_at"]))
-        return is_fresh(captured_at, timedelta(hours=24), now=now)
+        return is_fresh(captured_at, timedelta(minutes=5), now=now)
     except (KeyError, TypeError, ValueError):
         return False
 
