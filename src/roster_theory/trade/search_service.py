@@ -56,6 +56,7 @@ class SearchRunResult:
     output_path: Path
     csv_path: Path | None
     run_manifest: dict[str, Any] | None = None
+    performance: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,6 +236,7 @@ def run_league_search(
     normalized_options = _options_from_policy(options, resolved_policy)
     normalized_config = _config_from_policy(config, resolved_search_policy)
     as_of = datetime.now(timezone.utc)
+    performance: dict[str, Any] = {}
     result = evaluate_at(as_of, search_league,
         refresh.refresh.snapshot,
         projections=refresh.weekly_projections,
@@ -243,6 +245,7 @@ def run_league_search(
         gaps=refresh.gaps,
         options=normalized_options,
         config=normalized_config,
+        metrics=performance,
     )
     target = Path(
         output_path
@@ -283,7 +286,8 @@ def run_league_search(
                 for row in result.opportunities
             ),
         )
-    return SearchRunResult(result, refresh, target, csv_target, manifest)
+    performance['evidence_bytes'] = target.stat().st_size
+    return SearchRunResult(result, refresh, target, csv_target, manifest, performance)
 
 
 def run_package_comparison(

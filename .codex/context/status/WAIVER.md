@@ -5,7 +5,7 @@ Updated: September 25, 2026 (America/Los_Angeles)
 AC-001/#7 through AC-005/#11 merged in PRs #15–#19.
 PR #20 reconciled #11's completion records; issue #11 is closed.
 AC-006/#12 merged in PR #21 with all 20 checks passing; issue #12 is closed.
-AC-007/#13 is implemented in PR #22; GitHub records its merge state.
+AC-007/#13 merged in PR #22 with all 20 checks passing; issue #13 is closed.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_007.md`.
 
 Source observations retain their original times, including cache hits. News uses
@@ -23,10 +23,12 @@ truthful decision paths and tie preservation remain. AC-002 candidate/retention
 safety and AC-003 cross-position, exhaustive search, budget disclosure and
 conditional-claim safeguards remain unchanged.
 
-Historical specialist calibration and league-exact custom expert rankings remain
-unproven/unavailable. No live report, paid refresh or Sleeper mutation ran.
-Verification: 792 tests, Ruff and diff checks pass on the AC-007 branch.
+Specialist calibration and league-exact expert ranks remain unproven.
+No live report, paid refresh or Sleeper mutation ran.
+AC-008/#14 is implemented in PR #23, pending merge.
+Stage timing, exact coverage, and cache sizes are exposed outside hashed Waiver
+evidence. Independent alpha/beta policy fixtures and offline replay remain
+decision-stable. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
+Verification: 797 tests, Ruff and diff checks pass on the AC-008 branch.
 
-The audit is NOT closed. AC-008 remains planned in
-`docs/ASSISTANT_RELIABILITY_TASKS.md`. No next milestone is authorized.
-The assistant remains read-only.
+Audit open; AC-008 unmerged. No next milestone authorized. Read-only.

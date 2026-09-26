@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
 from itertools import combinations
+from time import perf_counter
 from typing import Callable, Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, RosterIllegal
@@ -649,16 +650,24 @@ def _enumerate_for_target(
                     config.fair_market_band_ratio,
                     config.fair_market_band_floor,
                 )
-                user_gain = package_delta(snapshot.user_roster_id, sent, received)
-                partner_gain = package_delta(opponent_id, received, sent)
-                partner_need_hits = sum(
-                    bool(_positions(player_by_id[player_id]) & partner_needs) for player_id in sent
-                )
-                partner_prefilter = bool(
-                    partner_need_hits
-                    or target_owner_disposable
-                    or partner_gain >= config.partner_lineup_floor
-                )
+                # A market-band rejection is recorded before any lineup score is
+                # needed. Its candidate is never used outside the rejection count.
+                if difference > broad_allowed:
+                    user_gain = partner_gain = 0.0
+                    partner_need_hits = 0
+                    partner_prefilter = False
+                else:
+                    user_gain = package_delta(snapshot.user_roster_id, sent, received)
+                    partner_gain = package_delta(opponent_id, received, sent)
+                    partner_need_hits = sum(
+                        bool(_positions(player_by_id[player_id]) & partner_needs)
+                        for player_id in sent
+                    )
+                    partner_prefilter = bool(
+                        partner_need_hits
+                        or target_owner_disposable
+                        or partner_gain >= config.partner_lineup_floor
+                    )
                 candidates.append(
                     _Candidate(
                         lane=target.kind,
@@ -977,9 +986,11 @@ def optimize_target_packages(
     target_result: TargetDiscoveryResult,
     config: TargetOptimizerConfig,
     options: EvaluationOptions = EvaluationOptions(),
+    metrics: dict[str, object] | None = None,
 ) -> TargetPackageSearchResult:
     """Construct and exactly evaluate packages around precomputed target lanes."""
 
+    started = perf_counter()
     assert_current(snapshot)
     if target_result.manifest_id != snapshot.manifest.analysis_id:
         raise CoverageIncomplete("Target evidence belongs to a different snapshot manifest")
@@ -1113,6 +1124,7 @@ def optimize_target_packages(
         _diagnosis_sets(diagnoses[snapshot.user_roster_id])[1]
         if snapshot.user_roster_id in diagnoses else set()
     )
+    setup_finished = perf_counter()
     all_seeds: list[OutgoingSeedEvidence] = []
     candidates_by_key: dict[
         tuple[str, str, str, str, tuple[str, ...], tuple[str, ...]], _Candidate
@@ -1238,10 +1250,16 @@ def optimize_target_packages(
                     _merge_candidate(existing, candidate) if existing else candidate
                 )
 
+    construction_finished = perf_counter()
     decisions: list[EvaluatedPackageDecision] = []
     accepted_rows: list[TargetPackageOpportunity] = []
     coverage: list[LanePackageCoverage] = []
     rejection_counts = dict(construction_rejections)
+    exact_cache: dict[
+        tuple[str, tuple[str, ...], tuple[str, ...]], TradeEvaluation
+    ] = {}
+    exact_cache_hits = 0
+    exact_cache_misses = 0
     for lane in TARGET_KINDS:
         for package_size in PACKAGE_SIZE_LABELS:
             group_key = (lane, package_size)
@@ -1270,21 +1288,32 @@ def optimize_target_packages(
                         PlayerAsset(player_id) for player_id in candidate.received_player_ids
                     ),
                 )
-                try:
-                    evaluation = evaluate_trade(
-                        snapshot,
-                        package,
-                        projections=projections,
-                        selected_board=selected_board,
-                        market_board=market_ecr_board,
-                        options=options,
-                        projection_matrix=matrix,
-                    )
-                except (CoverageIncomplete, RosterIllegal) as exc:
-                    reason = type(exc).__name__.upper()
-                    key = (lane, package_size, reason)
-                    rejection_counts[key] = rejection_counts.get(key, 0) + 1
-                    continue
+                exact_key = (
+                    candidate.opponent_roster_id,
+                    candidate.sent_player_ids,
+                    candidate.received_player_ids,
+                )
+                evaluation = exact_cache.get(exact_key)
+                if evaluation is None:
+                    exact_cache_misses += 1
+                    try:
+                        evaluation = evaluate_trade(
+                            snapshot,
+                            package,
+                            projections=projections,
+                            selected_board=selected_board,
+                            market_board=market_ecr_board,
+                            options=options,
+                            projection_matrix=matrix,
+                        )
+                    except (CoverageIncomplete, RosterIllegal) as exc:
+                        reason = type(exc).__name__.upper()
+                        key = (lane, package_size, reason)
+                        rejection_counts[key] = rejection_counts.get(key, 0) + 1
+                        continue
+                    exact_cache[exact_key] = evaluation
+                else:
+                    exact_cache_hits += 1
                 evaluated_count += 1
                 fairness = _fairness(
                     candidate.sent_player_ids,
@@ -1376,6 +1405,7 @@ def optimize_target_packages(
                 )
             )
 
+    exact_finished = perf_counter()
     opportunities = tuple(
         row
         for lane in TARGET_KINDS
@@ -1449,4 +1479,29 @@ def optimize_target_packages(
         evidence_hash="",
         roster_exclusions=roster_exclusions,
     )
-    return replace(base, evidence_hash=stable_hash(asdict(base)))
+    result = replace(base, evidence_hash=stable_hash(asdict(base)))
+    if metrics is not None:
+        finished = perf_counter()
+        metrics.update({
+            "stage_ms": {
+                "setup": round((setup_finished - started) * 1000, 3),
+                "construction": round((construction_finished - setup_finished) * 1000, 3),
+                "exact": round((exact_finished - construction_finished) * 1000, 3),
+                "finalize": round((finished - exact_finished) * 1000, 3),
+            },
+            "coverage": {
+                "enumerated": sum(row.enumerated for row in coverage),
+                "prefiltered": sum(row.prefiltered for row in coverage),
+                "eligible": sum(row.eligible for row in coverage),
+                "attempted": sum(row.attempted for row in coverage),
+                "evaluated": sum(row.evaluated for row in coverage),
+                "accepted": sum(row.accepted for row in coverage),
+            },
+            "cache": {
+                "exact_hits": exact_cache_hits,
+                "exact_misses": exact_cache_misses,
+                "lineup_entries": len(package_delta_cache),
+                "player_entries": len(metric_cache),
+            },
+        })
+    return result

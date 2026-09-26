@@ -18,8 +18,8 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 | AC-004 | [#10](https://github.com/jaretjb/RosterTheory/issues/10) | Merged in [PR #18](https://github.com/jaretjb/RosterTheory/pull/18) |
 | AC-005 | [#11](https://github.com/jaretjb/RosterTheory/issues/11) | Merged in [PR #19](https://github.com/jaretjb/RosterTheory/pull/19) |
 | AC-006 | [#12](https://github.com/jaretjb/RosterTheory/issues/12) | Merged in [PR #21](https://github.com/jaretjb/RosterTheory/pull/21) |
-| AC-007 | [#13](https://github.com/jaretjb/RosterTheory/issues/13) | Implemented in [PR #22](https://github.com/jaretjb/RosterTheory/pull/22) |
-| AC-008 | [#14](https://github.com/jaretjb/RosterTheory/issues/14) | Planned |
+| AC-007 | [#13](https://github.com/jaretjb/RosterTheory/issues/13) | Merged in [PR #22](https://github.com/jaretjb/RosterTheory/pull/22) |
+| AC-008 | [#14](https://github.com/jaretjb/RosterTheory/issues/14) | Implemented in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23); merge pending |
 
 ## AC-001 — Weekly availability and projection provenance
 
@@ -126,7 +126,7 @@ reuse. Verify provider capabilities against primary documentation before changes
 
 ## AC-007 — Freshness, readiness, provenance, and handoff contracts
 
-Status: implemented in [PR #22](https://github.com/jaretjb/RosterTheory/pull/22).
+Status: merged in [PR #22](https://github.com/jaretjb/RosterTheory/pull/22); issue #13 is closed.
 GitHub records its merge state. Findings: D2, Q3. Depends on AC-002 and AC-004 (merged).
 
 Preserve per-source observation/fetch times and scope news coverage honestly.
@@ -141,7 +141,7 @@ Do not claim complete per-player news from a finite global feed.
 
 ## AC-008 — End-to-end release gates and measured optimization
 
-Status: PLANNED. Findings: Q1, Q2. Depends on AC-003 through AC-007.
+Status: IMPLEMENTED in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23); MERGE PENDING. Findings: Q1, Q2. Depends on AC-003 through AC-007.
 
 Add production-path integration and metamorphic regressions across all repaired
 contracts. Profile fixed saved/synthetic fixtures, move cheap valid filters ahead
@@ -153,6 +153,7 @@ Acceptance: full suite, Ruff, independent league validation, supported-format
 fixtures, bounded/exhaustive comparisons, deterministic replay, output semantics,
 and measured before/after runtime/memory/size with unchanged decision coverage.
 No claimed speedup without measurements and no hidden recommendation pruning.
+Acceptance evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
 
 ## Completion protocol
 
