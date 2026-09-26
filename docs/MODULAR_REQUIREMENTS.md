@@ -57,7 +57,7 @@ not implicitly covered by those 12 cases.
 
 Use public, synthetic profile identifiers:
 
-| Profile | Known intended shape | Verification still required before baseline freeze |
+| Profile | Known intended shape | Required baseline inventory |
 | --- | --- | --- |
 | `reference_a` | 10 teams; half PPR; one RB/WR flex; K and DST | Exact full roster, bench, scoring, waiver, reserve, lock and playoff settings |
 | `reference_b` | 12 teams; half PPR; two RB/WR/TE flexes; five bench; K and DST | Exact full scoring, waiver, reserve, lock and playoff settings |
@@ -68,6 +68,10 @@ invented identities and synthetic player evidence. An authorized implementation
 task must inventory current settings, preserve local provenance, and record the
 redacted rule maps and source-observation date before declaring either profile
 verified. The conversation and old status notes are not current provider facts.
+
+MA-001's [baseline record](MODULAR_BASELINE.md) now contains the observed maps
+and dates. Provider-stat coverage and operation-specific capability remain
+separate evidence gates; observing a rule does not prove support for it.
 
 If actual settings fall outside section 2.1, report the discrepancy and resolve
 the scope before claiming support. Do not modify the user's league or silently

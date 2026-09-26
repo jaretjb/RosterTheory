@@ -1,0 +1,5692 @@
+{
+  "help": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--no-banner"
+      ],
+      "destination": "help_no_banner",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs status": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": false,
+      "nargs": "?",
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--all-leagues"
+      ],
+      "destination": "all_leagues",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--assistant"
+      ],
+      "destination": "assistant",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "draft",
+        "trade",
+        "waiver",
+        "all"
+      ],
+      "default": "all",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--data-dir"
+      ],
+      "destination": "data_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs prepare": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": false,
+      "nargs": "?",
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--all-leagues"
+      ],
+      "destination": "all_leagues",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--assistant"
+      ],
+      "destination": "assistant",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "draft",
+        "trade",
+        "waiver",
+        "all"
+      ],
+      "default": "all",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--data-dir"
+      ],
+      "destination": "data_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--refresh"
+      ],
+      "destination": "refresh",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "auto",
+        "force"
+      ],
+      "default": "auto",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--offline"
+      ],
+      "destination": "offline",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs experts inspect": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--artifact"
+      ],
+      "destination": "artifact",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "draft-accuracy",
+        "inseason-pool",
+        "all"
+      ],
+      "default": "all",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--data-dir"
+      ],
+      "destination": "data_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-category-output"
+      ],
+      "destination": "draft_category_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-annual-output"
+      ],
+      "destination": "draft_annual_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--inseason-accuracy-output"
+      ],
+      "destination": "inseason_accuracy_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--pool-output"
+      ],
+      "destination": "pool_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--audit-output"
+      ],
+      "destination": "audit_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--evidence-dir"
+      ],
+      "destination": "evidence_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs experts validate": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--artifact"
+      ],
+      "destination": "artifact",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "draft-accuracy",
+        "inseason-pool",
+        "all"
+      ],
+      "default": "all",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--data-dir"
+      ],
+      "destination": "data_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-category-output"
+      ],
+      "destination": "draft_category_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-annual-output"
+      ],
+      "destination": "draft_annual_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--inseason-accuracy-output"
+      ],
+      "destination": "inseason_accuracy_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--pool-output"
+      ],
+      "destination": "pool_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--audit-output"
+      ],
+      "destination": "audit_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--evidence-dir"
+      ],
+      "destination": "evidence_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs experts refresh": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--artifact"
+      ],
+      "destination": "artifact",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "draft-accuracy",
+        "inseason-pool",
+        "all"
+      ],
+      "default": "all",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--data-dir"
+      ],
+      "destination": "data_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-category-output"
+      ],
+      "destination": "draft_category_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-annual-output"
+      ],
+      "destination": "draft_annual_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--inseason-accuracy-output"
+      ],
+      "destination": "inseason_accuracy_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--pool-output"
+      ],
+      "destination": "pool_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--audit-output"
+      ],
+      "destination": "audit_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--evidence-dir"
+      ],
+      "destination": "evidence_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--replay-dir"
+      ],
+      "destination": "replay_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--minimum-interval"
+      ],
+      "destination": "minimum_interval",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 1.0,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--pool-size"
+      ],
+      "destination": "pool_size",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 3,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--minimum-pool-size"
+      ],
+      "destination": "minimum_pool_size",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--maximum-source-count"
+      ],
+      "destination": "maximum_source_count",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--freshness-hours"
+      ],
+      "destination": "freshness_hours",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 48.0,
+      "action": "_StoreAction"
+    }
+  ],
+  "inputs experts import": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--artifact"
+      ],
+      "destination": "artifact",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "draft-accuracy",
+        "inseason-pool",
+        "all"
+      ],
+      "default": "all",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--data-dir"
+      ],
+      "destination": "data_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-category-output"
+      ],
+      "destination": "draft_category_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-annual-output"
+      ],
+      "destination": "draft_annual_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--inseason-accuracy-output"
+      ],
+      "destination": "inseason_accuracy_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--pool-output"
+      ],
+      "destination": "pool_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--audit-output"
+      ],
+      "destination": "audit_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--evidence-dir"
+      ],
+      "destination": "evidence_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--input"
+      ],
+      "destination": "input",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--pool-size"
+      ],
+      "destination": "pool_size",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 3,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--minimum-pool-size"
+      ],
+      "destination": "minimum_pool_size",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--maximum-source-count"
+      ],
+      "destination": "maximum_source_count",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--freshness-hours"
+      ],
+      "destination": "freshness_hours",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 48.0,
+      "action": "_StoreAction"
+    }
+  ],
+  "inputs experts": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "inputs schedule inspect": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs schedule validate": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs schedule refresh": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--evidence-output"
+      ],
+      "destination": "evidence_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--replay"
+      ],
+      "destination": "replay",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs schedule import": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--input"
+      ],
+      "destination": "input",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--source"
+      ],
+      "destination": "source",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--source-url"
+      ],
+      "destination": "source_url",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--license"
+      ],
+      "destination": "license",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--captured-at"
+      ],
+      "destination": "captured_at",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--use-restriction"
+      ],
+      "destination": "use_restriction",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--evidence-output"
+      ],
+      "destination": "evidence_output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "inputs schedule": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "inputs": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "setup init": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--replace"
+      ],
+      "destination": "replace",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup import": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--input"
+      ],
+      "destination": "input",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--replace"
+      ],
+      "destination": "replace",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup owner": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--sleeper-username"
+      ],
+      "destination": "sleeper_username",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--sleeper-user-id"
+      ],
+      "destination": "sleeper_user_id",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--update"
+      ],
+      "destination": "update",
+      "required": true,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup add-league": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--name"
+      ],
+      "destination": "name",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--league-id"
+      ],
+      "destination": "league_id",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--user-roster-id"
+      ],
+      "destination": "user_roster_id",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-id"
+      ],
+      "destination": "draft_id",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--user-draft-slot"
+      ],
+      "destination": "user_draft_slot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--team-count"
+      ],
+      "destination": "team_count",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--update"
+      ],
+      "destination": "update",
+      "required": true,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup scaffold": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--artifact"
+      ],
+      "destination": "artifact",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "all",
+        "expert-overrides",
+        "identity-overrides",
+        "draft-preferences",
+        "trade-decision",
+        "trade-search",
+        "waiver-decision",
+        "waiver-wire",
+        "contingencies"
+      ],
+      "default": "all",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--update-config"
+      ],
+      "destination": "update_config",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--replace"
+      ],
+      "destination": "replace",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup list": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": false,
+      "nargs": "?",
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup validate": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": false,
+      "nargs": "?",
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup show-redacted": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": false,
+      "nargs": "?",
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--artifact"
+      ],
+      "destination": "artifact",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "config",
+        "expert-overrides",
+        "identity-overrides",
+        "draft-preferences",
+        "trade-decision",
+        "trade-search",
+        "waiver-decision",
+        "waiver-wire",
+        "contingencies"
+      ],
+      "default": "config",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup explain": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "artifact",
+      "required": false,
+      "nargs": "?",
+      "choices": [
+        "all",
+        "config",
+        "expert-overrides",
+        "identity-overrides",
+        "draft-preferences",
+        "trade-decision",
+        "trade-search",
+        "waiver-decision",
+        "waiver-wire",
+        "contingencies"
+      ],
+      "default": "all",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup override add": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--kind"
+      ],
+      "destination": "kind",
+      "required": true,
+      "nargs": null,
+      "choices": [
+        "expert",
+        "identity"
+      ],
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--scope"
+      ],
+      "destination": "scope",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--subject"
+      ],
+      "destination": "subject",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--action"
+      ],
+      "destination": "action",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--reason"
+      ],
+      "destination": "reason",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--evidence-date"
+      ],
+      "destination": "evidence_date",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--source"
+      ],
+      "destination": "source",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--value"
+      ],
+      "destination": "value",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-id"
+      ],
+      "destination": "fantasypros_id",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--sleeper-id"
+      ],
+      "destination": "sleeper_id",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--team"
+      ],
+      "destination": "team",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--position"
+      ],
+      "destination": "position",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--update"
+      ],
+      "destination": "update",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup override remove": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--kind"
+      ],
+      "destination": "kind",
+      "required": true,
+      "nargs": null,
+      "choices": [
+        "expert",
+        "identity"
+      ],
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--scope"
+      ],
+      "destination": "scope",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--subject"
+      ],
+      "destination": "subject",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--action"
+      ],
+      "destination": "action",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--reason"
+      ],
+      "destination": "reason",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--evidence-date"
+      ],
+      "destination": "evidence_date",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--source"
+      ],
+      "destination": "source",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--value"
+      ],
+      "destination": "value",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-id"
+      ],
+      "destination": "fantasypros_id",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--sleeper-id"
+      ],
+      "destination": "sleeper_id",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--team"
+      ],
+      "destination": "team",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--position"
+      ],
+      "destination": "position",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--update"
+      ],
+      "destination": "update",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--dry-run"
+      ],
+      "destination": "dry_run",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "setup override": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "setup": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "doctor": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": false,
+      "nargs": "?",
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--schedule"
+      ],
+      "destination": "schedule",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--draft-board"
+      ],
+      "destination": "draft_board",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--waiver-inputs"
+      ],
+      "destination": "waiver_inputs",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--details"
+      ],
+      "destination": "details",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "example-config": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "leagues": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "snapshot": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "analyze": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "sleeper-adp-audit": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--board"
+      ],
+      "destination": "board",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2026,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--scoring"
+      ],
+      "destination": "scoring",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "standard",
+        "half_ppr",
+        "ppr"
+      ],
+      "default": "half_ppr",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--cache-dir"
+      ],
+      "destination": "cache_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/sleeper_adp",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "build-board": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--input"
+      ],
+      "destination": "input",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--accuracy"
+      ],
+      "destination": "accuracy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/manual/fantasypros/expert_accuracy_2021_2025.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--ecr-shrinkage"
+      ],
+      "destination": "ecr_shrinkage",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.25,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-expert-share"
+      ],
+      "destination": "max_expert_share",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.2,
+      "action": "_StoreAction"
+    }
+  ],
+  "fantasypros-probe": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "endpoint",
+      "required": true,
+      "nargs": null,
+      "choices": [
+        "experts",
+        "rankings",
+        "consensus",
+        "projections",
+        "players"
+      ],
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2026,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--position"
+      ],
+      "destination": "position",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "RB",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--scoring"
+      ],
+      "destination": "scoring",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "STD",
+      "action": "_StoreAction"
+    }
+  ],
+  "trade-sleeper-probe": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--weeks"
+      ],
+      "destination": "weeks",
+      "required": false,
+      "nargs": "+",
+      "choices": null,
+      "default": [
+        1,
+        15,
+        16,
+        17
+      ],
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--skip-players"
+      ],
+      "destination": "skip_players",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--include-trends"
+      ],
+      "destination": "include_trends",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "trade-fantasypros-probe": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2026,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--week"
+      ],
+      "destination": "week",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 1,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--historical-season"
+      ],
+      "destination": "historical_season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2025,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "trade refresh": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--ranking-horizon"
+      ],
+      "destination": "ranking_horizon",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "WEEKLY-PROXY",
+        "ROS"
+      ],
+      "default": "WEEKLY-PROXY",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--schedule"
+      ],
+      "destination": "schedule",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--player-cache"
+      ],
+      "destination": "player_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/trade/sleeper/players_nfl.json",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "trade values": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-cache"
+      ],
+      "destination": "fantasypros_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/trade/fantasypros/daily_budget.json",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "trade evaluate": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--send"
+      ],
+      "destination": "send",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": [],
+      "action": "_AppendAction"
+    },
+    {
+      "flags": [
+        "--receive"
+      ],
+      "destination": "receive",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": [],
+      "action": "_AppendAction"
+    },
+    {
+      "flags": [
+        "--drop"
+      ],
+      "destination": "drop",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": [],
+      "action": "_AppendAction"
+    },
+    {
+      "flags": [
+        "--add"
+      ],
+      "destination": "add",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": [],
+      "action": "_AppendAction"
+    },
+    {
+      "flags": [
+        "--playoff-weight"
+      ],
+      "destination": "playoff_weight",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 1.0,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--risk-posture"
+      ],
+      "destination": "risk_posture",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "conservative",
+        "balanced",
+        "ceiling"
+      ],
+      "default": "balanced",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--allow-partial"
+      ],
+      "destination": "allow_partial",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--allow-rank-only"
+      ],
+      "destination": "allow_rank_only",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--save-evidence"
+      ],
+      "destination": "save_evidence",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--policy"
+      ],
+      "destination": "policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-cache"
+      ],
+      "destination": "fantasypros_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/trade/fantasypros/daily_budget.json",
+      "action": "_StoreAction"
+    }
+  ],
+  "trade diagnose": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--risk-posture"
+      ],
+      "destination": "risk_posture",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "conservative",
+        "balanced",
+        "ceiling"
+      ],
+      "default": "balanced",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--policy"
+      ],
+      "destination": "policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-cache"
+      ],
+      "destination": "fantasypros_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/trade/fantasypros/daily_budget.json",
+      "action": "_StoreAction"
+    }
+  ],
+  "trade gaps": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--csv"
+      ],
+      "destination": "csv",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-cache"
+      ],
+      "destination": "fantasypros_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/trade/fantasypros/daily_budget.json",
+      "action": "_StoreAction"
+    }
+  ],
+  "trade targets": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--risk-posture"
+      ],
+      "destination": "risk_posture",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "conservative",
+        "balanced",
+        "ceiling"
+      ],
+      "default": "balanced",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--small-pool"
+      ],
+      "destination": "small_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--large-pool"
+      ],
+      "destination": "large_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-exact"
+      ],
+      "destination": "max_exact",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-large-exact"
+      ],
+      "destination": "max_large_exact",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-results"
+      ],
+      "destination": "max_results",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--csv"
+      ],
+      "destination": "csv",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--policy"
+      ],
+      "destination": "policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--target-policy",
+        "--search-policy"
+      ],
+      "destination": "target_policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--trade-market-import"
+      ],
+      "destination": "trade_market_import",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--performance-history"
+      ],
+      "destination": "performance_history",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--ecr-proxy"
+      ],
+      "destination": "ecr_proxy",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-cache"
+      ],
+      "destination": "fantasypros_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/trade/fantasypros/daily_budget.json",
+      "action": "_StoreAction"
+    }
+  ],
+  "trade search": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--risk-posture"
+      ],
+      "destination": "risk_posture",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "conservative",
+        "balanced",
+        "ceiling"
+      ],
+      "default": "balanced",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--small-pool"
+      ],
+      "destination": "small_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--large-pool"
+      ],
+      "destination": "large_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-exact"
+      ],
+      "destination": "max_exact",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-large-exact"
+      ],
+      "destination": "max_large_exact",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-results"
+      ],
+      "destination": "max_results",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--csv"
+      ],
+      "destination": "csv",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--policy"
+      ],
+      "destination": "policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--target-policy",
+        "--search-policy"
+      ],
+      "destination": "target_policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--trade-market-import"
+      ],
+      "destination": "trade_market_import",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--performance-history"
+      ],
+      "destination": "performance_history",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--ecr-proxy"
+      ],
+      "destination": "ecr_proxy",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-cache"
+      ],
+      "destination": "fantasypros_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/trade/fantasypros/daily_budget.json",
+      "action": "_StoreAction"
+    }
+  ],
+  "trade compare": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--packages"
+      ],
+      "destination": "packages",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--risk-posture"
+      ],
+      "destination": "risk_posture",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "conservative",
+        "balanced",
+        "ceiling"
+      ],
+      "default": "balanced",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--policy"
+      ],
+      "destination": "policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--fantasypros-cache"
+      ],
+      "destination": "fantasypros_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--budget"
+      ],
+      "destination": "budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/trade/fantasypros/daily_budget.json",
+      "action": "_StoreAction"
+    }
+  ],
+  "trade": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "waiver refresh": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--player-cache"
+      ],
+      "destination": "player_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/waiver/sleeper/players_nfl.json",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "waiver inputs": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--policy"
+      ],
+      "destination": "policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--waiver-wire-policy"
+      ],
+      "destination": "waiver_wire_policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--contingency-file"
+      ],
+      "destination": "contingency_file",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "waiver evaluate": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--add"
+      ],
+      "destination": "add",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--drop"
+      ],
+      "destination": "drop",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--inputs"
+      ],
+      "destination": "inputs",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--player-cache"
+      ],
+      "destination": "player_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/waiver/sleeper/players_nfl.json",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--policy"
+      ],
+      "destination": "policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--save-evidence"
+      ],
+      "destination": "save_evidence",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "waiver search": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--inputs"
+      ],
+      "destination": "inputs",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--player-cache"
+      ],
+      "destination": "player_cache",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/waiver/sleeper/players_nfl.json",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--policy"
+      ],
+      "destination": "policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--save-evidence"
+      ],
+      "destination": "save_evidence",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--exact-candidate-budget"
+      ],
+      "destination": "exact_candidate_budget",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    }
+  ],
+  "waiver": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    }
+  ],
+  "fantasypros-board": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--accuracy"
+      ],
+      "destination": "accuracy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/manual/fantasypros/expert_accuracy_2021_2025.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--experts"
+      ],
+      "destination": "experts",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 10,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--ecr-shrinkage"
+      ],
+      "destination": "ecr_shrinkage",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.25,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-expert-share"
+      ],
+      "destination": "max_expert_share",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.2,
+      "action": "_StoreAction"
+    }
+  ],
+  "fantasypros-grouped-rankings": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2026,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--accuracy"
+      ],
+      "destination": "accuracy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/manual/fantasypros/expert_accuracy_2021_2025.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--annual-accuracy"
+      ],
+      "destination": "annual_accuracy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/manual/fantasypros/expert_accuracy_annual_2021_2025.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output-dir"
+      ],
+      "destination": "output_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/fantasypros_2026",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--experts"
+      ],
+      "destination": "experts",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 10,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--specialist-experts"
+      ],
+      "destination": "specialist_experts",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 20,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--cohort-size"
+      ],
+      "destination": "cohort_size",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 5,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--ecr-shrinkage"
+      ],
+      "destination": "ecr_shrinkage",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.15,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--specialist-ecr-shrinkage"
+      ],
+      "destination": "specialist_ecr_shrinkage",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.25,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-overrides"
+      ],
+      "destination": "expert_overrides",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/manual/fantasypros/expert_pool_overrides_2026.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-skill-ranking-age-days"
+      ],
+      "destination": "max_skill_ranking_age_days",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 14,
+      "action": "_StoreAction"
+    }
+  ],
+  "fantasypros-accuracy-history": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/manual/fantasypros/expert_accuracy_annual_2021_2025.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--minimum-interval"
+      ],
+      "destination": "minimum_interval",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 1.0,
+      "action": "_StoreAction"
+    }
+  ],
+  "fantasypros-rank-consistency": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2026,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/fantasypros_2026/expert_pools.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--scope"
+      ],
+      "destination": "scope",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "skills_half_ppr",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--scoring"
+      ],
+      "destination": "scoring",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "HALF",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--minimum-interval"
+      ],
+      "destination": "minimum_interval",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 1.0,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--weighted-rankings"
+      ],
+      "destination": "weighted_rankings",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/fantasypros_2026/weighted_rankings.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/fantasypros_2026/rank_consistency_half_ppr.json",
+      "action": "_StoreAction"
+    }
+  ],
+  "fantasypros-league-boards": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--season"
+      ],
+      "destination": "season",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2026,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--rankings"
+      ],
+      "destination": "rankings",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/fantasypros_2026/weighted_rankings.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot-dir"
+      ],
+      "destination": "snapshot_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--source-dir"
+      ],
+      "destination": "source_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/fantasypros_2026",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output-dir"
+      ],
+      "destination": "output_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/league_boards_2026",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--league"
+      ],
+      "destination": "league",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_AppendAction"
+    }
+  ],
+  "fantasypros-scenario-board": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--reception-points"
+      ],
+      "destination": "reception_points",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--rankings"
+      ],
+      "destination": "rankings",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/fantasypros_2026/weighted_rankings.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--source-dir"
+      ],
+      "destination": "source_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/fantasypros_2026",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--sleeper-players"
+      ],
+      "destination": "sleeper_players",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/sleeper_players.json",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output-dir"
+      ],
+      "destination": "output_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/league_boards_2026",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output-key"
+      ],
+      "destination": "output_key",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "manual-board": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--rankings"
+      ],
+      "destination": "rankings",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--projections"
+      ],
+      "destination": "projections",
+      "required": true,
+      "nargs": "+",
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--adp"
+      ],
+      "destination": "adp",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--accuracy"
+      ],
+      "destination": "accuracy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/manual/fantasypros/expert_accuracy_2021_2025.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--expert-pool"
+      ],
+      "destination": "expert_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/manual/fantasypros/expert_pool_2026.csv",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--rankings-mode"
+      ],
+      "destination": "rankings_mode",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "auto",
+        "selected-ecr",
+        "matrix"
+      ],
+      "default": "auto",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--rankings-scoring"
+      ],
+      "destination": "rankings_scoring",
+      "required": true,
+      "nargs": null,
+      "choices": [
+        "standard",
+        "half-ppr",
+        "ppr"
+      ],
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--player-overrides"
+      ],
+      "destination": "player_overrides",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--sleeper-players"
+      ],
+      "destination": "sleeper_players",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/cache/sleeper_players.json",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--refresh-sleeper-players"
+      ],
+      "destination": "refresh_sleeper_players",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--ecr-shrinkage"
+      ],
+      "destination": "ecr_shrinkage",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.25,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-expert-share"
+      ],
+      "destination": "max_expert_share",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.2,
+      "action": "_StoreAction"
+    }
+  ],
+  "simulate": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--board"
+      ],
+      "destination": "board",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--slot"
+      ],
+      "destination": "slot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--all-slots"
+      ],
+      "destination": "all_slots",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--trials"
+      ],
+      "destination": "trials",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 1000,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--seed"
+      ],
+      "destination": "seed",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2026,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--strategies"
+      ],
+      "destination": "strategies",
+      "required": false,
+      "nargs": "+",
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--trace"
+      ],
+      "destination": "trace",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--include-special-teams"
+      ],
+      "destination": "include_special_teams",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--replacement-aware-evaluation"
+      ],
+      "destination": "replacement_aware_evaluation",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--bench-weights"
+      ],
+      "destination": "bench_weights",
+      "required": false,
+      "nargs": "+",
+      "choices": null,
+      "default": [
+        0.1,
+        0.2,
+        0.3
+      ],
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--rank-weights"
+      ],
+      "destination": "rank_weights",
+      "required": false,
+      "nargs": "+",
+      "choices": null,
+      "default": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--history-weight"
+      ],
+      "destination": "history_weight",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--opponent-market-noise"
+      ],
+      "destination": "opponent_market_noise",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 2.5,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--opponent-position-profile"
+      ],
+      "destination": "opponent_position_profile",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "raw",
+        "early_rb",
+        "early_wr",
+        "middle_qb_te"
+      ],
+      "default": "raw",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--snapshot"
+      ],
+      "destination": "snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "recommend": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "league",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--board"
+      ],
+      "destination": "board",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--slot"
+      ],
+      "destination": "slot",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--limit"
+      ],
+      "destination": "limit",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 10,
+      "action": "_StoreAction"
+    }
+  ],
+  "watch-mock": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "draft",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--board"
+      ],
+      "destination": "board",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--league"
+      ],
+      "destination": "league",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--slot"
+      ],
+      "destination": "slot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--user-id"
+      ],
+      "destination": "user_id",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--limit"
+      ],
+      "destination": "limit",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 5,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--poll-seconds"
+      ],
+      "destination": "poll_seconds",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 0.5,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--scoring-override"
+      ],
+      "destination": "scoring_override",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "standard",
+        "half_ppr"
+      ],
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--history-league"
+      ],
+      "destination": "history_league",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--acquisition-mode"
+      ],
+      "destination": "acquisition_mode",
+      "required": false,
+      "nargs": null,
+      "choices": [
+        "human_league",
+        "sleeper_cpu"
+      ],
+      "default": "human_league",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--history-weight"
+      ],
+      "destination": "history_weight",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--history-snapshot"
+      ],
+      "destination": "history_snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--exclude-history-user-id"
+      ],
+      "destination": "exclude_history_user_id",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": [],
+      "action": "_AppendAction"
+    },
+    {
+      "flags": [
+        "--preferences"
+      ],
+      "destination": "preferences",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--preference-league"
+      ],
+      "destination": "preference_league",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--preference-snapshot"
+      ],
+      "destination": "preference_snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--preference-limit"
+      ],
+      "destination": "preference_limit",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": 3,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--max-polls"
+      ],
+      "destination": "max_polls",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--once"
+      ],
+      "destination": "once",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--json"
+      ],
+      "destination": "json",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--show-duplicates"
+      ],
+      "destination": "show_duplicates",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--record-evidence"
+      ],
+      "destination": "record_evidence",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--sleeper-adp-snapshot"
+      ],
+      "destination": "sleeper_adp_snapshot",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--evidence-dir"
+      ],
+      "destination": "evidence_dir",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": "data/exports/mock_evidence",
+      "action": "_StoreAction"
+    }
+  ],
+  "audit-mock-evidence": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [],
+      "destination": "log",
+      "required": true,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--output"
+      ],
+      "destination": "output",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--external-grade"
+      ],
+      "destination": "external_grade",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ],
+  "root": [
+    {
+      "flags": [
+        "-h",
+        "--help"
+      ],
+      "destination": "help",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "action": "_HelpAction"
+    },
+    {
+      "flags": [
+        "--no-banner"
+      ],
+      "destination": "no_banner",
+      "required": false,
+      "nargs": 0,
+      "choices": null,
+      "default": false,
+      "action": "_StoreTrueAction"
+    },
+    {
+      "flags": [
+        "--config"
+      ],
+      "destination": "config",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    }
+  ]
+}

@@ -1,5 +1,30 @@
 # Active milestone
 
+## MA-001 - Reference profiles and migration baseline
+
+Active by user authorization on September 25, 2026. Planning PR #27 is merged.
+MA-001 implementation is complete and locally validated; awaiting PR review/merge.
+Evidence: `docs/MODULAR_BASELINE.md`. All 811 tests and local gates passed.
+Tracking: https://github.com/jaretjb/RosterTheory/issues/29.
+Contract: `docs/MODULAR_MIGRATION_PLAN.md`, section 3; requirements sections 2-5;
+architecture sections 3, 5-6; `IMPLEMENTATION_POLICY.md`.
+
+Allowed: additive synthetic fixtures/tests, offline baseline/benchmark tooling,
+compatibility and defect inventories, and read-only current Sleeper rule capture
+for the two configured reference leagues. Keep raw responses/identity local and
+publish only redacted rules and synthetic evidence. No FantasyPros refresh.
+
+No production algorithm changes, new policy/calibration, live recommendations,
+league mutation or reopened Draft operations. User authorization covers offline
+synthetic validation after completeness checks, not live Draft simulation.
+
+Gates: targeted and full compact unit suite, Ruff, context routing, privacy of
+tracked/index contents, deterministic results, five measured benchmark repeats
+after warm-up, and CI. Stop at a tested MA-001 handoff; unresolved profile/scope
+gaps remain explicit. MA-002 is not activated automatically.
+
+## Previous milestone history (not active)
+
 TA-1313 — Trade Finder projection scoring compatibility is implementation-complete;
 delivery is through PR #25. Projections retain provider-declared scope and use
 verified raw stats with each league's Sleeper rules; ranking authority is
@@ -18,7 +43,7 @@ AC-007 — Freshness, readiness, provenance, and handoff contracts (issue #13)
 merged in PR #22 with all 20 checks passing. AC-008 — End-to-end release gates and
 measured optimization (issue #14) merged in PR #23 with all 20 checks passing;
 issue #14 is closed. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
-No further product implementation milestone is active. New implementation
+No further Trade implementation milestone is active. New implementation
 requires explicit authorization and a separate branch and pull request.
 
 AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
