@@ -19,7 +19,7 @@ Shared code owns factual evidence; Waiver and Trade retain separate policy.
 | AC-005 | [#11](https://github.com/jaretjb/RosterTheory/issues/11) | Merged in [PR #19](https://github.com/jaretjb/RosterTheory/pull/19) |
 | AC-006 | [#12](https://github.com/jaretjb/RosterTheory/issues/12) | Merged in [PR #21](https://github.com/jaretjb/RosterTheory/pull/21) |
 | AC-007 | [#13](https://github.com/jaretjb/RosterTheory/issues/13) | Merged in [PR #22](https://github.com/jaretjb/RosterTheory/pull/22) |
-| AC-008 | [#14](https://github.com/jaretjb/RosterTheory/issues/14) | Implemented in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23); merge pending |
+| AC-008 | [#14](https://github.com/jaretjb/RosterTheory/issues/14) | Merged in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23) |
 
 ## AC-001 — Weekly availability and projection provenance
 
@@ -141,7 +141,7 @@ Do not claim complete per-player news from a finite global feed.
 
 ## AC-008 — End-to-end release gates and measured optimization
 
-Status: IMPLEMENTED in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23); MERGE PENDING. Findings: Q1, Q2. Depends on AC-003 through AC-007.
+Status: MERGED in [PR #23](https://github.com/jaretjb/RosterTheory/pull/23); issue #14 is closed. Findings: Q1, Q2. Depends on AC-003 through AC-007.
 
 Add production-path integration and metamorphic regressions across all repaired
 contracts. Profile fixed saved/synthetic fixtures, move cheap valid filters ahead

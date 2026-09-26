@@ -25,10 +25,10 @@ conditional-claim safeguards remain unchanged.
 
 Specialist calibration and league-exact expert ranks remain unproven.
 No live report, paid refresh or Sleeper mutation ran.
-AC-008/#14 is implemented in PR #23, pending merge.
+AC-008/#14 merged in PR #23 with all 20 checks passing; issue #14 is closed.
 Stage timing, exact coverage, and cache sizes are exposed outside hashed Waiver
 evidence. Independent alpha/beta policy fixtures and offline replay remain
 decision-stable. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
-Verification: 797 tests, Ruff and diff checks pass on the AC-008 branch.
+Verification: 797 tests, Ruff and diff checks passed for AC-008.
 
-Audit open; AC-008 unmerged. No next milestone authorized. Read-only.
+Audit open; no next milestone authorized. Read-only.

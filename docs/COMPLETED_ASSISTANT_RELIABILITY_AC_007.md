@@ -2,7 +2,7 @@
 
 Merged for issue #13, September 25, 2026, in
 [PR #22](https://github.com/jaretjb/RosterTheory/pull/22) (commit `35c76ba9ff105b196ba8e04b4eb09dce460e1b0d`); all 20 checks passed and issue #13 is closed.
-AC-008 is active on a separate branch; this does not close the reliability audit.
+AC-008 merged in PR #23; the reliability audit remains open.
 
 ## Behavior and boundaries
 

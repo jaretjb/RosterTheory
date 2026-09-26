@@ -20,13 +20,13 @@ It adds frozen evaluation time, final live-fact and source-expiry checks,
 hourly global-news disclosure and hashed offline replay. Readiness and
 confidence remain separate; informational warnings do not degrade readiness.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_007.md`.
-AC-008/#14 is implemented in PR #23, pending merge.
+AC-008/#14 merged in PR #23 with all 20 checks passing; issue #14 is closed.
 Identical exact packages are cached across target lanes within a run while
 lane-specific gates remain separate. Cheap market rejection precedes lineup
 calculation; stage/coverage/cache diagnostics are outside hashed evidence.
 Repeated exact proofs are linked in the display report; saved evidence remains
 complete. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
-Verification: 797 tests, Ruff and diff checks pass on the AC-008 branch.
+Verification: 797 tests, Ruff and diff checks passed for AC-008.
 Audit open; no next milestone authorized.
 
 TA-1310 empirical calibration remains unpromoted pending sufficient dated
