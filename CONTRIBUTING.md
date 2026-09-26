@@ -1,8 +1,6 @@
 # Contributing to RosterTheory
 
 RosterTheory is a local, read-only fantasy-football decision-support project.
-The initial release is GitHub source-only. Contributions are welcome once the
-repository is made public; this file does not announce publication.
 
 Before changing a product track, read `.codex/context/STEERING.md` and follow its one
 route. `.codex/context/ACTIVE_MILESTONE.md` authorizes implementation; do not promote a
