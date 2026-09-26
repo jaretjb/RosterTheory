@@ -1,4 +1,4 @@
-"""Conservative FantasyPros weekly-stat translation into the scoring contract.
+"""Conservative FantasyPros projection translation into the scoring contract.
 
 This catalogue declares arithmetic, not provider coverage. Missing fields are
 never zero. See docs/MODULAR_PROVIDER_SCORING.md for sources and limitations.
@@ -16,6 +16,7 @@ from roster_theory.providers.sleeper_scoring_rules import INDIVIDUALS, SLEEPER_L
 
 
 SCORING_CONTRACT_VERSION = "fantasypros-weekly-v1"
+DRAFT_SCORING_CONTRACT_VERSION = "fantasypros-draft-season-v1"
 WEEKLY_RULES = SLEEPER_LINEAR_RULES
 
 # Explicit aliases retained from the existing NFL adapter where category
@@ -52,7 +53,9 @@ def statistic_number(raw: object) -> float | None:
     return value if isfinite(value) else None
 
 
-def score_projection_row(row: Mapping[str, object], assessment: RuleAssessment) -> ScoredEvidence:
+def _score_projection_row(
+    row: Mapping[str, object], assessment: RuleAssessment, source_schema: str,
+) -> ScoredEvidence:
     stats = row.get("stats")
     stats = stats if isinstance(stats, Mapping) else {}
     position = str(row.get("position_id") or "").upper()
@@ -76,9 +79,21 @@ def score_projection_row(row: Mapping[str, object], assessment: RuleAssessment) 
             observations.append(StatObservation(statistic, present[0][1], "OBSERVED",
                 "Provider field: " + ", ".join(key for key, _ in present)))
     scope = assessment.scope
-    evidence = StatEvidence(1, "FantasyPros", SCORING_CONTRACT_VERSION, scope.season,
+    evidence = StatEvidence(1, "FantasyPros", source_schema, scope.season,
                             scope.horizon, scope.week, position, tuple(observations))
     return score_evidence(assessment, evidence)
+
+
+def score_projection_row(row: Mapping[str, object], assessment: RuleAssessment) -> ScoredEvidence:
+    """Score existing weekly/ROS projections without changing their source schema."""
+    return _score_projection_row(row, assessment, SCORING_CONTRACT_VERSION)
+
+
+def score_draft_projection_row(row: Mapping[str, object], assessment: RuleAssessment) -> ScoredEvidence:
+    """Score season projections with an explicitly preseason Draft source schema."""
+    if assessment.scope.horizon != "SEASON":
+        raise ValueError("Draft projection scoring requires a season scope")
+    return _score_projection_row(row, assessment, DRAFT_SCORING_CONTRACT_VERSION)
 
 
 def scoring_coverage(result: ScoredEvidence) -> str:

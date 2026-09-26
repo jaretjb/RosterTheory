@@ -1,6 +1,32 @@
 # Active milestone
 
-## MA-002i - Draft manual projection scoring evidence
+## MA-002j - Draft API projection scoring evidence
+
+Authorized by the user's September 26 request to continue after merging PR #43.
+Implement a bounded #30 follow-up for the FantasyPros preseason API board:
+assess actual Sleeper rules and season-scoped provider statistics; use only
+complete projections for point totals and replacement baselines; report missing,
+invalid, ambiguous and unsupported scoring evidence without losing independent
+expert ranks. Keep provider-declared scope distinct from ranking authority.
+Requirements MR-01, MR-02, MR-04, MR-06, MR-09, MR-10; architecture sections
+3.1 and 5.
+
+Allowed: the Draft API projection adapter, board preparation and its readiness
+report, CLI scope handoff, synthetic regressions and evidence. Do not call paid
+providers during implementation or tests. Do not change manual import, expert
+weights, acquisition policy, live Draft operation, Trade/Waiver behavior or
+league state. Missing fields are not zero without verified provider evidence.
+Preserve complete-case point totals, board columns and command names; additive
+metadata/issue evidence is allowed. Gates: missing-versus-explicit-zero,
+invalid/unsupported/ambiguous source and scope cases, unchanged reference
+goldens, full suite/Ruff/context/privacy/CI. Stop at a tested PR against main;
+#30 and MA-002 remain open.
+
+Implementation complete: 910 tests pass with unchanged reference goldens;
+Ruff, compilation, context and tracked-tree privacy gates pass. Evidence:
+`docs/MODULAR_DRAFT_API_SCORING.md`. Required CI and review remain the merge gate.
+
+## Previous MA-002i - Draft manual projection scoring evidence (merged PR #43)
 
 Authorized by the user's September 26 request to continue after merging PR #42.
 Implement a bounded #30 follow-up for the manual FantasyPros preseason export:
