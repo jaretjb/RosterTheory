@@ -163,6 +163,11 @@ timestamp, and expert/market provenance remain visible.
 
 ## Shared architecture boundary
 
+The approved [modular architecture](../../docs/MODULAR_ARCHITECTURE.md) and
+[scope reconciliation](../../docs/MODULAR_REQUIREMENTS.md#6-reconciliation-with-existing-specifications)
+refine this boundary. They do not activate implementation or replace existing
+feature decision policy.
+
 Provider access, canonical identities, league scoring, projections, lineup
 optimization, replacement value, risk, caching, provenance, and evidence may
 be shared. Product policy and feature-specific orchestration stay in their own

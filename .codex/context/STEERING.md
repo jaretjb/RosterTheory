@@ -1,9 +1,8 @@
 # RosterTheory context router
 
-Updated: September 14, 2026 (America/Los_Angeles)
+Updated: September 25, 2026 (America/Los_Angeles)
 
-At task start, read only this file. Select one route and load only its row.
-Load named sections/task rows by heading/ID.
+At task start, read only this file. Select one route; load its named sections/task IDs.
 
 Implementation/provider routes also load
 `.codex/context/IMPLEMENTATION_POLICY.md`.
@@ -21,6 +20,7 @@ Implementation/provider routes also load
 | Draft status or work | `.codex/context/status/DRAFT.md` |
 | Draft planning or implementation | Draft status, selected `docs/OPEN_TASKS.md` row, then active milestone for implementation only |
 | Shared architecture | Only relevant sections of `.codex/context/PROJECT_CONTEXT.md` and affected track status files |
+| Modular redesign planning | Selected sections of `docs/MODULAR_REQUIREMENTS.md`, `docs/MODULAR_ARCHITECTURE.md`, and `docs/MODULAR_MIGRATION_PLAN.md` |
 | Open-source release planning | `docs/OPEN_SOURCE_RELEASE_TASKS.md` |
 | Open-source release implementation | Selected `docs/OPEN_SOURCE_RELEASE_TASKS.md` row, `.codex/context/ACTIVE_MILESTONE.md`, and `.codex/context/IMPLEMENTATION_POLICY.md` |
 | Terminal experience design or planning | Only relevant sections of `docs/TERMINAL_EXPERIENCE_DESIGN.md` and selected `docs/TERMINAL_EXPERIENCE_TASKS.md` row |
@@ -29,8 +29,8 @@ Implementation/provider routes also load
 | Project-wide status, priorities, or “what's next?” | `.codex/context/DEVELOPMENT_STATUS.md`, then only the backlog row or track status it names |
 | Historical audit | Only the named public record; use private local evidence solely when the user explicitly requests it and it is available |
 
-Never preload all track files, whole backlogs, full designs, completed records,
-runbooks, or private local history evidence. Only
+Do not preload unrelated status, backlogs, designs, completed records,
+runbooks, or private history. Only
 `.codex/context/ACTIVE_MILESTONE.md` authorizes implementation.
 
 ## Git workflow

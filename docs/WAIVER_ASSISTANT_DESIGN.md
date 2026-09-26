@@ -3,6 +3,11 @@
 Status: Initial design for the approved League Alpha vertical slice
 Updated: September 9, 2026 (America/Los_Angeles)
 
+Approved extraction plan: [modular architecture](MODULAR_ARCHITECTURE.md),
+sections 2-4, and [migration plan](MODULAR_MIGRATION_PLAN.md). These refine the
+temporary Trade-import seam below; implementation requires a separate active
+milestone. Waiver decision policy and safety gates remain in force.
+
 ## Architecture
 
 The Waiver Assistant is a separate product adapter over feature-neutral
