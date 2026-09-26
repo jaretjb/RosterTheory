@@ -152,7 +152,9 @@ def build_trade_snapshot(
             "Duplicate Sleeper ownership: " + ", ".join(sorted(duplicates))
         )
     player_by_id = {player.player_id: player for player in sleeper.players}
-    require_membership(league, sleeper.teams)
+    membership = require_membership(league, sleeper.teams, allow_capacity_overage=True)
+    warnings = (*warnings, *(f"{row.status}: {row.code} on roster {row.roster_id}"
+                             for row in membership.issues if row.status == "OVER_LIMIT"))
     missing = sorted(player_id for player_id in owner_by_player if player_id not in player_by_id)
 
     rostered_skill_ids = {
@@ -459,6 +461,6 @@ def assert_current(
 ) -> None:
     if not snapshot.current:
         raise StaleData("Offline Trade snapshot is non-current")
-    require_membership(snapshot.league, snapshot.teams)
+    require_membership(snapshot.league, snapshot.teams, allow_capacity_overage=True)
     if not is_fresh(snapshot.captured_at, maximum_age, now=now or evaluation_time()):
         raise StaleData("Sleeper ownership exceeds the current-run freshness gate")

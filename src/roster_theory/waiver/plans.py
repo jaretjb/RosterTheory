@@ -36,6 +36,8 @@ def hypothetical_claim(snapshot: WaiverSnapshot, add: str, drop: str | None) -> 
     """Update all roster/ownership views; never make a drop an instant free agent."""
     team = next(row for row in snapshot.teams if row.roster_id == snapshot.user_roster_id)
     capacity = next(row for row in snapshot.roster_capacity if row.roster_id == team.roster_id)
+    if not capacity.capacity_legal or not capacity.reserve_legality_known or not capacity.reserve_legal:
+        raise RosterIllegal("Current roster capacity or reserve legality prevents a claim branch")
     if add in dict(snapshot.owner_by_player):
         raise RosterIllegal("Target already owned on this branch")
     if drop is None and capacity.open_active_slots < 1:

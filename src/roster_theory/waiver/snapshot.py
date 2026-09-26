@@ -184,7 +184,7 @@ def classify_acquisition_state(
 
 
 def _capacity(league: LeagueRules, team: FantasyTeam, players=()) -> RosterCapacity:
-    membership = require_membership(league, (team,)).rosters[0]
+    membership = require_membership(league, (team,), allow_capacity_overage=True).rosters[0]
     player_ids = set(team.player_ids)
     starter_ids = {player_id for player_id in team.starter_ids if player_id != "0"}
     reserve_ids = set(team.reserve_ids)
@@ -200,10 +200,6 @@ def _capacity(league: LeagueRules, team: FantasyTeam, players=()) -> RosterCapac
     capacity_legal = active_count <= active_limit and (
         not reserve_known or len(player_ids) <= active_limit + int(reserve_limit)
     )
-    if not capacity_legal:
-        raise RosterIllegal(f"Roster {team.roster_id} exceeds its configured capacity")
-    if reserve_known and not reserve_legal:
-        raise RosterIllegal(f"Roster {team.roster_id} exceeds its reserve capacity")
     eligibility = reserve_eligibility(league, team, players)
     reserve_known = reserve_known and not any(row.status == "UNKNOWN" for row in eligibility)
     reserve_legal = reserve_legal and not eligibility
@@ -277,7 +273,7 @@ def build_waiver_snapshot(
         if player.player_id in supported_rostered_ids
         or (player.active is True and SUPPORTED_POSITIONS.intersection(player.positions))
     )
-    require_membership(league, sleeper.teams)
+    membership = require_membership(league, sleeper.teams, allow_capacity_overage=True)
     capacities = tuple(_capacity(league, team, sleeper.players) for team in sleeper.teams)
     explicit = availability_by_player or {}
     acquisitions = tuple(
@@ -296,6 +292,8 @@ def build_waiver_snapshot(
     reserve_complete = all(item.reserve_legality_known and item.reserve_legal for item in capacities)
     acquisition_complete = unclassified_count == 0
     warnings: list[str] = []
+    warnings.extend(f"{row.status}: {row.code} on roster {row.roster_id}"
+                    for row in membership.issues if row.status == "OVER_LIMIT")
     if not reserve_complete:
         warnings.append("Reserve-slot limits or eligibility are incomplete for one or more rosters")
         warnings.extend(f"{row.status}: {row.code} on roster {row.roster_id}: {','.join(row.player_ids)}"
@@ -571,7 +569,7 @@ def assert_current(
 ) -> None:
     if not snapshot.current:
         raise StaleData("Offline Waiver snapshot is non-current")
-    require_membership(snapshot.league, snapshot.teams)
+    require_membership(snapshot.league, snapshot.teams, allow_capacity_overage=True)
     maximum_age = timedelta(seconds=snapshot.freshness_window_seconds)
     if not is_fresh(snapshot.captured_at, maximum_age, now=now or datetime.now(timezone.utc)):
         raise StaleData("Sleeper waiver inputs exceed the current-run freshness gate")
