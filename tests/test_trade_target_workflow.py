@@ -43,6 +43,9 @@ class TargetWorkflowTests(unittest.TestCase):
                 output_path=root / "boards.json",
             )
             with (
+                patch('roster_theory.trade.evaluation_service.revalidate_snapshot', return_value={
+                    'verified_at': snapshot.captured_at.isoformat(), 'status': 'UNCHANGED',
+                }),
                 patch("roster_theory.trade.target_workflow.resolve_league_policy_path", return_value=policy_path),
                 patch("roster_theory.trade.target_workflow._options_from_policy", return_value=permissive_options()),
                 patch("roster_theory.trade.target_workflow.refresh_value_boards", return_value=refresh) as board_refresh,
@@ -62,6 +65,11 @@ class TargetWorkflowTests(unittest.TestCase):
                     output_path=root / "proxy.json", proxy_only=True,
                 )
             self.assertEqual(board_refresh.call_count, 3)
+            from roster_theory.trade.replay import replay_trade_manifest
+            for report in (targets, search, proxy):
+                replayed = replay_trade_manifest(report.output_path.with_suffix('.manifest.json'))
+                self.assertFalse(replayed['current'])
+                self.assertEqual(replayed['result']['targets']['evidence_hash'], report.targets.evidence_hash)
             self.assertEqual(market_resolve.call_count, 3)
             self.assertTrue(all(call.kwargs["source"] is None for call in market_resolve.call_args_list))
             self.assertEqual(proxy.targets.pricing_mode, "ECR-PROXY")

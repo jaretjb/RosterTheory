@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from roster_theory.core.provenance import stable_hash
+from roster_theory.core.run_contract import evaluate_at, manifest_summary, record_run, revalidate_snapshot, validate_sources
+from datetime import datetime, timezone
 from roster_theory.fantasypros import FantasyProsClient
 from roster_theory.providers.cache import atomic_write_json
 from roster_theory.sleeper import resolve_league_policy_path
@@ -27,6 +29,24 @@ class EnteredEvaluationResult:
     evaluation: TradeEvaluation
     board_refresh: BoardRefreshResult
     output_path: Path
+    run_manifest: dict[str, Any] | None = None
+
+
+def finish_trade_run(target, refresh, *, inputs, policy, readiness, as_of=None):
+    proof = revalidate_snapshot(refresh.refresh.snapshot)
+    sources = getattr(refresh, 'source_evidence', ())
+    market = inputs.get('trade_market')
+    if market is not None and market.board is not None and market.mode != 'PRIOR_WEEK_MARKET':
+        sources = (*sources, {'name': 'Trade market', 'captured_at': market.board.as_of.isoformat(),
+                              'maximum_age_seconds': 36 * 3600,
+                              'payload_hash': market.board.evidence_hash})
+    validate_sources(sources, now=datetime.fromisoformat(proof['verified_at']))
+    return record_run(target, snapshot=refresh.refresh.snapshot,
+        inputs={
+            'projections': refresh.weekly_projections,
+            'selected_board': refresh.selected_final, 'market_board': refresh.market,
+            'news_coverage': getattr(refresh, 'news_coverage', None), **inputs,
+        }, policy=policy, revalidation=proof, readiness=readiness, sources=sources, as_of=as_of)
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,7 +108,8 @@ def evaluate_entered_trade(
         fantasypros_client=fantasypros_client,
     )
     snapshot = board_refresh.refresh.snapshot
-    package = build_entered_package(snapshot, send=send, receive=receive)
+    as_of = datetime.now(timezone.utc)
+    package = evaluate_at(as_of, build_entered_package, snapshot, send=send, receive=receive)
     normalized_options = _options_from_policy(options, resolved_policy)
     drop_queries = tuple(options.drop_overrides)
     if options.drop_override and options.drop_override not in drop_queries:
@@ -113,7 +134,7 @@ def evaluate_entered_trade(
             add_override=None,
             add_overrides=adds,
         )
-    evaluation = evaluate_trade(
+    evaluation = evaluate_at(as_of, evaluate_trade,
         snapshot,
         package,
         projections=board_refresh.weekly_projections,
@@ -127,8 +148,13 @@ def evaluate_entered_trade(
             f"trade_evaluation_{evaluation.evidence_hash[:16]}.json"
         )
     )
+    manifest = finish_trade_run(target, board_refresh, as_of=as_of,
+        inputs={'operation': 'exact', 'package': package, 'result_hash': evaluation.evidence_hash}, policy=normalized_options,
+        readiness={'inputs_complete': evaluation.decision.confidence != 'INCOMPLETE',
+                   'search_complete': None, 'candidate_confidence': evaluation.decision.confidence,
+                   'informational_warnings': evaluation.warnings})
     save_trade_evaluation(evaluation, target)
-    return EnteredEvaluationResult(evaluation, board_refresh, target)
+    return EnteredEvaluationResult(evaluation, board_refresh, target, manifest)
 
 
 def diagnose_current_roster(
@@ -218,6 +244,7 @@ def evaluation_report(result: EnteredEvaluationResult) -> dict[str, Any]:
     value = asdict(result.evaluation)
     value["output_path"] = str(result.output_path)
     value["fantasypros_call_plan"] = asdict(result.board_refresh.call_plan)
+    value['run_manifest'] = manifest_summary(result.run_manifest)
     return value
 
 

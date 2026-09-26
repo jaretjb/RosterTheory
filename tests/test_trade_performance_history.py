@@ -149,6 +149,9 @@ class TradePerformanceHistoryTests(unittest.TestCase):
                 output_path=root / "boards.json",
             )
             with (
+                patch('roster_theory.trade.evaluation_service.revalidate_snapshot', return_value={
+                    'verified_at': snapshot.captured_at.isoformat(), 'status': 'UNCHANGED',
+                }),
                 patch("roster_theory.trade.target_workflow.resolve_league_policy_path", return_value=policy_path),
                 patch("roster_theory.trade.target_workflow._options_from_policy", return_value=permissive_options()),
                 patch("roster_theory.trade.target_workflow.refresh_value_boards", return_value=refresh),
@@ -162,6 +165,9 @@ class TradePerformanceHistoryTests(unittest.TestCase):
             buy_low = next(row for row in result.targets.targets if row.player_id == "o_buy")
             self.assertEqual(buy_low.performance_support, "SUPPORTS")
             self.assertEqual(result.policy_status, "PROVISIONAL_HEURISTIC")
+            from roster_theory.trade.replay import replay_trade_manifest
+            self.assertEqual(replay_trade_manifest(result.output_path.with_suffix('.manifest.json'))
+                             ['result']['targets']['evidence_hash'], result.targets.evidence_hash)
             saved = target_workflow_report(result)
             self.assertEqual(saved["performance_history"]["status"], "SUPPORTED")
             self.assertEqual(saved["target_policy"]["evidence_status"], "PROVISIONAL_HEURISTIC")

@@ -236,6 +236,13 @@ class SleeperAdapter:
     ) -> None:
         self.client = client
         self.player_cache_path = Path(player_cache_path)
+        self.observations: dict[str, tuple[datetime, str]] = {}
+
+    def _observe(self, endpoint, fetch):
+        observed_at = datetime.now(timezone.utc)
+        payload = fetch()
+        self.observations[endpoint] = (observed_at, stable_hash(payload))
+        return payload
 
     def _player_directory(
         self, captured_at: datetime, *, maximum_age: timedelta = timedelta(hours=24)
@@ -244,29 +251,30 @@ class SleeperAdapter:
             cached = json.loads(self.player_cache_path.read_text(encoding="utf-8"))
             cache_time = datetime.fromisoformat(str(cached["captured_at"]))
             if is_fresh(cache_time, maximum_age, now=captured_at):
+                self.observations['/players/nfl'] = (cache_time, stable_hash(cached['players']))
                 return cached["players"], "hit"
-        players = self.client.players("nfl")
+        players = self._observe('/players/nfl', lambda: self.client.players('nfl'))
         atomic_write_json(
             self.player_cache_path,
-            {"captured_at": captured_at.isoformat(), "players": players},
+            {"captured_at": self.observations['/players/nfl'][0].isoformat(), "players": players},
         )
         return players, "miss"
 
     def fetch(self, league_id: str, weeks: list[int]) -> SleeperBundle:
         captured_at = datetime.now(timezone.utc)
-        state = self.client.state("nfl")
-        raw_league = self.client.league(league_id)
-        users = self.client.league_users(league_id)
-        rosters = self.client.league_rosters(league_id)
-        winners = self.client.league_winners_bracket(league_id)
-        losers = self.client.league_losers_bracket(league_id)
-        player_rows, player_cache_status = self._player_directory(captured_at)
+        state = self._observe('/state/nfl', lambda: self.client.state('nfl'))
+        raw_league = self._observe(f'/league/{league_id}', lambda: self.client.league(league_id))
+        users = self._observe(f'/league/{league_id}/users', lambda: self.client.league_users(league_id))
+        rosters = self._observe(f'/league/{league_id}/rosters', lambda: self.client.league_rosters(league_id))
+        winners = self._observe(f'/league/{league_id}/winners_bracket', lambda: self.client.league_winners_bracket(league_id))
+        losers = self._observe(f'/league/{league_id}/losers_bracket', lambda: self.client.league_losers_bracket(league_id))
+        player_rows, player_cache_status = self._player_directory(captured_at, maximum_age=timedelta(minutes=5))
         matchup_values = {
-            week: self.client.league_matchups(league_id, week)
+            week: self._observe(f'/league/{league_id}/matchups/{week}', lambda: self.client.league_matchups(league_id, week))
             for week in sorted(set(weeks))
         }
         transaction_values = {
-            week: self.client.league_transactions(league_id, week)
+            week: self._observe(f'/league/{league_id}/transactions/{week}', lambda: self.client.league_transactions(league_id, week))
             for week in sorted(set(weeks))
         }
         league = normalize_league(raw_league)
@@ -296,7 +304,8 @@ class SleeperAdapter:
             DataStamp(
                 source="Sleeper",
                 endpoint=endpoint,
-                captured_at=captured_at,
+                captured_at=self.observations[endpoint][0],
+                payload_hash=self.observations[endpoint][1],
                 season=league.season,
                 week=week,
                 parameter_hash=stable_hash({"league_id": league_id, "week": week}),
@@ -342,26 +351,27 @@ class SleeperAdapter:
             player_directory_cache_status=player_cache_status,
         )
 
-    def fetch_waiver(self, league_id: str) -> SleeperBundle:
+    def fetch_waiver(self, league_id: str, *, force_players: bool = False) -> SleeperBundle:
         """Fetch the bounded GET-only inputs needed by a Waiver refresh."""
         captured_at = datetime.now(timezone.utc)
-        state = self.client.state("nfl")
+        state = self._observe('/state/nfl', lambda: self.client.state('nfl'))
         current_week = _integer(state.get("week"))
         if current_week is None or current_week < 1:
             raise ValueError("Sleeper NFL state is missing the current week")
-        raw_league = self.client.league(league_id)
-        users = self.client.league_users(league_id)
-        rosters = self.client.league_rosters(league_id)
+        raw_league = self._observe(f'/league/{league_id}', lambda: self.client.league(league_id))
+        users = self._observe(f'/league/{league_id}/users', lambda: self.client.league_users(league_id))
+        rosters = self._observe(f'/league/{league_id}/rosters', lambda: self.client.league_rosters(league_id))
         player_rows, player_cache_status = self._player_directory(
-            captured_at, maximum_age=timedelta(minutes=5)
+            captured_at, maximum_age=timedelta(seconds=-1) if force_players else timedelta(minutes=5)
         )
-        transaction_rows = self.client.league_transactions(league_id, current_week)
+        transaction_rows = self._observe(f'/league/{league_id}/transactions/{current_week}', lambda: self.client.league_transactions(league_id, current_week))
         league = normalize_league(raw_league)
         stamps = tuple(
             DataStamp(
                 source="Sleeper",
                 endpoint=endpoint,
-                captured_at=captured_at,
+                captured_at=self.observations[endpoint][0],
+                payload_hash=self.observations[endpoint][1],
                 season=league.season,
                 week=week,
                 parameter_hash=stable_hash({"league_id": league_id, "week": week}),

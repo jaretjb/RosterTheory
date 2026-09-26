@@ -12,6 +12,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
+from roster_theory.waiver.search import waiver_readiness
 
 from roster_theory.draft_analysis import (
     analyze_snapshot,
@@ -261,6 +262,7 @@ def _product_frame(
     *,
     warnings: Any = (),
     complete: bool = True,
+    search_complete: bool | None = None,
     paths: Any = (),
     limitations: Any = (),
 ) -> ReportFrame:
@@ -273,7 +275,9 @@ def _product_frame(
         product=product,
         league=league,
         horizon=weeks,
-        readiness="INCOMPLETE" if not complete else "DEGRADED" if warning_lines else "READY",
+        readiness=("INCOMPLETE" if not complete else "BOUNDED" if search_complete is False
+                   else "DEGRADED" if warning_lines and not product.casefold().startswith(('waiver', 'trade'))
+                   else "READY"),
         result=result,
         warnings=warning_lines,
         limitations=tuple(str(item) for item in limitations if item),
@@ -553,7 +557,7 @@ def command_waiver_evaluate(args: argparse.Namespace) -> None:
             "Waiver evaluation", evaluation.league_key, evaluation.horizon,
             evaluation.decision_label or "No authoritative recommendation",
             warnings=evaluation.warnings,
-            complete=evaluation.recommendation_generated,
+            complete=evaluation.value_inputs_complete and evaluation.projection_inputs_complete,
             limitations=(evaluation.strongest_uncertainty,), paths=(result.output_path,),
         ))
 
@@ -626,9 +630,9 @@ def command_waiver_search(args: argparse.Namespace) -> None:
                 horizon="weeks " + ", ".join(str(week) for week in search.horizon),
                 readiness=(
                     "INCOMPLETE"
-                    if not search.exact_evaluations
-                    else "DEGRADED"
-                    if search.warnings
+                    if not waiver_readiness(search)['inputs_complete']
+                    else "BOUNDED"
+                    if search.budget_excluded_player_ids
                     else "READY"
                 ),
                 result=waiver_search_action_summary(result),
@@ -733,7 +737,8 @@ def command_trade_evaluate(args: argparse.Namespace) -> None:
         _print_human_report(args, format_trade_evaluation(evaluation), _product_frame(
             "Trade evaluation", evaluation.league_key, evaluation.horizon,
             evaluation.summary, warnings=evaluation.warnings,
-            complete=evaluation.decision is not None, paths=(result.output_path,),
+            complete=evaluation.decision is not None and evaluation.decision.confidence != 'INCOMPLETE',
+            paths=(result.output_path,),
             limitations=("Expert ranks apply only to their declared horizon.",),
         ))
 
@@ -859,6 +864,8 @@ def _command_trade_target_workflow(args: argparse.Namespace, *, search: bool) ->
             result.targets.league_key, result.targets.horizon,
             "Target-first bounded package search" if search else "Target discovery only",
             warnings=result.targets.warnings,
+            complete=(getattr(result, 'run_manifest', None) or {}).get('readiness', {}).get('inputs_complete', True),
+            search_complete=False if search else None,
             paths=(result.output_path, result.csv_path),
             limitations=(
                 "Search is bounded; omitted packages are not evaluated."

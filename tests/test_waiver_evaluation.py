@@ -728,7 +728,7 @@ class WaiverEvaluationInputAndCliTests(unittest.TestCase):
                 emergence_evidence=emergence_evidence(),
             )
             loaded = load_waiver_evaluation_inputs(path)
-            self.assertEqual(loaded.schema_version, 9)
+            self.assertEqual(loaded.schema_version, 10)
             self.assertEqual(loaded.values[0].season_sample_size, 2)
             self.assertEqual(loaded.values[0].recent_sample_size, 1)
             self.assertEqual(loaded.values[0].performance_as_of, CAPTURED)
@@ -771,16 +771,23 @@ class WaiverEvaluationInputAndCliTests(unittest.TestCase):
             with patch(
                 "roster_theory.waiver.service.refresh_waiver_snapshot",
                 return_value=refresh,
-            ):
+            ), patch('roster_theory.waiver.service.revalidate_snapshot', return_value={
+                'verified_at': NOW.isoformat(), 'status': 'UNCHANGED',
+            }):
                 result = evaluate_entered_waiver(
                     "league_alpha",
                     add="Target Quarterback",
                     inputs_path=input_path,
                     output_path=output_path,
                     policy_path=POLICY_PATH,
+                    clock=lambda: NOW,
                     now=NOW,
                 )
             self.assertTrue(output_path.is_file())
+            from roster_theory.waiver.replay import replay_waiver_manifest
+            replay = replay_waiver_manifest(output_path.with_suffix('.manifest.json'))
+            self.assertFalse(replay['current'])
+            self.assertEqual(replay['result']['evidence_hash'], result.evaluation.evidence_hash)
             self.assertEqual(result.evaluation.decision_label, "ADD NOW")
             self.assertEqual(
                 result.evaluation.policy_version,

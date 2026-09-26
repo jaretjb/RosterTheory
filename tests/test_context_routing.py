@@ -13,6 +13,13 @@ def words(path: str) -> int:
 
 
 class ContextRoutingTests(unittest.TestCase):
+    def test_ac007_summary_and_detail_have_matching_status(self):
+        tracker = (ROOT / "docs/ASSISTANT_RELIABILITY_TASKS.md").read_text(encoding="utf-8")
+        row = next(line for line in tracker.splitlines() if line.startswith("| AC-007 |"))
+        table_state = row.split("|")[3].strip().split()[0].rstrip(";:").lower()
+        detail = tracker.split("## AC-007", 1)[1].split("## AC-008", 1)[0]
+        self.assertEqual(table_state, re.search(r"Status:\s*(\w+)", detail).group(1).lower())
+
     def test_ac006_summary_and_detail_have_matching_status(self):
         tracker = (ROOT / "docs/ASSISTANT_RELIABILITY_TASKS.md").read_text(encoding="utf-8")
         row = next(line for line in tracker.splitlines() if line.startswith("| AC-006 |"))

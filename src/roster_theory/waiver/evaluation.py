@@ -152,6 +152,10 @@ class WaiverEvaluationInputs:
     emergence_evidence: EmergenceEvidence | None
     ros_panel_evidence: Mapping[str, Any] | None
     input_hash: str
+    source_evidence: tuple[Mapping[str, Any], ...] = ()
+    news_coverage: Mapping[str, Any] | None = None
+    drop_legality_evidence: Mapping[str, Any] | None = None
+    drop_legality_context: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1812,6 +1816,9 @@ def evaluate_waiver(
         }
     )
     warnings = list(snapshot.warnings)
+    news_scope = (ros_panel_evidence or {}).get('news_coverage')
+    if news_scope and not news_scope.get('per_player_complete'):
+        warnings.append('News is a limited global feed, not complete per-player coverage; absence is not an all-clear')
     if waiver_wire_evidence is None:
         warnings.append("FantasyPros Waiver Wire acquisition evidence was not provided")
     else:
@@ -2033,13 +2040,16 @@ def save_waiver_evaluation_inputs(
     ros_panel_evidence: Mapping[str, Any] | None = None,
     emergence_evidence: EmergenceEvidence | None = None,
     drop_legality_evidence: Mapping[str, Any] | None = None,
+    source_evidence: Sequence[Mapping[str, Any]] = (),
+    news_coverage: Mapping[str, Any] | None = None,
+    drop_legality_context: Mapping[str, Any] | None = None,
 ) -> Path:
     if captured_at.tzinfo is None:
         raise ValueError("Waiver evaluation-input timestamp must be timezone-aware")
     if not availability_source.strip():
         raise ValueError("Waiver evaluation inputs require availability provenance")
     unsigned = {
-        "schema_version": 9,
+        "schema_version": 10,
         "product": "WAIVER ASSISTANT",
         "league_key": league_key,
         "captured_at": captured_at.astimezone(timezone.utc),
@@ -2047,6 +2057,9 @@ def save_waiver_evaluation_inputs(
         "availability_by_player": dict(sorted(availability_by_player.items())),
         "drop_legality": dict(sorted(drop_legality.items())),
         "drop_legality_evidence": drop_legality_evidence,
+        "source_evidence": tuple(source_evidence),
+        "news_coverage": news_coverage,
+        "drop_legality_context": drop_legality_context,
         "weeks": tuple(sorted(weeks, key=lambda row: row.week)),
         "projections": tuple(
             sorted(
@@ -2078,8 +2091,13 @@ def save_waiver_evaluation_inputs(
 
 def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
+    return parse_waiver_evaluation_inputs(value)
+
+
+def parse_waiver_evaluation_inputs(value: Mapping[str, Any]) -> WaiverEvaluationInputs:
+    """Verify and normalize exactly the input bytes admitted to this run."""
     schema_version = int(value.get("schema_version") or 0)
-    if schema_version not in {1, 2, 3, 4, 5, 6, 7, 8, 9}:
+    if schema_version not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}:
         raise ValueError("Unsupported Waiver evaluation-input schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Evaluation inputs must be Waiver-scoped")
@@ -2291,6 +2309,10 @@ def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
             else None
         ),
         input_hash=computed_hash,
+        source_evidence=tuple(value.get('source_evidence') or ()),
+        news_coverage=value.get('news_coverage'),
+        drop_legality_evidence=value.get('drop_legality_evidence'),
+        drop_legality_context=value.get('drop_legality_context'),
     )
 
 

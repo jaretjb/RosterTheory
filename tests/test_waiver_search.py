@@ -1325,7 +1325,9 @@ class WaiverSearchServiceAndCliTests(unittest.TestCase):
             with patch(
                 "roster_theory.waiver.service.refresh_waiver_snapshot",
                 return_value=refresh,
-            ):
+            ), patch('roster_theory.waiver.service.revalidate_snapshot', return_value={
+                'verified_at': NOW.isoformat(), 'status': 'UNCHANGED',
+            }):
                 result = search_waivers(
                     "league_beta",
                     inputs_path=inputs_path,
@@ -1334,6 +1336,7 @@ class WaiverSearchServiceAndCliTests(unittest.TestCase):
                         POLICY_PATH.parent / "league_beta.decision-policy.json"
                     ),
                     now=NOW,
+                    clock=lambda: NOW,
                     enable_pruning=False,
                 )
         self.assertEqual(result.search.league_key, "league_beta")
@@ -1361,16 +1364,23 @@ class WaiverSearchServiceAndCliTests(unittest.TestCase):
             with patch(
                 "roster_theory.waiver.service.refresh_waiver_snapshot",
                 return_value=refresh,
-            ):
+            ), patch('roster_theory.waiver.service.revalidate_snapshot', return_value={
+                'verified_at': NOW.isoformat(), 'status': 'UNCHANGED',
+            }):
                 result = search_waivers(
                     "league_alpha",
                     inputs_path=inputs_path,
                     output_path=output_path,
                     policy_path=POLICY_PATH,
                     now=NOW,
+                    clock=lambda: NOW,
                     enable_pruning=False,
                 )
             self.assertTrue(output_path.is_file())
+            from roster_theory.waiver.replay import replay_waiver_manifest
+            replay = replay_waiver_manifest(output_path.with_suffix('.manifest.json'))
+            self.assertFalse(replay['current'])
+            self.assertEqual(replay['result']['evidence_hash'], result.search.evidence_hash)
             self.assertEqual(result.search.input_bundle_hash, input_payload()["input_hash"])
             machine_report = waiver_search_report(result)
             json.dumps(machine_report, allow_nan=False)
