@@ -10,10 +10,10 @@ from typing import Any, Mapping, Sequence
 from roster_theory.core.models import Projection
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.projections import projection_is_complete
-from roster_theory.core.scoring import score_stats
 from roster_theory.core.run_contract import revalidate_snapshot
 from roster_theory.core.provenance import stable_hash
 from roster_theory.providers.formats import ranking_format
+from roster_theory.providers.sleeper_historical_scoring import assess_historical_rules, score_historical_stats
 from roster_theory.sleeper import SleeperClient, resolve_league_policy_path
 from roster_theory.waiver.evaluation import (
     ContingencyScenarioInput,
@@ -134,6 +134,7 @@ def _rank_by_position(
 def _performance_evidence(
     *,
     client: SleeperClient,
+    league_id: str,
     season: int,
     current_week: int,
     players: dict[str, object],
@@ -160,11 +161,26 @@ def _performance_evidence(
         week: observe(f'Sleeper stats {season}/W{week}', lambda: client.weekly_stats(season, week))
         for week in completed_weeks
     }
-    season_points = {
-        player_id: score_stats(row, scoring, position=next(iter(players[player_id].positions), None)).points
-        for player_id, row in season_rows.items()
-        if player_id in players
-    }
+    season_assessment = assess_historical_rules(scoring, league_id=league_id, season=season, week=None)
+    weekly_assessments = {week: assess_historical_rules(scoring, league_id=league_id,
+        season=season, week=week) for week in completed_weeks}
+    season_points: dict[str, float] = {}
+    scoring_warnings: dict[str, list[str]] = {player_id: [] for player_id in players}
+
+    def reasons(result) -> str:
+        return "; ".join(sorted({f"{issue.setting or 'source'}={issue.category}" for issue in result.issues}))
+
+    for player_id, row in season_rows.items():
+        if player_id not in players:
+            continue
+        position = _waiver_position(players[player_id])
+        result = score_historical_stats(row, season_assessment, position=position)
+        if result.complete:
+            season_points[player_id] = result.require_points()
+        else:
+            scoring_warnings[player_id].append("Season league points unavailable: " + reasons(result))
+    for player_id in players.keys() - season_rows.keys():
+        scoring_warnings[player_id].append("Season league points unavailable: no Sleeper season stat row")
     recent_points: dict[str, float] = {}
     recent_opportunities: dict[str, float] = {}
     recent_yards: dict[str, float] = {}
@@ -174,23 +190,32 @@ def _performance_evidence(
         if position is None:
             continue
         rows = tuple(
-            weekly_rows[week][player_id]
+            (week, weekly_rows[week][player_id])
             for week in completed_weeks
             if player_id in weekly_rows[week]
             and weekly_rows[week][player_id].get("gp") != 0
         )
         if not rows:
+            if completed_weeks:
+                scoring_warnings[player_id].append(
+                    "Recent league points unavailable: no observed weekly stat rows")
             continue
-        recent_samples[player_id] = (len(rows) if all(_game_count(row.get("gp")) == 1 for row in rows)
+        recent_samples[player_id] = (len(rows) if all(_game_count(row.get("gp")) == 1 for _, row in rows)
                                      else None)
-        recent_points[player_id] = round(
-            sum(score_stats(row, scoring, position=player.positions[0]).points for row in rows) / len(rows), 3
-        )
+        scored_rows = tuple((week, score_historical_stats(row, weekly_assessments[week],
+            position=position)) for week, row in rows)
+        if all(result.complete for _, result in scored_rows):
+            recent_points[player_id] = round(
+                sum(result.require_points() for _, result in scored_rows) / len(scored_rows), 3)
+        else:
+            scoring_warnings[player_id].extend(
+                f"Recent league points unavailable for Week {week}: {reasons(result)}"
+                for week, result in scored_rows if not result.complete)
         opportunity_values = tuple(
-            value for row in rows if (value := _opportunities(row, position)) is not None
+            value for _, row in rows if (value := _opportunities(row, position)) is not None
         )
         yard_values = tuple(
-            value for row in rows if (value := _yards(row, position)) is not None
+            value for _, row in rows if (value := _yards(row, position)) is not None
         )
         if opportunity_values:
             recent_opportunities[player_id] = round(
@@ -216,6 +241,7 @@ def _performance_evidence(
                 "recent_yards_per_game": recent_yards.get(player_id),
                 "recent_yards_rank": yard_ranks.get(player_id),
                 "recent_sample_size": recent_samples.get(player_id, 0),
+                "scoring_warnings": tuple(scoring_warnings[player_id]),
             }
             for player_id in players
         },
@@ -435,6 +461,7 @@ def build_waiver_inputs(
     performance_sources: list[dict[str, Any]] = []
     performance, completed_weeks = _performance_evidence(
         client=sleeper,
+        league_id=waiver_state.league.league_id,
         season=waiver_state.league.season,
         current_week=waiver_state.manifest.current_week,
         players=players,
@@ -486,7 +513,7 @@ def build_waiver_inputs(
             recent_yards_rank=performance[player_id]["recent_yards_rank"],
             recent_completed_weeks=completed_weeks,
             performance_source=(
-                "Sleeper public season and weekly stats scored under this league's rules"
+                "Sleeper public season and weekly stats scored under this league's rules when complete"
             ),
             warnings=tuple(
                 sorted(
@@ -494,6 +521,7 @@ def build_waiver_inputs(
                         *format_evidence.warnings,
                         *(selected[player_id].warnings if player_id in skill_ids else ()),
                         *(market[player_id].warnings if player_id in skill_ids else ()),
+                        *performance[player_id]["scoring_warnings"],
                         *(
                             (
                                 "Ranked Waiver candidate is outside complete selected/market value-board coverage; retained for visibility only",
@@ -599,6 +627,11 @@ def build_waiver_inputs(
         "performance_players": sum(
             1 for row in performance.values() if row["season_points"] is not None
         ),
+        "performance_scoring_unavailable_players": {
+            player_id: list(performance[player_id]["scoring_warnings"])
+            for player_id in sorted(covered_ids)
+            if performance[player_id]["scoring_warnings"]
+        },
         "contingency_relationships": len(contingencies),
         "user_drop_legality_rows": len(active_supported_ids),
         "user_players_missing_value_inputs": sorted(active_supported_ids - covered_ids),

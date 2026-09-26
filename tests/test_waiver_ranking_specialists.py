@@ -88,7 +88,7 @@ class RankingSpecialistTests(unittest.TestCase):
         now = datetime(2026, 9, 20, tzinfo=timezone.utc)
         results = []
         for scale in (3, 5):
-            evidence, _ = _performance_evidence(client=client, season=2026, current_week=3,
+            evidence, _ = _performance_evidence(client=client, league_id="fixture", season=2026, current_week=3,
                 players=players, scoring={"fgm": scale}, as_of=now)
             self.assertEqual(evidence["b"]["season_sample_size"], 1)
             self.assertEqual(evidence["b"]["recent_sample_size"], 1)

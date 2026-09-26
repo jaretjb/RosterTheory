@@ -1,5 +1,31 @@
 # Active milestone
 
+## MA-002g - Waiver historical scoring evidence
+
+Authorized by the user's September 26 request to continue after PR #40 merged.
+Implement a bounded #30 follow-up: score Sleeper season and recent-week
+historical statistics through the explicit, position-aware coverage contract.
+Requirements MR-01, MR-02, MR-04, MR-06, MR-09, MR-10; architecture section 3.1
+and compatibility section 5.
+
+Season points and per-game averages must be usable only when every applicable
+nonzero rule has observed, finite evidence. Missing, invalid, unsupported and
+unknown-applicability settings remain visible per player; an incomplete week
+cannot enter a complete recent average or position rank. Preserve independent
+opportunity/yard metrics and other candidates. No omitted stat becomes zero
+without verified source-schema evidence. Keep source season/week and actual
+league scoring distinct. Use existing saved Waiver input warnings plus an
+additive data-only build-report field; saved input readers remain compatible.
+
+Allowed: a scoped Sleeper historical-stat translator, Waiver input preparation,
+synthetic regression tests and handoff evidence. Do not change Draft imports,
+Trade boards, FantasyPros projection scoring, recommendation thresholds,
+calibration, provider requests, user settings or league state. No live/provider
+operation or simulation. Gates: before-fix partial-score ranking examples,
+position/applicability and explicit-zero cases, independent-candidate invariance,
+unchanged MA-001 complete-data goldens, full suite/Ruff/context/privacy/CI.
+Stop at a tested PR against main; #30 and MA-002 remain open.
+
 ## MA-002f - Operation-specific roster capacity
 
 Authorized by the user's September 26 request to continue after merging PR #39.
