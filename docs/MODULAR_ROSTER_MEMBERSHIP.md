@@ -104,6 +104,14 @@ All 877 local tests pass (107.398 seconds), including all 24 full-output referen
 workloads. Ruff, compilation, 18 context-routing tests and the tracked repository
 privacy gate pass. Required PR CI and review remain the merge gate.
 
+The bounded Trade/Waiver timing and peak-memory comparison is recorded in
+[PR #38](https://github.com/jaretjb/RosterTheory/pull/38). Run
+`scripts/ma002_decision_benchmark.py --source-root CHECKOUT --memory --output FILE`
+sequentially on the merged base and this change on the same machine. It uses
+five repetitions after warm-up and a separate traced run, and checks each result
+against that checkout's complete golden. Local receipts are ignored
+`data/exports/ma002d-benchmark-before.json` and `ma002d-benchmark-after.json`.
+
 Offline tests cover lost taxi preservation; unknown/empty distinctions;
 duplicates, overlaps and capacity; missing/malformed source fields; independent
 reference profiles; enabled/disabled/unknown reserve rules; three-feature taxi

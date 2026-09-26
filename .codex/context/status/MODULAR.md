@@ -8,7 +8,7 @@ remain available despite irrelevant missing players. Unknown assets stay
 protected; connected dependencies remain conditional. Evidence:
 `docs/MODULAR_DECISION_COVERAGE.md` and `docs/MODULAR_PROVIDER_SCORING.md`.
 
-MA-002d implements the membership slice of #31: preserve taxi roles, reconcile
+PR #38 implements MA-002d, the membership slice of #31: preserve taxi roles, reconcile
 ownership/capacity, check reserve eligibility and reject known taxi formats.
 Normalized snapshots now require explicit taxi evidence; old files request a
 refresh or original-build replay. The reviewed schema-only golden migration

@@ -142,8 +142,10 @@ class RosterMembershipTests(unittest.TestCase):
             require_draft_snapshot_membership({"current": {"rosters": [{"taxi": ["taxi"]}]}})
 
     def test_typed_restore_rejects_lost_membership_but_preserves_new_records(self):
+        for taxis in ((), None, ("taxi",)):
+            team = replace(self.team, taxi_ids=taxis)
+            self.assertEqual(restore_record(FantasyTeam, json.loads(canonical_json(team))), team)
         encoded = json.loads(canonical_json(self.team))
-        self.assertEqual(restore_record(FantasyTeam, encoded), self.team)
         del encoded["taxi_ids"]
         with self.assertRaisesRegex(ValueError, "refresh"):
             restore_record(FantasyTeam, encoded)
@@ -177,10 +179,13 @@ class RosterMembershipTests(unittest.TestCase):
     def test_snapshot_readers_preserve_membership_and_reject_legacy_or_future_schema(self):
         for snapshot, save, load in ((snapshot_fixture(), save_trade_snapshot, load_trade_snapshot),
                                      (waiver_snapshot(), save_waiver_snapshot, load_waiver_snapshot)):
+            snapshot = replace(snapshot, schema_version=2, league=replace(snapshot.league, taxi_slots=2),
+                teams=(replace(snapshot.teams[0], taxi_ids=(snapshot.teams[0].player_ids[-1],)), *snapshot.teams[1:]))
             with tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "snapshot.json"
                 save(snapshot, path)
                 self.assertEqual(load(path).teams, snapshot.teams)
+                self.assertEqual(load(path).league, snapshot.league)
                 encoded = json.loads(path.read_text())
                 del encoded["teams"][0]["taxi_ids"]
                 path.write_text(json.dumps(encoded))
