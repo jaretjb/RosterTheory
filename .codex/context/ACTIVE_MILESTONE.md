@@ -7,15 +7,15 @@ AC-006 — Supported scoring formats and season portability (issue #12) merged i
 PR #21 with all 20 checks passing. Tracking reconciliation merged in PR #20.
 AC-007 — Freshness, readiness, provenance, and handoff contracts (issue #13)
 merged in PR #22 with all 20 checks passing. AC-008 — End-to-end release gates and
-measured optimization (issue #14) is active, authorized by the user's request.
-Load only AC-008 and the completion protocol in `docs/ASSISTANT_RELIABILITY_TASKS.md`.
-Add production-path and metamorphic regressions, measure fixed fixtures, then
-optimize without changing decision coverage. Stop at a tested PR handoff.
+measured optimization (issue #14) merged in PR #23 with all 20 checks passing;
+issue #14 is closed. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
+No product milestone is currently active. Further implementation requires a new
+explicit authorization and a separate branch and pull request.
 
 AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
 all CI checks. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
 AC-002/#8 through AC-005/#11 merged in PRs #16–#19 with all checks passing.
-Baseline: 792 tests, Ruff and diff checks pass. The audit remains open.
+Release gate: 797 tests, Ruff and diff checks pass. The audit remains open.
 All league actions remain read-only.
 
 WA-027 — League-scored specialist performance weighting completed September
