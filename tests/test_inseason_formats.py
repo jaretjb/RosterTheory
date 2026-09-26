@@ -147,6 +147,96 @@ class InseasonFormatTests(unittest.TestCase):
             self.assertEqual(result_points[0], result_points[1])
             self.assertEqual(result_points[0], {"1": 6 + 4 * rec, "2": 10 + 2 * rec})
 
+    def test_trade_rescores_mismatched_projection_label_from_raw_stats(self):
+        class Provider:
+            def consensus_rankings(self, season, **params):
+                return {
+                    "year": season, "week": params["week"],
+                    "scoring": params["scoring"], "ranking_type_name": "Weekly",
+                    "players": [],
+                }
+
+            def projections(self, season, **params):
+                self.requested_scoring = params["scoring"]
+                return {
+                    "season": season, "week": params["week"], "scoring": "STD",
+                    "players": [
+                        {"fpid": "complete", "position_id": "TE",
+                         "stats": {"rec_rec": 4, "rec_yds": 20, "points": 2}},
+                        {"fpid": "no_receptions", "position_id": "TE",
+                         "stats": {"rec_yds": 40, "points": 4}},
+                        {"fpid": "points_only", "position_id": "TE",
+                         "stats": {"points": 10}},
+                    ],
+                }
+
+            def news(self, **params):
+                return {"items": []}
+
+        provider = Provider()
+        snapshot = SimpleNamespace(
+            league=SimpleNamespace(season=2027, scoring=(("rec", 0.5), ("rec_yd", 0.1))),
+            manifest=SimpleNamespace(current_week=1),
+            weeks=(SimpleNamespace(week=1),),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            result = _fetch_value_inputs(
+                SimpleNamespace(snapshot=snapshot), client=provider,
+                cache_dir=Path(directory), budget_path=Path(directory) / "budget.json",
+                ranking_positions=("TE",),
+            )
+        rows = {row.player_id: row for row in result.projection_sets[0].projections}
+        self.assertEqual(provider.requested_scoring, "HALF")
+        self.assertEqual(result.projection_sets[0].scoring, "STD")
+        self.assertEqual(result.projection_sets[0].stamp.scoring_label, "STD")
+        self.assertEqual(rows["complete"].league_points, 4.0)
+        self.assertEqual(rows["complete"].coverage_status, "complete")
+        self.assertEqual(rows["no_receptions"].coverage_status, "missing_reception_stats_for_rescore")
+        self.assertEqual(rows["points_only"].coverage_status, "missing_league_scoring_raw_stats")
+        source = next(row for row in result.source_evidence if row["name"] == "projections_1")
+        self.assertEqual(source["parameters"]["scoring"], "HALF")
+        self.assertEqual(source["declared_scoring"], "STD")
+        self.assertEqual(source["projection_points_method"], "RAW_STATS_LEAGUE_SCORED")
+
+    def test_trade_rejects_unknown_or_wrong_season_projection_scope(self):
+        class Provider:
+            def __init__(self, declared_scoring, returned_season):
+                self.declared_scoring = declared_scoring
+                self.returned_season = returned_season
+
+            def consensus_rankings(self, season, **params):
+                return {
+                    "year": season, "week": params["week"],
+                    "scoring": params["scoring"], "ranking_type_name": "Weekly",
+                    "players": [],
+                }
+
+            def projections(self, season, **params):
+                return {
+                    "season": self.returned_season, "week": params["week"],
+                    "scoring": self.declared_scoring, "players": [],
+                }
+
+            def news(self, **params):
+                return {"items": []}
+
+        snapshot = SimpleNamespace(
+            league=SimpleNamespace(season=2027, scoring=(("rec", 0.5),)),
+            manifest=SimpleNamespace(current_week=1),
+            weeks=(SimpleNamespace(week=1),),
+        )
+        for declared, returned_season in (("UNKNOWN", 2027), ("STD", 2026)):
+            with self.subTest(declared=declared, returned_season=returned_season):
+                with tempfile.TemporaryDirectory() as directory:
+                    with self.assertRaises(CoverageIncomplete):
+                        _fetch_value_inputs(
+                            SimpleNamespace(snapshot=snapshot),
+                            client=Provider(declared, returned_season),
+                            cache_dir=Path(directory),
+                            budget_path=Path(directory) / "budget.json",
+                            ranking_positions=("TE",),
+                        )
+
     def test_new_named_league_uses_snapshot_season_for_default_cache(self):
         snapshot = SimpleNamespace(league=SimpleNamespace(season=2027, scoring=(("rec", 1),)))
         with (

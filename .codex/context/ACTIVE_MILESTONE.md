@@ -1,5 +1,15 @@
 # Active milestone
 
+TA-1313 — Trade Finder projection scoring and League Beta provisional policy
+compatibility is active by the user's September 25, 2026 request. Work is limited
+to the TA-1313 row in `docs/TRADE_ASSISTANT_TASKS.md`. Keep provider-declared
+projection scope visible, score only verified raw stats with the league's
+Sleeper rules, leave ranking authority unchanged, and keep the league's policy
+league-local and provisional. Use a separate branch and pull request; no trade
+submission. Implementation and local validation are complete; PR review is
+pending. The live League Beta run remains incomplete for two unrelated missing
+Week 3 roster projections, so no offer is recommendation-ready.
+
 AC-005 — Explicit ranking caps and specialist performance policy (issue #11) is
 merged in PR #19; all 20 CI checks passed and issue #11 is closed.
 Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_005.md`.
@@ -9,8 +19,8 @@ AC-007 — Freshness, readiness, provenance, and handoff contracts (issue #13)
 merged in PR #22 with all 20 checks passing. AC-008 — End-to-end release gates and
 measured optimization (issue #14) merged in PR #23 with all 20 checks passing;
 issue #14 is closed. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
-No product milestone is currently active. Further implementation requires a new
-explicit authorization and a separate branch and pull request.
+Before TA-1313, no product milestone was active. Further implementation beyond
+TA-1313 requires a new explicit authorization and a separate branch and pull request.
 
 AC-001 and prerequisite PR #6 are merged through PRs into main. PR #15 passed
 all CI checks. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_001.md`.
