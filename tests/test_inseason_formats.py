@@ -129,7 +129,7 @@ class InseasonFormatTests(unittest.TestCase):
                 )
                 with (
                     tempfile.TemporaryDirectory() as directory,
-                    patch("roster_theory.trade.board_service.time.sleep"),
+                    patch("roster_theory.storage.request_gate.time.sleep"),
                 ):
                     result = _fetch_value_inputs(
                         SimpleNamespace(snapshot=snapshot),
@@ -251,7 +251,7 @@ class InseasonFormatTests(unittest.TestCase):
                 return_value=SimpleNamespace(snapshot=snapshot),
             ),
             patch(
-                "roster_theory.trade.board_service._fetch_value_inputs",
+                "roster_theory.application.value_preparation._fetch_value_inputs",
                 side_effect=RuntimeError("captured"),
             ) as fetch,
         ):

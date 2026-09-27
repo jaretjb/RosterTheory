@@ -3,12 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import datetime, timedelta, timezone
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from roster_theory.core.models import Projection
-from roster_theory.core.errors import CoverageIncomplete
+from roster_theory.core.errors import CoverageIncomplete, ScheduleIncomplete
 from roster_theory.core.projections import projection_is_complete, projection_is_estimated
 from roster_theory.core.run_contract import revalidate_snapshot
 from roster_theory.core.provenance import stable_hash
@@ -21,12 +21,19 @@ from roster_theory.waiver.evaluation import (
     save_waiver_evaluation_inputs,
 )
 from roster_theory.waiver.expert_panel import WaiverRosPanelSelector
-from roster_theory.trade.board_service import refresh_value_boards
-from roster_theory.trade.boards import ESTIMATED_VALUE_WARNING
+from roster_theory.application.value_preparation import (
+    ValueRefresh,
+    ValueSnapshot,
+    ValueWeek,
+    refresh_value_boards,
+)
+from roster_theory.inseason.boards import ESTIMATED_VALUE_WARNING
 from roster_theory.waiver.policy import load_waiver_policy
 from roster_theory.waiver.legality import DropLegality, assess_drop_legality, sleeper_drop_rules
 from roster_theory.waiver.snapshot import WaiverSnapshot
-from roster_theory.trade.schedule import ScheduleConfig, load_schedule
+from roster_theory.application.schedule import ScheduleConfig, load_schedule
+from roster_theory.schedule_inputs import default_schedule_path
+from roster_theory.providers.cache import atomic_write_json
 from roster_theory.waiver.service import refresh_waiver_snapshot
 from roster_theory.waiver.ww_evidence import (
     load_waiver_wire_config,
@@ -358,6 +365,71 @@ def load_contingency_inputs(
     return tuple(result)
 
 
+def _waiver_value_refresh(waiver_refresh: object, *, include_special_teams: bool) -> ValueRefresh:
+    """Adapt one Waiver snapshot to neutral value preparation evidence."""
+
+    source = waiver_refresh.snapshot
+    schedule_path = default_schedule_path(source.league.season)
+    schedule = load_schedule(schedule_path, expected_season=source.league.season)
+    current_week = source.manifest.current_week
+    championship_week = source.league.championship_week
+    if championship_week is None or championship_week < current_week:
+        raise ScheduleIncomplete("League championship week is missing or before current week")
+    required_weeks = tuple(range(current_week, championship_week + 1))
+    if any(week not in schedule.weeks for week in required_weeks):
+        raise ScheduleIncomplete("Audited NFL schedule does not cover the full evaluation horizon")
+
+    owners = dict(source.owner_by_player)
+    by_id = {player.player_id: player for player in source.players}
+    skill_positions = {"QB", "RB", "WR", "TE"}
+    rostered_skill = {
+        player_id for player_id in owners
+        if player_id in by_id and skill_positions.intersection(by_id[player_id].positions)
+    }
+    valued = tuple(
+        player for player in source.players
+        if player.player_id in rostered_skill
+        or (
+            player.active is True
+            and skill_positions.intersection(player.positions)
+            and player.nfl_team in schedule.teams
+        )
+    )
+    valued_ids = {player.player_id for player in valued}
+    specialists = tuple(
+        player for player in source.players
+        if include_special_teams
+        and player.player_id not in valued_ids
+        and player.active is True
+        and {"K", "DST"}.intersection(player.positions)
+        and player.nfl_team in schedule.teams
+    )
+    excluded = tuple(sorted(
+        [(player_id, "PLAYER_IDENTITY_UNAVAILABLE") for player_id in owners if player_id not in by_id]
+        + [(player_id, "SCHEDULED_NFL_TEAM_UNAVAILABLE") for player_id in rostered_skill
+           if by_id[player_id].nfl_team not in schedule.teams]
+    ))
+    snapshot = ValueSnapshot(
+        league_key=source.league_key,
+        captured_at=source.captured_at,
+        ranking_horizon="EARLY_SEASON_DRAFT_ANCHOR",
+        league=source.league,
+        players=tuple(sorted((*valued, *specialists), key=lambda player: player.player_id)),
+        weeks=tuple(ValueWeek(week) for week in required_weeks),
+        owner_by_player=source.owner_by_player,
+        valuation_player_ids=tuple(sorted(valued_ids)),
+        manifest=source.manifest,
+        player_exclusions=excluded,
+    )
+    return ValueRefresh(
+        snapshot=snapshot,
+        call_plan=waiver_refresh.call_plan,
+        output_path=waiver_refresh.output_path,
+        schedule_path=schedule_path,
+        schedule_captured_at=schedule.captured_at or schedule.verified_at,
+    )
+
+
 def build_waiver_inputs(
     league_key: str,
     *,
@@ -380,7 +452,8 @@ def build_waiver_inputs(
             explicit_path=policy_path,
         )
     )
-    waiver_state = refresh_waiver_snapshot(league_key, config_path=config).snapshot
+    waiver_refresh = refresh_waiver_snapshot(league_key, config_path=config)
+    waiver_state = waiver_refresh.snapshot
     format_evidence = ranking_format(dict(waiver_state.league.scoring), getattr(waiver_state.league, "roster_positions", ()))
     ww_config = load_waiver_wire_config(
         resolve_league_policy_path(league_key, "waiver_wire", config_path=config,
@@ -390,6 +463,14 @@ def build_waiver_inputs(
         raise ValueError("Waiver Wire configuration scoring does not match league format " + format_evidence.scoring)
     board = refresh_value_boards(
         league_key,
+        refresh_snapshot=lambda _league_key, **_kwargs: _waiver_value_refresh(
+            waiver_refresh, include_special_teams=True
+        ),
+        retag_snapshot=lambda snapshot, horizon: replace(snapshot, ranking_horizon=horizon),
+        save_snapshot=lambda snapshot, path: atomic_write_json(path, snapshot),
+        output_root="data/exports/waiver",
+        snapshot_filename="value_snapshot.json",
+        evidence_product="WAIVER ASSISTANT",
         config_path=config,
         budget_path="data/cache/trade/fantasypros/daily_budget.json",
         include_special_teams=True,

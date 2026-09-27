@@ -473,7 +473,7 @@ class TradeBoardTests(unittest.TestCase):
                     return_value=refresh,
                 ),
                 patch(
-                    "roster_theory.trade.board_service._fetch_value_inputs"
+                    "roster_theory.application.value_preparation._fetch_value_inputs"
                 ) as fetch_inputs,
             ):
                 with self.assertRaisesRegex(

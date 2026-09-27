@@ -25,6 +25,7 @@ from roster_theory.expert_accuracy_history import (
 )
 from roster_theory.fantasypros import FantasyProsClient
 from roster_theory.providers.cache import DailyRequestBudget, atomic_write_json
+from roster_theory.storage.request_gate import pace_request, reserve_requests
 from roster_theory.rankings import ACCURACY_POSITIONS, load_accuracy, normalize_name
 from roster_theory.sleeper import find_league_config
 from roster_theory.trade.board_service import load_expert_pool
@@ -385,20 +386,17 @@ def _page_evidence(
     minimum_interval: float,
     timeout_seconds: float,
     fetch_text: Callable[[str, float], str],
+    budget_path: Path,
 ) -> tuple[dict[str, Any], ...]:
     records: list[dict[str, Any]] = []
-    last_request = 0.0
     for year in years:
         source_path = _evidence_path(replay_dir, kind, year) if replay_dir else None
         if source_path is not None:
             records.append(_load_evidence(source_path, kind=kind, year=year))
             continue
-        elapsed = time.monotonic() - last_request
-        if last_request and elapsed < minimum_interval:
-            time.sleep(minimum_interval - elapsed)
+        pace_request(budget_path, minimum_spacing_seconds=minimum_interval)
         url = url_template.format(year=year)
         payload = fetch_text(url, timeout_seconds)
-        last_request = time.monotonic()
         record = _evidence_record(kind, year, url, captured_at, payload)
         atomic_write_json(_evidence_path(evidence_dir, kind, year), record)
         records.append(record)
@@ -628,10 +626,13 @@ def _current_expert_evidence(
     replay_dir: Path | None,
     captured_at: str,
     client: FantasyProsClient,
+    budget_path: Path,
+    minimum_interval: float,
 ) -> dict[str, Any]:
     path = _evidence_path(replay_dir or evidence_dir, "current_experts", season)
     if replay_dir is not None:
         return _load_evidence(path, kind="current_experts", year=season)
+    pace_request(budget_path, minimum_spacing_seconds=minimum_interval)
     payload = client.ranking_experts(
         season, ranking_type="ros", details="experts"
     )
@@ -797,7 +798,7 @@ def refresh_expert_inputs(
     if call_count:
         # Reserve before the first request so a partial provider failure cannot
         # make a retry invisible to the shared daily budget.
-        atomic_write_json(paths.budget, budget_state.to_json())
+        reserve_requests(paths.budget, call_count, today=(now or datetime.now(timezone.utc)).date())
     captured = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     captured_at = captured.isoformat()
     artifacts: list[dict[str, Any]] = []
@@ -831,6 +832,7 @@ def refresh_expert_inputs(
             minimum_interval=minimum_interval,
             timeout_seconds=timeout_seconds,
             fetch_text=fetch_text,
+            budget_path=paths.budget,
         )
         annual: list[AnnualAccuracy] = []
         detail: list[DraftAccuracyDetail] = []
@@ -886,6 +888,7 @@ def refresh_expert_inputs(
                 minimum_interval=minimum_interval,
                 timeout_seconds=timeout_seconds,
                 fetch_text=fetch_text,
+                budget_path=paths.budget,
             )
             accuracy_rows: list[InSeasonAccuracy] = []
             for record in evidence:
@@ -907,14 +910,19 @@ def refresh_expert_inputs(
         # can be retried without downloading five unchanged seasons again.
         if reusable_inseason is None:
             write_inseason_accuracy(accuracy_rows, paths.inseason_accuracy)
-        if not replay:
-            time.sleep(minimum_interval)
         current_record = _current_expert_evidence(
             resolved_season,
             evidence_dir=paths.evidence_dir,
             replay_dir=replay,
             captured_at=captured_at,
-            client=client or FantasyProsClient(),
+            client=client or FantasyProsClient(
+                before_retry=lambda: (
+                    reserve_requests(paths.budget, 1),
+                    pace_request(paths.budget, minimum_spacing_seconds=minimum_interval),
+                )
+            ),
+            budget_path=paths.budget,
+            minimum_interval=minimum_interval,
         )
         current = normalize_current_experts(current_record["payload"])
         if not current:

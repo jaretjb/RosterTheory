@@ -4,7 +4,7 @@ import json
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -35,6 +35,7 @@ class FantasyProsClient:
     base_url: str = "https://api.fantasypros.com/public/v2/json"
     timeout_seconds: float = 20.0
     retries: int = 1
+    before_retry: Callable[[], None] | None = None
     request_count: int = field(default=0, init=False)
     last_get_metadata: dict[str, Any] = field(default_factory=dict, init=False)
 
@@ -57,6 +58,8 @@ class FantasyProsClient:
         )
         last_error: Exception | None = None
         for attempt in range(self.retries + 1):
+            if attempt and self.before_retry is not None:
+                self.before_retry()
             try:
                 self.request_count += 1
                 with urlopen(request, timeout=self.timeout_seconds) as response:

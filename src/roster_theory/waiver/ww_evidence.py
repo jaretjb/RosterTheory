@@ -4,7 +4,6 @@ from roster_theory.providers.formats import validate_provider_scope
 
 import json
 import re
-import time
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -26,6 +25,7 @@ from roster_theory.providers.fantasypros import (
     RankingDataset,
     normalize_rankings,
 )
+from roster_theory.storage.request_gate import pace_request, reserve_requests
 
 
 class AccuracyExpert(Protocol):
@@ -906,7 +906,13 @@ def refresh_waiver_wire_evidence(
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         raise ValueError("Waiver Wire refresh time must be timezone-aware")
-    provider = client or FantasyProsClient()
+    budget_target = Path(budget_path)
+    provider = client or FantasyProsClient(
+        before_retry=lambda: (
+            reserve_requests(budget_target, 1),
+            pace_request(budget_target, minimum_spacing_seconds=minimum_interval),
+        )
+    )
     root = Path(cache_dir)
     maximum_age = timedelta(hours=config.maximum_age_hours)
     definitions = [("market", None)] + [
@@ -946,25 +952,19 @@ def refresh_waiver_wire_evidence(
             )
         )
 
-    budget_target = Path(budget_path)
     budget = _load_budget(budget_target)
     plan = build_call_plan(calls, budget)
     if plan.fantasypros_calls:
-        budget.reserve(plan.fantasypros_calls)
-        atomic_write_json(budget_target, budget.to_json())
-    last_request = time.monotonic()
+        reserve_requests(budget_target, plan.fantasypros_calls)
     for name, _expert_id in definitions:
         if name in records:
             continue
-        elapsed = time.monotonic() - last_request
-        if elapsed < minimum_interval:
-            time.sleep(minimum_interval - elapsed)
+        pace_request(budget_target, minimum_spacing_seconds=minimum_interval)
         payload = provider.consensus_rankings(season, **parameters_by_name[name])
         captured_at = current.astimezone(timezone.utc)
         record = {"captured_at": captured_at.isoformat(), "payload": payload}
         atomic_write_json(cache_paths[name], record)
         records[name] = record
-        last_request = time.monotonic()
 
     datasets: dict[str, RankingDataset] = {}
     for name, expert_id in definitions:

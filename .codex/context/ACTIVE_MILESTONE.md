@@ -1,6 +1,19 @@
 # Active milestone
 
-## MA-002p - Restore conditional in-season forecast estimates
+## MA-003 - Extract shared in-season preparation
+
+Authorized by the user's September 27 request. Extract factual preparation from
+Trade so Trade and Waiver call one shared implementation without either feature
+calling the other's workflow. Shared ownership includes provider retrieval and
+cache coordination, identity matching, league scoring, freshness and neutral
+value preparation. Keep expert selection, horizon choices and decision rules
+explicitly feature-owned. Preserve the established read-only behavior, source
+evidence, saved contracts and reference decisions through synthetic tests.
+Use the MA-003 row in `docs/MODULAR_MIGRATION_PLAN.md` and architecture sections
+2, 3.3, 3.4, 4-6. No new provider calls, league writes or policy promotion.
+Stop at a tested handoff on a separate branch and PR.
+
+## Previous MA-002p - Restore conditional in-season forecast estimates
 
 Authorized by the user's September 27 request to correct the confirmed Trade
 and Waiver projection regression after merging PR #49. Continue the MA-002

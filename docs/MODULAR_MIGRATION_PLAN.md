@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002p conditional forecast restoration active after merged PR #49
+Status: MA-003 shared preparation extraction active; MA-002 evidence follow-ups remain open
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -31,7 +31,8 @@ decision-scoped coverage, membership and Draft rule checks, but live-workflow
 compatibility was not adequately established. Reconcile that behavior before
 more provider investigation or structural extraction. Remaining MA-002
 slices need their own detailed contracts and activation after the tested handoff;
-MA-003 onward remain **planned, not authorized**.
+MA-003 was subsequently authorized by the user's September 27 request to remove
+Waiver's dependency on Trade preparation. MA-004 onward remain planned.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
