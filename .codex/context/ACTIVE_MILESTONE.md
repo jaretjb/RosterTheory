@@ -1,6 +1,24 @@
 # Active milestone
 
-## MA-003b - Complete the shared FantasyPros request limit (#32)
+## MA-004a - Establish the Draft analysis package
+
+Authorized by the user's September 27 request to set the next milestone after
+MA-003b merged in PR #52. Make one behavior-preserving Draft extraction PR:
+create `src/roster_theory/draft/`, move the implementation of
+`draft_analysis.py` into `draft/analysis.py`, and retain the old import path as
+a compatibility adapter. Update internal imports only where they can point to
+the new owner without a cycle. Use the MA-004a contract in
+`docs/MODULAR_MIGRATION_PLAN.md`, architecture sections 2, 3.2 and 4-6, and
+the MA-001 synthetic compatibility, semantic and performance evidence.
+Preserve Draft commands, result fields, choices, reasons, rankings, policy caps,
+season assumptions, schemas and replay checks. Do not move the large simulation
+or watcher workflows, fix #33, add formats, run paid provider calls or write to
+Sleeper in this slice. Run focused Draft and reference tests, full suite, Ruff,
+package/import smoke, context and privacy gates, CI and a same-machine Draft
+performance review. Stop at a tested PR; further MA-004 slices need their own
+activation.
+
+## Previous MA-003b - Complete the shared FantasyPros request limit (#32; merged PR #52)
 
 Authorized by the user's September 27 request to finish the provider request-limit
 follow-up after MA-003 merged. Make the remaining Draft, diagnostic and historical
@@ -10,7 +28,7 @@ retries, and preserve cache hits without a charge. Fail closed on invalid ledger
 exhausted budget or lock contention. Use synthetic transport and process tests;
 make no live paid-provider calls, league writes, or feature-policy changes. Record
 the compatibility and rollback limits, run the repository gates, and stop at a
-tested pull request. Issue #32 remains open until this follow-up is merged.
+tested pull request. Issue #32 closed when this follow-up merged.
 
 ## Previous MA-003 - Extract shared in-season preparation (merged PR #51)
 
