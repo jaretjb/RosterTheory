@@ -1,6 +1,32 @@
 # Active milestone
 
-## MA-002l - Draft API preseason projection-source scope
+## MA-002m - FantasyPros projection-source tier evidence
+
+Authorized by the user's September 26 request to continue after merging PR #46.
+Take a bounded #30 provider-evidence slice: inspect at most four read-only,
+rate-paced 2026 preseason projection responses, retain only aggregate schema
+facts, and require each Draft projection response to prove non-sample access
+before the imported board can be draft-ready. Missing tier evidence is
+incomplete; observed statistic shapes do not prove unobserved field coverage or
+structural zeros. Requirements MR-02, MR-04,
+MR-06, MR-09, MR-10 and MR-14; architecture sections 3.1 and 5.
+
+Allowed: FantasyPros read-only projection calls at no more than one per second,
+the Draft projection readiness check and CLI report warning, synthetic
+regressions, and focused public evidence.
+Do not print or persist the API key, player rows, private responses or league
+data. Do not change expert rankings, manual import, Trade/Waiver behavior,
+league state, or existing rank/projection thresholds. Gates: independently
+limited versus explicitly premium projection sources, observed-versus-inferred
+field classification, unchanged reference goldens,
+full suite/Ruff/context/privacy/CI. Stop at a tested PR against main; #30 and
+MA-002 remain open.
+
+Implementation complete: 915 tests pass with unchanged reference goldens;
+Ruff, compilation, context routing and tracked-tree privacy gates pass.
+Evidence: `docs/MODULAR_PROJECTION_SOURCE_TIER.md`. CI/review remain the merge gate.
+
+## Previous MA-002l - Draft API preseason projection-source scope (merged PR #46)
 
 Authorized by the user's September 26 request to continue after merging PR #45.
 Implement a bounded #30 follow-up: explicitly request week-zero FantasyPros
