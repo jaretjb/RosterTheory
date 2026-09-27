@@ -16,7 +16,7 @@ _INDIVIDUAL_SETTINGS = (
     "fum_rec_td", "st_td", "st_ff", "st_fum_rec",
 )
 _DEFENSE_SETTINGS = (
-    "int", "sack", "safe", "blk_kick", "ff", "def_td",
+    "int", "sack", "safe", "blk_kick", "ff", "fum_rec", "def_td",
     "def_st_td", "def_st_ff", "def_st_fum_rec", "pts_allow_0",
     "pts_allow_1_6", "pts_allow_7_13", "pts_allow_14_20", "pts_allow_21_27",
     "pts_allow_28_34", "pts_allow_35p",
@@ -37,7 +37,4 @@ SLEEPER_LINEAR_RULES = tuple(
 ) + tuple(
     LinearScoringRule(f"bonus_rec_{position.lower()}", "rec", (position,), _RULE_EVIDENCE)
     for position in ("RB", "WR", "TE")
-) + (
-    # The position boundary is unresolved; do not guess it for either source.
-    LinearScoringRule("fum_rec", "fum_rec", None, "Unresolved applicability; issue #30"),
 )

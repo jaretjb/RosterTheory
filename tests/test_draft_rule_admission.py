@@ -1,4 +1,4 @@
-"""Room admission must happen before recommendations, including cache reuse."""
+"""Draft-room rule evidence remains visible across suggestions and cache reuse."""
 from types import SimpleNamespace
 from contextlib import redirect_stdout
 from dataclasses import asdict
@@ -17,7 +17,9 @@ from roster_theory.core.capabilities import CapabilityAssessment, RuleCapability
 from roster_theory.core.errors import RosterIllegal
 from roster_theory.core.provenance import canonical_json
 from roster_theory.core.run_contract import restore_record
-from roster_theory.providers.sleeper_draft_rules import assess_draft_position_limits
+from roster_theory.providers.sleeper_draft_rules import (
+    assess_draft_position_limits, draft_position_limit_advisory,
+)
 from scripts.ma002_draft_rules import main as inspect_rules
 from tests.ma001_fixtures import PROFILES, rules
 
@@ -29,7 +31,19 @@ def draft_room(enforcement=0):
 
 
 class DraftRoomAdmissionTests(unittest.TestCase):
-    def test_watcher_blocks_unknown_rules_before_fetching_picks_or_computing(self):
+    def test_malformed_explicit_limit_setting_still_blocks_suggestions(self):
+        client = Mock()
+        client.draft.return_value = draft_room('enabled')
+        args = SimpleNamespace(league='synthetic', board='unused', slot=1, limit=3)
+        with patch('roster_theory.cli.SleeperClient', return_value=client), \
+             patch('roster_theory.cli.find_league_config', return_value={'draft_id': 'synthetic'}), \
+             patch('roster_theory.cli._load_board') as board:
+            with self.assertRaises(CoverageIncomplete):
+                command_recommend(args)
+        board.assert_not_called()
+        client.draft_picks.assert_not_called()
+
+    def test_watcher_keeps_unknown_rules_visible_with_read_only_suggestions(self):
         client = Mock()
         room = draft_room()
         del room['settings']['enforce_position_limits']
@@ -38,13 +52,14 @@ class DraftRoomAdmissionTests(unittest.TestCase):
         client.last_get_metadata = {}
         watcher = MockDraftWatcher(client, room['draft_id'], [], claimed_slot=1)
         with patch('roster_theory.mock_watcher.recommend_for_state', return_value={}) as recommend:
-            with self.assertRaisesRegex(CoverageIncomplete, 'position'):
-                watcher.poll_once(now=100)
-        client.draft_picks.assert_not_called()
+            result = watcher.poll_once(now=100)
+        self.assertEqual(result['position_limit_status'], 'LIMITED')
+        self.assertIn('position limits', ' '.join(result['warnings']))
+        client.draft_picks.assert_called_once_with(room['draft_id'])
         client.draft.assert_called_once_with(room['draft_id'], fresh=True)
-        recommend.assert_not_called()
+        recommend.assert_called_once()
 
-    def test_recommend_command_blocks_enabled_limits_before_loading_the_board(self):
+    def test_recommend_command_labels_enabled_unverified_limits(self):
         client = Mock()
         client.draft.return_value = draft_room(1)
         client.draft_picks.return_value = []
@@ -53,15 +68,16 @@ class DraftRoomAdmissionTests(unittest.TestCase):
              patch('roster_theory.cli.find_league_config', return_value={'draft_id': 'synthetic'}), \
              patch('roster_theory.cli._load_board') as board, \
              patch('roster_theory.cli.recommend_available', return_value=[]) as recommend, \
-             patch('roster_theory.cli._print_json'):
-            with self.assertRaisesRegex(CoverageIncomplete, 'position'):
-                command_recommend(args)
-        client.draft_picks.assert_not_called()
+             patch('roster_theory.cli._print_json') as output:
+            command_recommend(args)
+        self.assertEqual(output.call_args.args[0]['position_limit_status'], 'LIMITED')
+        self.assertIn('position limits', ' '.join(output.call_args.args[0]['warnings']))
+        client.draft_picks.assert_called_once_with('synthetic')
         client.draft.assert_called_once_with('synthetic', fresh=True)
-        board.assert_not_called()
-        recommend.assert_not_called()
+        board.assert_called_once()
+        recommend.assert_called_once()
 
-    def test_rule_change_blocks_cached_recommendation_and_clears_planned_turn(self):
+    def test_rule_change_recomputes_suggestions_and_updates_warning(self):
         room = draft_room()
         client = Mock(last_get_metadata={})
         client.draft.return_value = room
@@ -75,15 +91,16 @@ class DraftRoomAdmissionTests(unittest.TestCase):
             self.assertEqual(recommend.call_count, 1)
             watcher.planned_turn = {'second_pick': 2}
             room['settings']['enforce_position_limits'] = 1
-            with self.assertRaises(CoverageIncomplete):
-                watcher.poll_once(now=102)
-            self.assertIsNone(watcher.last_recommendation)
-            self.assertIsNone(watcher.planned_turn)
-            self.assertEqual(client.draft_picks.call_count, 2)
+            limited = watcher.poll_once(now=102)
+            self.assertFalse(limited['recommendation_cached'])
+            self.assertEqual(limited['position_limit_status'], 'LIMITED')
+            self.assertEqual(recommend.call_count, 2)
+            self.assertEqual(client.draft_picks.call_count, 3)
             room['settings']['enforce_position_limits'] = 0
             refreshed = watcher.poll_once(now=103)
             self.assertFalse(refreshed['recommendation_cached'])
-            self.assertEqual(recommend.call_count, 2)
+            self.assertNotIn('position_limit_status', refreshed)
+            self.assertEqual(recommend.call_count, 3)
 
     def test_disabled_command_preserves_existing_output_and_taxi_rejection(self):
         room = draft_room()
@@ -169,6 +186,9 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(result.status, 'LIMITED')
             self.assertEqual(result.checks[0].classification, enforcement)
             self.assertEqual(result.checks[1].classification, 'UNKNOWN')
+            advisory, warning = draft_position_limit_advisory(rules(profile)['draft'])
+            self.assertEqual(advisory.status, 'LIMITED')
+            self.assertIn('check the league', warning)
 
     def test_saved_rule_inspection_is_read_only_scoped_and_machine_readable(self):
         with tempfile.TemporaryDirectory() as directory:

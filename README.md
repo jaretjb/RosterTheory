@@ -199,6 +199,10 @@ Or follow a live Sleeper draft or mock:
 roster-theory watch-mock SLEEPER_DRAFT_URL --league home_league --board PATH_TO_BOARD --slot 1 --user-id YOUR_USER_ID
 ```
 
+If Sleeper does not provide enough information to verify position limits, these
+commands still show read-only suggestions with a warning. Check the league's
+position limits before making a pick.
+
 ## Trade
 
 Request a current read-only roster diagnosis or target-first trade search. Each

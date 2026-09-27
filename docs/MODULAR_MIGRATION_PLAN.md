@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002 authorized; PR #47 projection tier merged; MA-002n ranking tier active
+Status: MA-002o working-workflow reconciliation active after merged PR #48
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -24,10 +24,12 @@ change recommendation policy, activate later work, or merge itself.
 
 ## 2. Sequence and traceability
 
-The user authorized MA-002 on September 26 and requested continuation after
-merging PR #47. ACTIVE_MILESTONE selects MA-002n Draft ranking-source tier
-evidence, a bounded #30 follow-up. PRs #37–#47 brought scoring, decision-scoped
-coverage, membership, Draft rule admission and operation capacity onto main. Remaining MA-002
+The user authorized MA-002 and, after merging PR #48, requested a before-and-after
+review of previously working workflows. ACTIVE_MILESTONE selects MA-002o
+regression reconciliation. Earlier MA-002 slices established scoring,
+decision-scoped coverage, membership and Draft rule checks, but live-workflow
+compatibility was not adequately established. Reconcile that behavior before
+more provider investigation or structural extraction. Remaining MA-002
 slices need their own detailed contracts and activation after the tested handoff;
 MA-003 onward remain **planned, not authorized**.
 
@@ -111,6 +113,14 @@ observes limited consensus and individual Draft ranking responses despite a
 `premium` tier label. It prevents sample or unverified ranking responses from
 making a Draft board ready while preserving inspectable diagnostic ranks.
 Actual premium source coverage remains under #30.
+
+MA-002o's [working-workflow reconciliation](MODULAR_WORKFLOW_RECONCILIATION.md)
+compares the accepted pre-MA-002 paths with preserved aggregate evidence. The
+successful grouped Draft path is distinct from the direct API import probes.
+The new room gate stops both reference Draft configurations, and strict weekly
+scoring makes cached forecasts unusable for Trade/Waiver value preparation.
+The slice corrects proven misclassification and records remaining behavior
+choices without calling incomplete scores complete.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |

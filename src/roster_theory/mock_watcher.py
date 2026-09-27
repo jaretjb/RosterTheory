@@ -8,7 +8,7 @@ from typing import Any, Iterable, Mapping
 
 from roster_theory.draft_analysis import HistoricalPositionCurves
 from roster_theory.core.errors import CoverageIncomplete
-from roster_theory.providers.sleeper_draft_rules import require_draft_position_limits
+from roster_theory.providers.sleeper_draft_rules import draft_position_limit_advisory
 from roster_theory.draft_preferences import (
     DraftPreferenceBook,
     evaluate_draft_preferences,
@@ -1925,6 +1925,7 @@ class MockDraftWatcher:
     last_change_at: float | None = None
     last_recommendation: dict[str, Any] | None = None
     planned_turn: dict[str, Any] | None = None
+    last_position_limit_evidence: tuple[tuple[str, str, tuple[str, ...]], ...] | None = None
     draft_pick_cache_status_counts: dict[str, int] = field(default_factory=dict)
     draft_pick_cache_max_age_seconds: float = 0.0
 
@@ -1933,11 +1934,20 @@ class MockDraftWatcher:
         draft_id = parse_draft_id(self.draft_reference)
         draft = self.client.draft(draft_id, fresh=True)
         try:
-            require_draft_position_limits(draft)
+            position_limits, position_warning = draft_position_limit_advisory(draft)
         except CoverageIncomplete:
             self.last_recommendation = None
             self.planned_turn = None
+            self.last_position_limit_evidence = None
             raise
+        position_evidence = tuple(
+            (row.rule, row.classification, row.evidence) for row in position_limits.checks
+        )
+        if (self.last_position_limit_evidence is not None
+                and self.last_position_limit_evidence != position_evidence):
+            self.last_recommendation = None
+            self.planned_turn = None
+        self.last_position_limit_evidence = position_evidence
         picks = self.client.draft_picks(draft_id)
         pick_fetch = dict(self.client.last_get_metadata)
         cache_status = str(pick_fetch.get("cache_status") or "").upper()
@@ -2037,6 +2047,8 @@ class MockDraftWatcher:
             )
         )
         warnings = list(state.warnings)
+        if position_warning:
+            warnings.append(position_warning)
         if self.acquisition_mode == "sleeper_cpu":
             warnings.append(
                 "CPU MOCK MODE: Sleeper timing only; values unchanged"
@@ -2053,7 +2065,7 @@ class MockDraftWatcher:
         if missed_turn:
             warnings.append("the draft advanced past a detected user turn without a matching slot pick")
         self.previous_state = state
-        return {
+        result = {
             "draft_id": state.draft_id,
             "status": state.status,
             "teams": state.teams,
@@ -2089,3 +2101,6 @@ class MockDraftWatcher:
             "warnings": warnings,
             "read_only": True,
         }
+        if position_warning:
+            result["position_limit_status"] = position_limits.status
+        return result
