@@ -9,7 +9,7 @@ from typing import Any, Mapping, Sequence
 
 from roster_theory.core.models import Projection
 from roster_theory.core.errors import CoverageIncomplete
-from roster_theory.core.projections import projection_is_complete
+from roster_theory.core.projections import projection_is_complete, projection_is_estimated
 from roster_theory.core.run_contract import revalidate_snapshot
 from roster_theory.core.provenance import stable_hash
 from roster_theory.providers.formats import ranking_format
@@ -22,6 +22,7 @@ from roster_theory.waiver.evaluation import (
 )
 from roster_theory.waiver.expert_panel import WaiverRosPanelSelector
 from roster_theory.trade.board_service import refresh_value_boards
+from roster_theory.trade.boards import ESTIMATED_VALUE_WARNING
 from roster_theory.waiver.policy import load_waiver_policy
 from roster_theory.waiver.legality import DropLegality, assess_drop_legality, sleeper_drop_rules
 from roster_theory.waiver.snapshot import WaiverSnapshot
@@ -448,6 +449,14 @@ def build_waiver_inputs(
         and SPECIAL_TEAM_POSITIONS.intersection(players[player_id].positions)
     } | roster_special_ids
     skill_ids = set(selected).intersection(market)
+    estimated_skill_ids = {
+        row.player_id for row in board.weekly_projections
+        if projection_is_estimated(row) and row.player_id in skill_ids
+    } | {
+        player_id for player_id in skill_ids
+        if ESTIMATED_VALUE_WARNING in selected[player_id].warnings
+        or ESTIMATED_VALUE_WARNING in market[player_id].warnings
+    }
     notable_visibility_ids = {
         row.player_id
         for row in waiver_wire_refresh.evidence.players
@@ -490,9 +499,8 @@ def build_waiver_inputs(
                 else None
             ),
             coverage_status=(
-                "complete"
-                if player_id in (skill_ids | special_ids)
-                else "incomplete"
+                "estimated" if player_id in estimated_skill_ids else
+                "complete" if player_id in (skill_ids | special_ids) else "incomplete"
             ),
             normalization_basis="LEAGUE_POSITIONAL_VORP",
             long_term_value_horizon=board.stage.mode,

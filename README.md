@@ -222,6 +222,8 @@ roster-theory trade evaluate home_league --send "Player A" --receive "Player B"
 ```
 
 Repeat `--send` or `--receive` for multi-player trades.
+When FantasyPros omits scoring statistics but supplies the core forecast,
+Trade shows an estimate and marks any affected verdict `CONDITIONAL`.
 `trade gaps` and `trade compare` use the same automatic preparation. The
 `targets` command shows `WATCH` cards without implying an offer exists;
 `search` adds exact, grouped offers with separate intrinsic and market verdicts.
@@ -250,6 +252,9 @@ To evaluate one move:
 ```text
 roster-theory waiver evaluate home_league --add "Player A" --drop "Player B" --inputs PATH_TO_INPUTS
 ```
+
+Waiver can compare similarly labeled estimates, but it shows `WATCH` instead
+of an add or claim instruction when missing scoring fields could change the result.
 
 ## Finding commands
 

@@ -218,6 +218,23 @@ def input_payload(*, league_key="league_alpha"):
 
 
 class WaiverSearchTests(unittest.TestCase):
+    def test_estimated_candidate_is_visible_as_conditional_search_result(self):
+        projected = tuple(
+            replace(row, raw_stats=(("pass_yd", 300.0),),
+                    coverage_status="estimated_missing_stats_v1:missing_statistic=fum_lost")
+            if row.player_id == "add" else row
+            for row in complete_projections()
+        )
+        valued = tuple(
+            replace(row, coverage_status="estimated") if row.player_id == "add" else row
+            for row in complete_values()
+        )
+        result = search(projection_rows=projected, value_rows=valued)
+        self.assertIn("add", result.eligible_candidate_ids)
+        add = next(row for row in result.exact_evaluations if row.add_player_id == "add")
+        self.assertEqual(add.decision_label, "WATCH")
+        self.assertTrue(any(warning.startswith("Forecast estimate:") for warning in add.warnings))
+
     def test_independent_league_coverage_and_metrics_do_not_change_decisions(self):
         results = {}
         for league_key in ("league_alpha", "league_beta"):

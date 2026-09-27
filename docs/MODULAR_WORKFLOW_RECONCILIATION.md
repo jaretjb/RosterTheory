@@ -77,3 +77,36 @@ The full local suite passes (916 tests), including the Draft room, provider
 scoring, Waiver historical scoring, and reference baseline cases. Ruff, Python
 compilation, context routing, and the tracked-tree privacy gate pass. This is
 synthetic and retained-evidence validation; it is not a live provider run.
+
+## Conditional in-season repair after PR #49
+
+The 34 retained weekly responses contain 12,861 QB/RB/WR/TE rows. For both
+reference scoring maps, zero rows prove exact scoring coverage, but all 12,861
+have the observed position-core statistics needed for the older calculation.
+The repaired path uses each league's actual scoring multipliers on observed
+statistics and marks the result as an **estimate** when other active scoring
+fields are missing. It does not assert that those missing fields equal zero.
+An initial comparison found 8,356 point differences because the strict scorer
+omitted the provider's `fumbles` field. That omission was incorrect for weekly
+FantasyPros projections: its [projection table](https://www.fantasypros.com/nfl/projections/qb.php/?loggedin=&week=draft)
+labels the projected category FL, meaning fumbles lost, and the
+[published API example](https://api.fantasypros.com/v2/docs) reconciles to
+its stated 293.7 standard points only when `fumbles: 2.85` receives the
+lost-fumble deduction. The weekly scoring contract now maps this provider
+field to `fum_lost`; Draft's separate source contract is unchanged. Both
+reference maps then show zero old/new point differences on the 12,861
+retained skill-player rows. They remain estimates because other active
+scoring fields are absent.
+Missing core statistics, invalid values, unknown rules and incomplete source
+scope still make a row unavailable.
+
+Estimated rows can populate Trade/Waiver value curves and weekly comparisons.
+When a position's curve includes estimates, all values derived from that curve
+carry the warning, even for a player whose own forecast is exact. The missing
+fields remain in player warnings; the value-board report is
+`PARTIAL`. An affected Trade verdict is `CONDITIONAL`. Waiver search may show
+and rank an estimated candidate, but a favorable estimate yields `WATCH`
+instead of an add/claim instruction. This restores analysis availability
+without claiming that any retained forecast or current live run is exact.
+The repaired slice passes 923 local tests, including provider preparation,
+value curves, Trade evaluation, and Waiver evaluation/search regressions.

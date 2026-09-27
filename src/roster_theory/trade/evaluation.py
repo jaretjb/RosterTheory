@@ -18,6 +18,7 @@ from roster_theory.core.errors import (
 )
 from roster_theory.core.lineup import LineupPlayer, LineupResult, optimize_lineup
 from roster_theory.core.models import Player, Projection
+from roster_theory.core.projections import ESTIMATED_PROJECTION_PREFIX
 from roster_theory.core.provenance import stable_hash
 from roster_theory.inseason.evaluation import (
     InSeasonContext,
@@ -40,7 +41,7 @@ from roster_theory.inseason.evaluation import (
     weighted_lineup_score as inseason_weighted_lineup_score,
 )
 from roster_theory.providers.cache import atomic_write_json
-from roster_theory.trade.boards import BoardPlayerValue, ValueBoard
+from roster_theory.trade.boards import BoardPlayerValue, ESTIMATED_VALUE_WARNING, ValueBoard
 from roster_theory.trade.snapshot import SKILL_POSITIONS, TradeSnapshot, assert_current
 
 
@@ -363,6 +364,7 @@ def _inseason_context(snapshot: TradeSnapshot) -> InSeasonContext:
         ),
         unowned_player_ids=snapshot.free_agent_ids,
         current_week=snapshot.manifest.current_week,
+        allow_estimated_projections=True,
     )
 
 
@@ -1354,6 +1356,8 @@ def evaluate_trade(
             "Secondary add/drop search is budget-limited; unexamined combinations may be better"
         )
 
+    estimated_relevant_count = 0
+    estimated_value_count = 0
     if projections:
         projection_coverage = _projection_coverage(
             snapshot,
@@ -1382,6 +1386,28 @@ def evaluate_trade(
                 f"{row.player_name} ({row.scope}) is missing projection data for Weeks "
                 + ", ".join(str(week) for week in row.missing_weeks)
                 for row in relevant_issues
+            )
+        relevant_ids = before_a | before_b | final_a | final_b | package_ids | {
+            player_id for move in moves for player_id in move.next_best_player_ids
+        }
+        estimated_relevant_count = sum(
+            cell.player_id in relevant_ids
+            and cell.coverage_status.casefold().startswith(ESTIMATED_PROJECTION_PREFIX)
+            for cell in matrix.cells
+        )
+        estimated_value_count = len({
+            row.player_id
+            for board in (market_board, selected_board)
+            if board is not None
+            for row in board.players
+            if row.player_id in relevant_ids and ESTIMATED_VALUE_WARNING in row.warnings
+        })
+        if estimated_relevant_count or estimated_value_count:
+            modes.append("DECISION-CONDITIONAL")
+            warnings.append(
+                f"{estimated_relevant_count} relevant player-weeks and "
+                f"{estimated_value_count} ownership values use league-scored estimates "
+                "from available statistics; missing scoring fields may change this comparison"
             )
     else:
         projection_coverage = ProjectionCoverage(0, 0, 0, 0, 0, 0, ())
@@ -1472,7 +1498,9 @@ def evaluate_trade(
     else:
         summary = "Ownership values are shown without projected lineup impact; no decision label is applied."
     if "DECISION-CONDITIONAL" in modes:
-        if overages:
+        if estimated_relevant_count or estimated_value_count:
+            summary = "Conditional forecast comparison; missing scoring statistics may change the outcome. " + summary
+        elif overages:
             summary = "Conditional lineup comparison; over-limit roster state may prevent modeled moves. " + summary
         else:
             summary = "Conditional known-player comparison; protected missing players may change the outcome. " + summary

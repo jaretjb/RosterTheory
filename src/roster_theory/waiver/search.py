@@ -9,7 +9,7 @@ from typing import Mapping, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, RosterIllegal
 from roster_theory.core.models import Projection
-from roster_theory.core.projections import projection_is_complete
+from roster_theory.core.projections import projection_is_usable
 from roster_theory.core.provenance import stable_hash
 from roster_theory.inseason.evaluation import (
     InSeasonContext,
@@ -26,6 +26,7 @@ from roster_theory.waiver.evaluation import (
     WaiverEvaluationOptions,
     evaluate_waiver,
     reconcile_current_week_inactive_omissions,
+    value_coverage_is_usable,
 )
 from roster_theory.waiver.ww_evidence import WaiverWireEvidence
 from roster_theory.waiver.plans import ClaimBranchCheck, validate_claim_branch
@@ -330,7 +331,7 @@ def _validate_search_inputs(
             player_id
             for player_id in supported_roster
             if player_id in value_map
-            if value_map[player_id].coverage_status.casefold() != "complete"
+            if not value_coverage_is_usable(value_map[player_id].coverage_status)
         )
     )
     drop_evidence_exclusions = {
@@ -372,8 +373,9 @@ def _validate_search_inputs(
             key
             for key in roster_projection_keys
             if key in projection_map
-            if not projection_is_complete(
-                projection_map[key], current_week=snapshot.manifest.current_week
+            if not projection_is_usable(
+                projection_map[key], current_week=snapshot.manifest.current_week,
+                allow_estimate=True,
             )
         )
     )
@@ -406,7 +408,7 @@ def _validate_search_inputs(
                 )
             )
             continue
-        if value.coverage_status.casefold() != "complete":
+        if not value_coverage_is_usable(value.coverage_status):
             omissions.append(
                 WaiverSearchOmission(
                     player_id, acquisition.state, "INCOMPLETE_VALUE_COVERAGE"
@@ -444,8 +446,9 @@ def _validate_search_inputs(
             )
             continue
         if any(
-            not projection_is_complete(
-                projection_map[key], current_week=snapshot.manifest.current_week
+            not projection_is_usable(
+                projection_map[key], current_week=snapshot.manifest.current_week,
+                allow_estimate=True,
             )
             for key in expected
         ):
@@ -517,6 +520,7 @@ def _candidate_upper_bounds(
         evaluation_positions=("QB", "RB", "WR", "TE", "K", "DST"),
         current_status_week_only=True,
         current_week=snapshot.manifest.current_week,
+        allow_estimated_projections=True,
     )
     matrix = build_weekly_projection_matrix(context, projections)
     return {
@@ -749,6 +753,7 @@ def _baseline_score(
         evaluation_positions=("QB", "RB", "WR", "TE", "K", "DST"),
         current_status_week_only=True,
         current_week=snapshot.manifest.current_week,
+        allow_estimated_projections=True,
     )
     matrix = build_weekly_projection_matrix(context, projections)
     return weighted_lineup_score(context, matrix, roster_player_ids, options)
@@ -933,6 +938,7 @@ def search_waiver_candidates(
             if row.owner_roster_id is None and row.state in ACQUIRABLE_STATES),
         evaluation_positions=("QB", "RB", "WR", "TE", "K", "DST"),
         current_week=snapshot.manifest.current_week,
+        allow_estimated_projections=True,
     )
     claim_branch_checks = validate_claim_branch(
         snapshot, tuple(row for row in ranked if row.decision_label in AFFIRMATIVE_LABELS),

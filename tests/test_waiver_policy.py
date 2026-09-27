@@ -428,6 +428,27 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         )
         self.assertEqual(len(evidence.contingency_scenarios), 2)
 
+    def test_estimated_forecast_preserves_comparison_but_withholds_claim(self):
+        projection_rows = tuple(
+            replace(row, raw_stats=(("pass_yd", 300.0),),
+                    coverage_status="estimated_missing_stats_v1:missing_statistic=fum_lost")
+            if row.player_id == "add" else row
+            for row in projections()
+        )
+        value_rows = tuple(
+            replace(row, coverage_status="estimated") if row.player_id == "add" else row
+            for row in target_values()
+        )
+        result = self.evaluate(projection_rows=projection_rows, value_rows=value_rows)
+        self.assertTrue(result.candidates)
+        self.assertEqual(result.decision_label, "WATCH")
+        self.assertEqual(result.decision.decision_path, "CONDITIONAL_FORECAST_ESTIMATE")
+        self.assertTrue(any(warning.startswith("Forecast estimate:")
+                            for warning in result.warnings))
+        value_only = self.evaluate(value_rows=value_rows)
+        self.assertEqual(value_only.decision_label, "WATCH")
+        self.assertEqual(value_only.decision.decision_path, "CONDITIONAL_FORECAST_ESTIMATE")
+
     def test_standalone_plus_contingency_rb_is_protected_from_marginal_drop(self):
         result = self.evaluate_contingent_rb()
         evidence = result.candidates[0].contingency

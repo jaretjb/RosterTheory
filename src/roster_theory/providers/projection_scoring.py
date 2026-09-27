@@ -8,6 +8,7 @@ from __future__ import annotations
 from math import isfinite
 from typing import Mapping
 
+from roster_theory.core.projections import ESTIMATED_PROJECTION_PREFIX
 from roster_theory.core.scoring_contract import (
     RuleAssessment, ScoredEvidence, StatEvidence,
     StatObservation, score_evidence,
@@ -15,9 +16,16 @@ from roster_theory.core.scoring_contract import (
 from roster_theory.providers.sleeper_scoring_rules import INDIVIDUALS, SLEEPER_LINEAR_RULES
 
 
-SCORING_CONTRACT_VERSION = "fantasypros-weekly-v1"
+SCORING_CONTRACT_VERSION = "fantasypros-weekly-v2"
 DRAFT_SCORING_CONTRACT_VERSION = "fantasypros-draft-season-v1"
+WEEKLY_ESTIMATE_POLICY_VERSION = "core-stats-conditional-v1"
 WEEKLY_RULES = SLEEPER_LINEAR_RULES
+_CORE_SKILL_STATS = {
+    "QB": frozenset({"pass_yd", "pass_td", "pass_int", "rush_yd", "rush_td"}),
+    "RB": frozenset({"rush_yd", "rush_td", "rec", "rec_yd", "rec_td"}),
+    "WR": frozenset({"rec", "rec_yd", "rec_td"}),
+    "TE": frozenset({"rec", "rec_yd", "rec_td"}),
+}
 
 # Explicit aliases retained from the existing NFL adapter where category
 # identity is unambiguous. Canonical event keys are also accepted. This does
@@ -66,6 +74,10 @@ def _score_projection_row(
     observations = []
     for statistic in sorted({rule.statistic for rule, _ in assessment.active_rules}):
         aliases = (statistic, *_ALIASES.get(statistic, ()))
+        if statistic == "fum_lost" and source_schema == SCORING_CONTRACT_VERSION:
+            # FantasyPros's projection table calls this FL (Fumbles Lost), and
+            # its published API example scores `fumbles` as lost fumbles.
+            aliases = (*aliases, "fumbles")
         present = [(key, statistic_number(stats[key])) for key in aliases if key in stats]
         if not present:
             continue
@@ -102,3 +114,28 @@ def scoring_coverage(result: ScoredEvidence) -> str:
         return "complete"
     issues = sorted({(issue.category, issue.setting or "source") for issue in result.issues})
     return "scoring_incomplete_v1:" + ";".join(f"{category}={setting}" for category, setting in issues)
+
+
+def weekly_estimate_coverage(result: ScoredEvidence) -> str | None:
+    """Admit a labeled skill estimate only when core stats and rules are sound."""
+    if result.assessment.scope.horizon != "WEEKLY" or result.assessment.support != "SUPPORTED":
+        return None
+    position = result.source_evidence.position
+    if position not in _CORE_SKILL_STATS or not result.used_settings:
+        return None
+    if not result.issues or any(issue.category != "missing_statistic" for issue in result.issues):
+        return None
+    observed = {
+        item.statistic for item in result.source_evidence.observations
+        if item.kind == "OBSERVED"
+    }
+    required_core = {
+        rule.statistic for rule, _ in result.assessment.active_rules
+        if rule.statistic in _CORE_SKILL_STATS[position] and position in (rule.positions or ())
+    }
+    if not required_core.issubset(observed):
+        return None
+    missing = sorted({issue.setting for issue in result.issues})
+    return ESTIMATED_PROJECTION_PREFIX + ";".join(
+        f"missing_statistic={setting}" for setting in missing
+    )

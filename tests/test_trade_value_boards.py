@@ -35,6 +35,7 @@ from roster_theory.trade.experts import (
 from roster_theory.trade.board_service import (
     _build_provider_projection_curves,
     _canonical_projections,
+    _estimated_curve_positions,
     _input_calls,
     _identity_map,
     _required_market_universe,
@@ -189,6 +190,17 @@ class InSeasonExpertTests(unittest.TestCase):
 
 
 class TradeBoardTests(unittest.TestCase):
+    def test_estimated_projection_marks_only_its_derived_position_curve(self) -> None:
+        rows = (
+            Projection("q", "WEEKLY", 1, (("pass_yd", 250.0),), 10.0, "fixture",
+                       "estimated_missing_stats_v1:missing_statistic=fum_lost"),
+            Projection("r", "WEEKLY", 1, (), 10.0, "fixture"),
+        )
+        curves = build_projection_curves(rows, {"q": "QB", "r": "RB"},
+            required_counts={"QB": 1, "RB": 1}, expected_weeks=(1,),
+            allow_estimates=True)
+        self.assertEqual(_estimated_curve_positions(curves, rows), frozenset({"QB"}))
+
     def test_missing_rostered_coverage_is_scoped_by_default_with_strict_opt_in(self) -> None:
         rows = []
         players = []
@@ -748,6 +760,15 @@ class TradeBoardTests(unittest.TestCase):
         self.assertFalse(report["recommendation_generated"])
         self.assertFalse(report["sleeper_write_performed"])
         self.assertTrue(report["boards_complete"])
+        result.weekly_projections = (Projection(
+            "p1", "WEEKLY", 1, (("rec", 1.0),), 0.5, "fixture",
+            "estimated_missing_stats_v1:missing_statistic=rec_2pt",
+        ),)
+        estimated = board_refresh_report(result)
+        self.assertFalse(estimated["boards_complete"])
+        self.assertEqual(estimated["coverage_status"], "PARTIAL")
+        self.assertEqual(estimated["estimated_projection_rows"], 1)
+        result.weekly_projections = ()
         result.selected_final = replace(selected, excluded_players=(("missing", "MISSING_MARKET_RANK"),))
         partial = board_refresh_report(result)
         self.assertFalse(partial["boards_complete"])

@@ -48,7 +48,7 @@ permits assigning zero to unknown players or missing scoring categories.
 ## Rule catalogue and source evidence
 
 `providers/projection_scoring.py` owns the provider translation and version
-`fantasypros-weekly-v1`; provider aliases do not enter the neutral core. Its
+`fantasypros-weekly-v2`; provider aliases do not enter the neutral core. Its
 catalogue describes linear arithmetic and applicability, not field availability.
 Assessment happens once per response, before per-player evaluation.
 
@@ -69,6 +69,14 @@ unambiguous aliases such as `pass_yds`, `pass_tds`, `rec_rec`, `rec_yds`,
 inputs, with synthetic regression coverage. No season/position-wide delivery
 guarantee is inferred from those examples or tests.
 
+For **weekly** FantasyPros projections, its
+[projection table](https://www.fantasypros.com/nfl/projections/qb.php/?loggedin=&week=draft)
+labels FL as fumbles lost. Its [API example](https://api.fantasypros.com/v2/docs)
+contains `fumbles: 2.85` and 293.7 standard points; the shown rushing and
+receiving stats reconcile to 293.7 only after a 5.7-point lost-fumble
+deduction. Therefore the weekly adapter maps `fumbles` to `fum_lost`. The
+weekly scoring contract is v2; the separate Draft source contract is unchanged.
+
 | Category | Treatment |
 | --- | --- |
 | Passing/rushing/receiving, player special teams, lost fumbles and fumble-return TDs | Require exact observations for individual positions QB/RB/WR/TE/K; team-defense fields cannot substitute |
@@ -79,8 +87,7 @@ guarantee is inferred from those examples or tests.
 | Unknown nonzero settings | Unsupported; no threshold-event derivation from yardage averages |
 | Zero settings | Disabled, including unknown settings; a string `"0"` is an invalid multiplier, not a disabled rule |
 
-Ambiguous legacy translations are intentionally withheld: `fumbles` does not
-prove `fum_lost`; `def_ff`/`def_fr` do not prove team-special-teams forced fumbles
+Other ambiguous legacy translations are withheld: `def_ff`/`def_fr` do not prove team-special-teams forced fumbles
 or recoveries; `def_retd` does not prove team-special-teams TDs. Lettered
 `def_pa_a` through `def_pa_g` also require verified bucket definitions before
 use. Exact canonical event fields remain accepted. Multiple supplied aliases
