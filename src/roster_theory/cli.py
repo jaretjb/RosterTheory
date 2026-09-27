@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from roster_theory.waiver.search import waiver_readiness
 
-from roster_theory.draft_analysis import (
+from roster_theory.draft.analysis import (
     analyze_snapshot,
     historical_position_pick_curves,
     simulation_round_tendencies,
