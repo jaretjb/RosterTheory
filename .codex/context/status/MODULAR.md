@@ -6,6 +6,15 @@ MA-003 merged in PR #51; its provider-limit follow-up merged in PR #52 and
 closed #32. Active MA-004a establishes a Draft package by moving only Draft
 analysis behind a compatibility import. Decision behavior stays unchanged.
 
+MA-004a's Draft analysis extraction is prepared on
+`codex/ma-004a-draft-analysis`. Both synthetic reference profiles retain their
+Draft semantic hashes and old/new analysis imports share callable objects.
+The focused 125-test set, full 936-test suite, Ruff, package/install smoke,
+context and privacy checks pass. Same-machine, five-repeat fixed-seed Draft
+turn and strategy medians changed by +0.7% to +2.0%; Python allocation peaks
+changed by at most 59 bytes. No provider or Sleeper operation was performed.
+Further Draft simulation, watcher and policy changes require a later slice.
+
 Trade and Waiver use shared neutral value preparation; Waiver adapts its own
 snapshot. Provider retrieval, cache interpretation, identity, league scoring,
 horizon evidence and value calculations moved out of Trade. Feature decisions

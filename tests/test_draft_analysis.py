@@ -1,5 +1,7 @@
 import unittest
 
+from roster_theory.draft import analysis
+from roster_theory import draft_analysis
 from roster_theory.draft_analysis import (
     analyze_draft,
     detect_position_runs,
@@ -18,6 +20,16 @@ def make_pick(pick_no: int, position: str, manager: str = "1") -> dict:
 
 
 class DraftAnalysisTests(unittest.TestCase):
+    def test_legacy_imports_share_new_analysis_objects(self) -> None:
+        for name in (
+            "ACQUISITION_POSITIONS", "CORE_POSITIONS", "MARKET_POSITION_PRIOR",
+            "HistoricalPositionCurves", "analyze_draft", "analyze_snapshot",
+            "detect_position_runs", "historical_position_pick_curves",
+            "pick_position", "player_name", "simulation_round_tendencies",
+        ):
+            with self.subTest(name=name):
+                self.assertIs(getattr(draft_analysis, name), getattr(analysis, name))
+
     def test_detects_position_run(self) -> None:
         picks = [make_pick(index + 1, pos) for index, pos in enumerate(["RB", "WR", "RB", "RB", "QB"])]
         runs = detect_position_runs(picks)

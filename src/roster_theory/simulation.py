@@ -11,7 +11,7 @@ from itertools import combinations
 from statistics import NormalDist, fmean, median, pstdev
 from typing import Any, Iterable, Mapping
 
-from roster_theory.draft_analysis import HistoricalPositionCurves
+from roster_theory.draft.analysis import HistoricalPositionCurves
 from roster_theory.specialist_preferences import (
     defense_draft_rank,
     defense_draft_sort_key,
