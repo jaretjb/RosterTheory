@@ -295,6 +295,7 @@ class ImportBoundaryTests(unittest.TestCase):
         prohibited = (
             "roster_theory.trade",
             "roster_theory.simulation",
+            "roster_theory.draft",
             "roster_theory.mock_watcher",
             "roster_theory.draft_analysis",
         )

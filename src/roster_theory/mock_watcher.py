@@ -18,7 +18,7 @@ from roster_theory.specialist_preferences import (
     defense_draft_rank,
     defense_draft_sort_key,
 )
-from roster_theory.simulation import (
+from roster_theory.draft.simulation import (
     Player,
     POSITION_CAPS,
     SKILL_POSITIONS,

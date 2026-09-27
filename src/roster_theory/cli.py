@@ -89,7 +89,7 @@ from roster_theory.rankings import (
     starter_baselines,
     weighted_consensus,
 )
-from roster_theory.simulation import (
+from roster_theory.draft.simulation import (
     OPPONENT_POSITION_STRESS_PROFILES,
     compare_strategies,
 )
