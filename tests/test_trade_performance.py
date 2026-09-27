@@ -252,7 +252,10 @@ class PerformanceEvidenceTests(unittest.TestCase):
     def test_target_context_keeps_expert_board_order_and_cannot_make_target_alone(self) -> None:
         snapshot, projections, selected, market_ecr, market = fixture()
         capture = pregame("o_buy", 1, points=12.0)
-        played = outcome("o_buy", 1, points=3.0, rank=18.0)
+        played = outcome(
+            "o_buy", 1, points=3.0, rank=18.0,
+            captured_at=snapshot.captured_at - timedelta(hours=1),
+        )
         evidence = build_performance_evidence(
             "fixture", 2026, 1, snapshot.captured_at,
             expectations=(capture,), outcomes=(played,), policy=policy(),
