@@ -13,7 +13,7 @@ from roster_theory.core.errors import CoverageIncomplete, IdentityIncomplete, Ro
 from roster_theory.core.isotonic import MonotoneCurve
 from roster_theory.core.models import FantasyTeam, LeagueRules, Player, Projection
 from roster_theory.core.provenance import AnalysisManifest, DataStamp
-from roster_theory.trade.boards import BoardPlayerValue, ValueBoard
+from roster_theory.trade.boards import BoardPlayerValue, ESTIMATED_VALUE_WARNING, ValueBoard
 from roster_theory.trade.evaluation import (
     EvaluationOptions,
     PlayerAsset,
@@ -284,6 +284,38 @@ class ProjectionAndEvaluationTests(unittest.TestCase):
             market_board=self.market,
             options=EvaluationOptions(**options),
         )
+
+    def test_estimated_package_forecast_is_computed_but_decision_is_conditional(self) -> None:
+        projections = tuple(
+            replace(row, raw_stats=(("rec", 4.0),),
+                    coverage_status="estimated_missing_stats_v1:missing_statistic=rec_2pt")
+            if row.player_id == "a_wr" else row
+            for row in self.projections
+        )
+        package = build_entered_package(self.snapshot, send=("a_wr",), receive=("b_rb",))
+        result = evaluate_trade(
+            self.snapshot, package, projections=projections,
+            selected_board=self.selected, market_board=self.market,
+        )
+        self.assertEqual(result.decision_label, "CONDITIONAL")
+        self.assertIn("DECISION-CONDITIONAL", result.modes)
+        self.assertIn("missing scoring statistics", result.summary)
+        self.assertTrue(any("league-scored estimates" in warning for warning in result.warnings))
+
+    def test_estimated_ownership_curve_alone_makes_trade_conditional(self) -> None:
+        market = replace(self.market, players=tuple(
+            replace(row, warnings=(ESTIMATED_VALUE_WARNING,))
+            if row.player_id == "a_wr" else row
+            for row in self.market.players
+        ))
+        package = build_entered_package(self.snapshot, send=("a_wr",), receive=("b_rb",))
+        result = evaluate_trade(
+            self.snapshot, package, projections=self.projections,
+            selected_board=self.selected, market_board=market,
+        )
+        self.assertEqual(result.decision_label, "CONDITIONAL")
+        self.assertTrue(any("ownership values use league-scored estimates" in warning
+                            for warning in result.warnings))
 
     def test_bye_zeroes_only_the_affected_week(self) -> None:
         weeks = (

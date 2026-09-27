@@ -20,12 +20,15 @@ from roster_theory.core.models import Projection, RankObservation
 from roster_theory.core.projections import (
     currently_inactive,
     projection_coverage_issue,
-    projection_is_complete,
+    projection_is_estimated,
+    projection_is_usable,
     reconcile_current_inactive_omissions,
 )
 from roster_theory.core.replacement import positional_waiver_baselines
 from roster_theory.core.scoring import STAT_ALIASES, POSITION_RECEPTION_BONUSES
-from roster_theory.providers.projection_scoring import SCORING_CONTRACT_VERSION
+from roster_theory.providers.projection_scoring import (
+    SCORING_CONTRACT_VERSION, WEEKLY_ESTIMATE_POLICY_VERSION,
+)
 from roster_theory.providers.formats import RankingFormat, ranking_format, validate_provider_scope
 from roster_theory.fantasypros import FantasyProsClient
 from roster_theory.providers.cache import (
@@ -44,6 +47,8 @@ from roster_theory.providers.fantasypros import (
     normalize_rankings,
 )
 from roster_theory.trade.boards import (
+    ESTIMATED_VALUE_WARNING,
+    ProjectionCurve,
     SelectedRank,
     ValueBoard,
     ValuationGap,
@@ -578,6 +583,9 @@ def _fetch_value_inputs(
             "projection_scoring_contract": (
                 SCORING_CONTRACT_VERSION if call.name.startswith("projections_") else None
             ),
+            "projection_estimate_policy": (
+                WEEKLY_ESTIMATE_POLICY_VERSION if call.name.startswith("projections_") else None
+            ),
             "captured_at": values[call.name]['captured_at'],
             "fetched_at": values[call.name].get('fetched_at'),
             "cache_status": 'hit' if call.fresh_cache_hit else 'miss',
@@ -951,10 +959,14 @@ def _canonical_projections(
         tuple(sleeper_players.values()), current_week, tuple(result)
     ) if current_week is not None else tuple(result)
     for row in normalized:
-        issue = projection_coverage_issue(row, current_week=current_week)
+        issue = projection_coverage_issue(row, current_week=current_week, allow_estimate=True)
         if issue is not None:
             warning_map[row.player_id] = (*warning_map.get(row.player_id, ()),
                                           f"Week {row.week}: {issue}")
+        elif projection_is_estimated(row):
+            warning_map[row.player_id] = (*warning_map.get(row.player_id, ()),
+                f"Week {row.week}: estimated from available league-scored stats; "
+                f"missing {row.coverage_status.partition(':')[2]}")
     return normalized, complete_positions, warning_map
 
 
@@ -981,6 +993,19 @@ def _build_provider_projection_curves(
         expected_weeks=expected_weeks,
         current_week=current_week,
         allow_partial=True,
+        allow_estimates=True,
+    )
+
+
+def _estimated_curve_positions(
+    curves: Sequence[ProjectionCurve], projections: Sequence[Projection],
+) -> frozenset[str]:
+    estimated_ids = {
+        row.player_id for row in projections if projection_is_estimated(row)
+    }
+    return frozenset(
+        curve.position for curve in curves
+        if any(player_id in estimated_ids for player_id, _ in curve.raw_player_points)
     )
 
 
@@ -1367,6 +1392,12 @@ def refresh_value_boards(
         expected_weeks=weeks,
         current_week=snapshot.manifest.current_week,
     )
+    estimated_curve_positions = _estimated_curve_positions(curves, canonical_projections)
+    for player_id, position in positions.items():
+        if position in estimated_curve_positions:
+            projection_warnings[player_id] = (
+                *projection_warnings.get(player_id, ()), ESTIMATED_VALUE_WARNING,
+            )
     if format_evidence.warnings:
         projection_warnings = {
             player_id: (*projection_warnings.get(player_id, ()), *format_evidence.warnings)
@@ -1514,8 +1545,9 @@ def refresh_value_boards(
                 ),
                 projected_points=(
                     current_projection[player_id].league_points
-                    if player_id in current_projection and projection_is_complete(
-                        current_projection[player_id], current_week=snapshot.manifest.current_week
+                    if player_id in current_projection and projection_is_usable(
+                        current_projection[player_id], current_week=snapshot.manifest.current_week,
+                        allow_estimate=True,
                     )
                     else None
                 ),
@@ -1616,6 +1648,7 @@ def refresh_value_boards(
             "raw stats were scored under league rules and unscorable rows are unavailable"
         ),
     ) if projection_scope_mismatches else ()
+    estimated_rows = sum(projection_is_estimated(row) for row in canonical_projections)
     export_board_evidence(
         target,
         selected_ranks=selected_ranks,
@@ -1627,6 +1660,11 @@ def refresh_value_boards(
         warnings=(
             *format_evidence.warnings,
             *projection_scope_warnings,
+            *(
+                (f"{estimated_rows} weekly projection rows use estimates from available league-scored "
+                 "stats; omitted scoring fields were not proven zero. Check player warnings before acting.",)
+                if estimated_rows else ()
+            ),
             f"{stage.mode} owns long-term value; CURRENT_SIGNAL remains separate",
             "CURRENT_SIGNAL weekly ranks/projections remain separate and do not change ownership value",
             "Valuation gaps are signals, not trade recommendations or opponent preferences",
@@ -1642,6 +1680,8 @@ def refresh_value_boards(
             "scoring_capability": asdict(scoring_capability),
             "ranking_format": asdict(format_evidence),
             "source_evidence": inputs.source_evidence,
+            "estimated_projection_rows": estimated_rows,
+            "estimated_curve_positions": sorted(estimated_curve_positions),
             "news_coverage": inputs.news_coverage,
             "missing_rostered_player_ids": list(missing_rostered_player_ids),
             "draft_anchor": {
@@ -1686,6 +1726,9 @@ def board_refresh_report(result: BoardRefreshResult) -> dict[str, Any]:
         player.player_id: player for player in result.refresh.snapshot.players
     }
     owner_by_player = dict(result.refresh.snapshot.owner_by_player)
+    estimated_rows = sum(
+        projection_is_estimated(row) for row in getattr(result, "weekly_projections", ())
+    )
     return {
         "ranking_format": asdict(result.ranking_format) if getattr(result, "ranking_format", None) else None,
         "product": "TRADE ASSISTANT",
@@ -1698,14 +1741,20 @@ def board_refresh_report(result: BoardRefreshResult) -> dict[str, Any]:
         "prospective_snapshot_path": str(result.prospective_snapshot_path),
         "selected_board": result.selected_final.board_id,
         "market_board": result.market.board_id,
-        "boards_complete": (result.selected_final.complete and result.market.complete
+        "boards_complete": (not estimated_rows and result.selected_final.complete and result.market.complete
                             and not result.selected_final.excluded_players
                             and not result.refresh.snapshot.player_exclusions),
         "included_rows_complete": result.selected_final.complete and result.market.complete,
         "required_players": result.required_players,
         "covered_players": len(result.selected_final.players),
         "excluded_players": list(result.selected_final.excluded_players),
-        "coverage_status": "PARTIAL" if result.selected_final.excluded_players or result.refresh.snapshot.player_exclusions else "COMPLETE",
+        "coverage_status": "PARTIAL" if estimated_rows or result.selected_final.excluded_players or result.refresh.snapshot.player_exclusions else "COMPLETE",
+        "estimated_projection_rows": estimated_rows,
+        "projection_estimate_warning": (
+            "Ownership values use estimates from available league-scored statistics; "
+            "missing scoring fields were not assumed to be verified zeros."
+            if estimated_rows else None
+        ),
         "snapshot_player_exclusions": list(result.refresh.snapshot.player_exclusions),
         "identity_matches": result.identity_matches,
         "missing_rostered_player_ids": list(

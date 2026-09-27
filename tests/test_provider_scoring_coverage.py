@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.core.models import Player, Projection
+from roster_theory.core.projections import projection_is_complete, projection_is_usable
 from roster_theory.core.provenance import canonical_json
 from roster_theory.core.run_contract import restore_record
 from roster_theory.core.scoring_contract import ScoringScope, assess_scoring_rules
@@ -51,6 +52,32 @@ def projection(stats, scoring, position="QB"):
 
 
 class ProviderScoringCoverageTests(unittest.TestCase):
+    def test_core_skill_forecast_becomes_labeled_estimate_only_for_missing_optional_stats(self):
+        scoring = {"pass_yd": .04, "pass_td": 6, "pass_int": -2,
+                   "rush_yd": .1, "rush_td": 6, "fum_lost": -2}
+        core = {"pass_yds": 250, "pass_tds": 2, "pass_ints": 1,
+                "rush_yds": 20, "rush_tds": 0}
+        row = projection(core, scoring)
+        self.assertEqual(row.league_points, 22)
+        self.assertTrue(row.coverage_status.startswith("estimated_missing_stats_v1:"))
+        self.assertIn("missing_statistic=fum_lost", row.coverage_status)
+        self.assertFalse(projection_is_complete(row, current_week=4))
+        self.assertTrue(projection_is_usable(row, current_week=4, allow_estimate=True))
+        self.assertFalse(projection_is_usable(row, current_week=4))
+        strict = build_projection_curves((row,), {"synthetic": "QB"},
+            required_counts={"QB": 1}, expected_weeks=(4,), current_week=4,
+            allow_partial=True)
+        estimated = build_projection_curves((row,), {"synthetic": "QB"},
+            required_counts={"QB": 1}, expected_weeks=(4,), current_week=4,
+            allow_partial=True, allow_estimates=True)
+        self.assertFalse(strict[0].slot_points)
+        self.assertEqual(estimated[0].slot_points, ((1, 22.0),))
+        missing_core = projection({"pass_yds": 250, "pass_ints": 1,
+                                   "rush_yds": 20, "rush_tds": 0}, scoring)
+        self.assertFalse(projection_is_usable(missing_core, current_week=4, allow_estimate=True))
+        invalid = projection({**core, "fum_lost": "bad"}, scoring)
+        self.assertFalse(projection_is_usable(invalid, current_week=4, allow_estimate=True))
+
     def test_missing_touchdowns_are_not_observed_zero(self):
         scoring = {"pass_yd": .04, "pass_td": 6}
         missing = projection({"pass_yds": 250}, scoring)

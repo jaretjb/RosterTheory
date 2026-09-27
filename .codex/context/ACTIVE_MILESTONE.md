@@ -1,6 +1,22 @@
 # Active milestone
 
-## MA-002o - Reconcile working workflows before further migration
+## MA-002p - Restore conditional in-season forecast estimates
+
+Authorized by the user's September 27 request to correct the confirmed Trade
+and Waiver projection regression after merging PR #49. Continue the MA-002
+before-and-after reconciliation using synthetic fixtures and aggregate retained
+cache evidence. Restore usable league-scored estimates only when position-core
+forecast stats are observed and scoring rules otherwise resolve. Keep missing
+fields explicit; invalid, missing-core, unknown-rule and unscoped data stay
+unavailable. Carry estimate status through value boards and both analyses.
+Trade decisions using estimates must be conditional; Waiver analysis may rank
+them but may not issue an affirmative claim/add label. Do not alter expert
+rankings, league-specific policy, Draft scoring, or Sleeper state. No new
+provider calls or publication of private rows. Validate the reference
+workflows, full suite, Ruff, context, privacy and CI; stop at a tested PR.
+MA-002 and remaining provider/rule evidence remain open.
+
+## Previous MA-002o - Reconcile working workflows before further migration (merged PR #49)
 
 Authorized by the user's September 26 request for a before-and-after review
 and fixes to confirmed regressions. Compare the accepted MA-001 baseline and

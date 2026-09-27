@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002o working-workflow reconciliation active after merged PR #48
+Status: MA-002p conditional forecast restoration active after merged PR #49
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -121,6 +121,12 @@ The new room gate stops both reference Draft configurations, and strict weekly
 scoring makes cached forecasts unusable for Trade/Waiver value preparation.
 The slice corrects proven misclassification and records remaining behavior
 choices without calling incomplete scores complete.
+
+MA-002p restores the prior usable in-season forecast path as an explicitly
+conditional estimate when core position statistics are present. It preserves
+strict exclusion for missing core or invalid evidence, exposes incomplete
+scoring on value boards, and limits Trade/Waiver decision labels while source
+fields remain unverified.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |

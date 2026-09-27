@@ -16,6 +16,7 @@ from roster_theory.providers.cache import atomic_write_json
 SUPPORTED_HORIZONS = frozenset(
     {"WEEKLY-PROXY", "ROS", "EARLY_SEASON_DRAFT_ANCHOR"}
 )
+ESTIMATED_VALUE_WARNING = "Ownership curve includes estimates from incomplete scoring statistics"
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,6 +275,7 @@ def build_projection_curves(
     expected_weeks: Sequence[int] = (),
     current_week: int | None = None,
     allow_partial: bool = False,
+    allow_estimates: bool = False,
 ) -> tuple[ProjectionCurve, ...]:
     by_player: dict[str, list[Projection]] = {}
     current_week = current_week if current_week is not None else min(expected_weeks, default=None)
@@ -294,7 +296,7 @@ def build_projection_curves(
             issues = tuple(
                 issue for row in rows
                 if (issue := projection_coverage_issue(
-                    row, current_week=current_week
+                    row, current_week=current_week, allow_estimate=allow_estimates
                 )) is not None
             )
             if issues:

@@ -13,6 +13,8 @@ from roster_theory.core.models import Player, Projection
 from roster_theory.core.projections import (
     KNOWN_INACTIVE,
     projection_is_complete,
+    projection_is_estimated,
+    projection_is_usable,
     reconcile_current_inactive_omissions,
 )
 from roster_theory.core.provenance import stable_hash
@@ -123,6 +125,11 @@ class PlayerValueInput:
     season_sample_size: int | None = None
     recent_sample_size: int | None = None
     performance_as_of: datetime | None = None
+
+
+def value_coverage_is_usable(status: str) -> bool:
+    """Estimated values can be compared, but must remain visibly conditional."""
+    return status.casefold() in {"complete", "estimated"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -609,6 +616,7 @@ def _validate_inputs(
         evaluation_positions=WAIVER_POSITIONS,
         current_status_week_only=True,
         current_week=snapshot.manifest.current_week,
+        allow_estimated_projections=True,
     )
     return value_map, context
 
@@ -1090,14 +1098,14 @@ def _quarterback_holding_evidence(
     omission_ids: list[str] = []
     for player_id in unowned_qb_ids:
         value = value_map.get(player_id)
-        complete = value is not None and value.coverage_status.casefold() == "complete"
+        complete = value is not None and value_coverage_is_usable(value.coverage_status)
         for week in context.weeks:
             projection = projection_by_key.get((player_id, week.week))
             cell = matrix.cell(player_id, week.week)
             complete = complete and projection is not None and cell is not None and cell.points is not None
             if projection is not None:
-                complete = complete and projection_is_complete(
-                    projection, current_week=context.current_week
+                complete = complete and projection_is_usable(
+                    projection, current_week=context.current_week, allow_estimate=True,
                 )
         (streamer_ids if complete else omission_ids).append(player_id)
 
@@ -1192,7 +1200,7 @@ def _quarterback_holding_evidence(
                 and player_id in player_by_id
                 and drop_position in _normalized_positions(player_by_id[player_id])
                 and acquisitions.get(player_id) in ACQUIRABLE_STATES
-                and value.coverage_status.casefold() == "complete"
+                and value_coverage_is_usable(value.coverage_status)
             )
         )
         replacement_selected = max(
@@ -1388,9 +1396,10 @@ def evaluate_waiver(
     for player_id in active_supported_roster:
         if any(
             (player_id, week.week) not in projection_rows
-            or not projection_is_complete(
+            or not projection_is_usable(
                 projection_rows[(player_id, week.week)],
                 current_week=snapshot.manifest.current_week,
+                allow_estimate=True,
             )
             for week in weeks
         ):
@@ -1418,7 +1427,7 @@ def evaluate_waiver(
         supplied_values = {row.player_id: row for row in values}
         for player_id in droppable_roster:
             value = supplied_values.get(player_id)
-            if value is None or value.coverage_status.casefold() != "complete":
+            if value is None or not value_coverage_is_usable(value.coverage_status):
                 drop_evidence_exclusion_map.setdefault(player_id, "INCOMPLETE_VALUE_EVIDENCE")
     drop_evidence_excluded = {
         player_id
@@ -1494,8 +1503,9 @@ def evaluate_waiver(
             + ", ".join(f"{player_id}/W{week}" for player_id, week in missing_projection_weeks)
         )
     projection_inputs_complete = not missing_projection_weeks and all(
-        projection_is_complete(
-            projection_by_key[(player_id, week.week)], current_week=context.current_week
+        projection_is_usable(
+            projection_by_key[(player_id, week.week)], current_week=context.current_week,
+            allow_estimate=True,
         )
         for player_id in evaluated_ids
         for week in context.weeks
@@ -1901,9 +1911,25 @@ def evaluate_waiver(
         row.drop_player_id for row in ordered if row.drop_player_id is not None
     }
     value_inputs_complete = all(
-        value_map[player_id].coverage_status.casefold() == "complete"
+        value_coverage_is_usable(value_map[player_id].coverage_status)
         for player_id in described_ids
     )
+    estimated_value_ids = {
+        player_id for player_id in evaluated_ids
+        if player_id in value_map
+        and value_map[player_id].coverage_status.casefold() == "estimated"
+    }
+    estimated_projection_weeks = sum(
+        projection_is_estimated(row)
+        for (player_id, week), row in projection_by_key.items()
+        if player_id in evaluated_ids and week in {item.week for item in context.weeks}
+    )
+    if estimated_value_ids or estimated_projection_weeks:
+        warnings.append(
+            "Forecast estimate: ownership values or weekly points use available "
+            "league-scored statistics; missing scoring fields are unverified, "
+            "so any favorable decision remains conditional"
+        )
     for player_id in sorted(described_ids):
         warnings.extend(value_map[player_id].warnings)
         for week in context.weeks:

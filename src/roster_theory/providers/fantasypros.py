@@ -11,8 +11,9 @@ from roster_theory.core.provenance import DataStamp, stable_hash
 from roster_theory.core.scoring_contract import ScoringScope, assess_scoring_rules
 from roster_theory.providers.formats import ranking_format, validate_provider_scope
 from roster_theory.providers.projection_scoring import (
-    SCORING_CONTRACT_VERSION, WEEKLY_RULES, score_projection_row, scoring_coverage,
-    statistic_number,
+    SCORING_CONTRACT_VERSION, WEEKLY_ESTIMATE_POLICY_VERSION, WEEKLY_RULES,
+    score_projection_row, scoring_coverage,
+    statistic_number, weekly_estimate_coverage,
 )
 from roster_theory.fantasypros import FantasyProsClient
 
@@ -325,7 +326,10 @@ def normalize_scored_projections(
     try:
         dataset = normalize_projections(value, horizon="WEEKLY",
             league_points={pid: result.diagnostic_points for pid, result in scored.items()},
-            coverage_by_player={pid: scoring_coverage(result) for pid, result in scored.items()},
+            coverage_by_player={
+                pid: (weekly_estimate_coverage(result) or scoring_coverage(result))
+                for pid, result in scored.items()
+            },
             captured_at=captured_at, endpoint=endpoint, parameters=parameters)
     except ValueError as exc:
         # Raw NaN/Inf cannot be hashed into a reproducible payload. Keep this a
@@ -334,6 +338,7 @@ def normalize_scored_projections(
     return replace(dataset, stamp=replace(dataset.stamp, scoring_hash=assessment.scoring_hash,
         parameter_hash=stable_hash({"provider_parameters": parameters or {},
                                    "scoring_contract": SCORING_CONTRACT_VERSION,
+                                   "estimate_policy": WEEKLY_ESTIMATE_POLICY_VERSION,
                                    "rules_hash": assessment.rules_hash})))
 
 

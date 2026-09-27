@@ -10,6 +10,7 @@ from roster_theory.core.models import Player, Projection
 
 
 KNOWN_INACTIVE = frozenset({"IR", "PUP", "SUSP", "OUT"})
+ESTIMATED_PROJECTION_PREFIX = "estimated_missing_stats_v1:"
 COMPLETE_PROJECTION_COVERAGE = frozenset({
     "complete", "verified_bye_zero", "known_inactive_zero", "verified_inactive_zero",
 })
@@ -24,15 +25,23 @@ def projection_coverage_is_complete(status: str) -> bool:
     return status.casefold() in COMPLETE_PROJECTION_COVERAGE
 
 
+def projection_is_estimated(row: Projection) -> bool:
+    return row.coverage_status.casefold().startswith(ESTIMATED_PROJECTION_PREFIX)
+
+
 def projection_coverage_issue(
     row: Projection,
     *,
     current_week: int | None,
     allow_scenario: bool = False,
+    allow_estimate: bool = False,
 ) -> str | None:
     status = row.coverage_status.casefold()
     if not projection_coverage_is_complete(status) and not (
         allow_scenario and status == "scenario_inactive_zero"
+    ) and not (
+        allow_estimate and status.startswith(ESTIMATED_PROJECTION_PREFIX)
+        and bool(status[len(ESTIMATED_PROJECTION_PREFIX):]) and bool(row.raw_stats)
     ):
         return f"Incomplete projection coverage: {row.coverage_status}"
     if not isfinite(row.league_points):
@@ -52,6 +61,16 @@ def projection_is_complete(
 ) -> bool:
     return projection_coverage_issue(
         row, current_week=current_week, allow_scenario=allow_scenario
+    ) is None
+
+
+def projection_is_usable(
+    row: Projection, *, current_week: int | None, allow_scenario: bool = False,
+    allow_estimate: bool = False,
+) -> bool:
+    return projection_coverage_issue(
+        row, current_week=current_week, allow_scenario=allow_scenario,
+        allow_estimate=allow_estimate,
     ) is None
 
 

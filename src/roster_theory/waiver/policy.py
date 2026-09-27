@@ -1680,6 +1680,9 @@ def apply_waiver_policy(
         _apply_contingency_policy(candidate, policy)
         for candidate in evaluation.candidates
     )
+    estimated_forecast = any(
+        warning.startswith("Forecast estimate:") for warning in evaluation.warnings
+    )
     def assess(candidate):
         scoped = candidate
         gaps = any(row.reason in {"INCOMPLETE_PROJECTION_EVIDENCE", "IDENTITY_UNAVAILABLE"}
@@ -1707,6 +1710,18 @@ def apply_waiver_policy(
             decision = replace(decision, gates=(*decision.gates,
                 _gate("independent_roster_risk_bound", bound, "<=", policy.maximum_downside_increase, True,
                       "Unchanged independent lineup components cancel; risk uses a conservative upper bound")))
+        if estimated_forecast and decision.label in {"ADD NOW", "CLAIM", "ACQUIRE"}:
+            decision = replace(
+                decision, label="WATCH", decision_path="CONDITIONAL_FORECAST_ESTIMATE",
+                gates=(*decision.gates, _gate(
+                    "forecast_scoring_verified", False, "==", True, False,
+                    "Missing forecast scoring fields may change the result",
+                )),
+            )
+            uncertainty = (
+                "The available-statistics forecast is an estimate; verify missing scoring "
+                "fields before making a claim or add"
+            )
         return candidate, decision, uncertainty
 
     assessments = tuple(assess(candidate) for candidate in policy_candidates)

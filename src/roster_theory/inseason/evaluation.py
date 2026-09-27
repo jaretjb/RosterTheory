@@ -11,6 +11,7 @@ from roster_theory.core.models import Player, Projection
 from roster_theory.core.projections import (
     currently_inactive,
     projection_coverage_issue,
+    projection_is_estimated,
 )
 
 
@@ -45,6 +46,7 @@ class InSeasonContext:
     current_status_week_only: bool = True
     current_week: int | None = None
     allow_scenario_projections: bool = False
+    allow_estimated_projections: bool = False
 
     def __post_init__(self) -> None:
         if not self.current_status_week_only:
@@ -221,6 +223,7 @@ def build_weekly_projection_matrix(
                 projection_coverage_issue(
                     projection, current_week=current_week,
                     allow_scenario=context.allow_scenario_projections,
+                    allow_estimate=context.allow_estimated_projections,
                 ) if projection else "Missing weekly projection"
             )
             if player.nfl_team in week.bye_teams:
@@ -246,6 +249,14 @@ def build_weekly_projection_matrix(
             else:
                 points = float(projection.league_points)
                 status = projection.coverage_status.casefold()
+                if projection_is_estimated(projection):
+                    cell_warnings.append(
+                        "Estimated from available league-scored statistics; "
+                        "missing active scoring fields are unverified"
+                    )
+                    warnings.append(
+                        f"{player.player_id} Week {week.week}: projection is estimated"
+                    )
                 availability = (
                     "BYE" if status == "verified_bye_zero"
                     else "INACTIVE" if status in {

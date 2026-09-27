@@ -77,3 +77,29 @@ The full local suite passes (916 tests), including the Draft room, provider
 scoring, Waiver historical scoring, and reference baseline cases. Ruff, Python
 compilation, context routing, and the tracked-tree privacy gate pass. This is
 synthetic and retained-evidence validation; it is not a live provider run.
+
+## Conditional in-season repair after PR #49
+
+The 34 retained weekly responses contain 12,861 QB/RB/WR/TE rows. For both
+reference scoring maps, zero rows prove exact scoring coverage, but all 12,861
+have the observed position-core statistics needed for the older calculation.
+The repaired path uses each league's actual scoring multipliers on observed
+statistics and marks the result as an **estimate** when other active scoring
+fields are missing. It does not assert that those missing fields equal zero.
+In 8,356 of these rows, the numeric estimate differs from the older result
+because the old scorer counted a generic `fumbles` field as fumbles **lost**.
+The new scorer does not make that unsupported equivalence. Both reference
+maps show the same aggregate difference count.
+Missing core statistics, invalid values, unknown rules and incomplete source
+scope still make a row unavailable.
+
+Estimated rows can populate Trade/Waiver value curves and weekly comparisons.
+When a position's curve includes estimates, all values derived from that curve
+carry the warning, even for a player whose own forecast is exact. The missing
+fields remain in player warnings; the value-board report is
+`PARTIAL`. An affected Trade verdict is `CONDITIONAL`. Waiver search may show
+and rank an estimated candidate, but a favorable estimate yields `WATCH`
+instead of an add/claim instruction. This restores analysis availability
+without claiming that any retained forecast or current live run is exact.
+The repaired slice passes 922 local tests, including provider preparation,
+value curves, Trade evaluation, and Waiver evaluation/search regressions.
