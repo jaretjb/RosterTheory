@@ -31,8 +31,8 @@ def _reserve_worker(path: str, results: object) -> None:
 
 
 def _pace_worker(path: str, results: object) -> None:
-    pace_request(Path(path), minimum_spacing_seconds=0.5)
-    results.put(datetime.now(timezone.utc).timestamp())
+    started_at = pace_request(Path(path), minimum_spacing_seconds=0.5)
+    results.put(started_at.timestamp())
 
 
 def _hold_lock_worker(path: str, ready: object) -> None:
@@ -153,7 +153,7 @@ class SharedValuePreparationTests(unittest.TestCase):
                 worker.join(timeout=15)
                 self.assertEqual(worker.exitcode, 0)
             times = sorted(results.get(timeout=2) for _ in workers)
-            self.assertGreaterEqual(times[1] - times[0], 0.4)
+            self.assertGreaterEqual(times[1] - times[0], 0.49)
 
     def test_retry_requires_an_additional_budget_reservation(self):
         with tempfile.TemporaryDirectory() as directory:
