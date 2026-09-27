@@ -1,6 +1,31 @@
 # Active milestone
 
-## MA-002m - FantasyPros projection-source tier evidence
+## MA-002n - FantasyPros Draft ranking-source tier evidence
+
+Authorized by the user's September 26 request to continue after merging PR #47.
+Take a bounded #30 provider-evidence slice: inspect at most two read-only,
+rate-paced Draft ranking responses, retain only aggregate scope/tier facts, and
+guard Draft readiness against any ranking source explicitly marked sample-only.
+Do not infer premium authority from the request or the expert directory when
+a ranking response disagrees. Requirements MR-02, MR-06, MR-09, MR-10 and MR-14;
+architecture sections 3.1 and 5.
+
+Allowed: FantasyPros read-only ranking calls at no more than one per second,
+the Draft API ranking readiness and CLI report, synthetic regressions and public
+aggregate evidence. Do not print or persist the API key, player rows, private
+responses or league data. Do not alter ranking weights, projection scoring,
+manual import, Trade/Waiver, league state or existing coverage thresholds.
+Missing tier declarations stay visibly unverified unless the sampled provider
+contract establishes an independent authority signal. Gates: sample versus
+unknown tier, independent valid ranks, unchanged reference goldens, full
+suite/Ruff/context/privacy/CI. Stop at a tested PR against main; #30 and MA-002
+remain open.
+
+Implementation complete: 915 tests pass with unchanged reference goldens;
+Ruff, compilation, context routing and tracked-tree privacy gates pass.
+Evidence: `docs/MODULAR_RANKING_SOURCE_TIER.md`. CI/review remain the merge gate.
+
+## Previous MA-002m - FantasyPros projection-source tier evidence (merged PR #47)
 
 Authorized by the user's September 26 request to continue after merging PR #46.
 Take a bounded #30 provider-evidence slice: inspect at most four read-only,

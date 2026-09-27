@@ -61,6 +61,7 @@ class SyntheticDraftClient:
         return {
             "year": str(season), "week": "0", "position_id": params["position"],
             "scoring": params["scoring"], "ranking_type_name": "DRAFT",
+            "public_api_limited": False,
             "players": self.ranked.get(params["position"], []),
             **self.ranking_scope_by_source.get((params["position"], source), {}),
         }
@@ -170,6 +171,31 @@ class DraftApiScoringTests(unittest.TestCase):
             issue["reason"] for issue in unknown_tier.metadata["projection_issues"]
         ])
         self.assertFalse(unknown_tier.metadata["draft_ready"])
+
+        limited_ranks = draft_board(SyntheticDraftClient(
+            ranked, projected, ranking_scope_by_source={
+                ("RB", "ecr"): {"public_api_limited": True, "tier": "premium"},
+            },
+        ), {"rec": 0.5})
+        self.assertEqual(limited_ranks.metadata["top_180_projection_coverage"], 1.0)
+        self.assertFalse(limited_ranks.metadata["checks"]["premium_ranking_sources"])
+        self.assertTrue(limited_ranks.metadata["public_api_limited"])
+        self.assertIn("sample_only_source", [
+            issue["reason"] for issue in limited_ranks.metadata["ranking_tier_issues"]
+        ])
+        self.assertFalse(limited_ranks.metadata["draft_ready"])
+
+        unknown_ranks = draft_board(SyntheticDraftClient(
+            ranked, projected, ranking_scope_by_source={
+                ("RB", "2:2"): {"public_api_limited": None},
+            },
+        ), {"rec": 0.5})
+        self.assertFalse(unknown_ranks.metadata["checks"]["premium_ranking_sources"])
+        self.assertIn("unverified_api_tier", [
+            issue["reason"] for issue in unknown_ranks.metadata["ranking_tier_issues"]
+        ])
+        self.assertTrue(unknown_ranks.metadata["checks"]["draft_ranking_sources_verified"])
+        self.assertFalse(unknown_ranks.metadata["draft_ready"])
 
         class SparseExperts(SyntheticDraftClient):
             def consensus_rankings(self, season, **params):

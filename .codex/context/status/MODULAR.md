@@ -2,16 +2,17 @@
 
 Updated: September 26, 2026 (America/Los_Angeles)
 
-PR #46 merged Draft projection-scope checks. MA-002m uses four read-only
-aggregate preseason provider samples to check projection tier evidence. All
-four responses declare sample-only access and mapping-shaped statistics; Draft
-readiness now requires each projection source to prove non-sample access.
-Evidence: `docs/MODULAR_PROJECTION_SOURCE_TIER.md`; CI/review remain the gate.
-All 915 local tests pass with unchanged reference goldens.
+PR #47 merged projection-source tier checks. MA-002n sampled consensus and
+single-expert Draft ranking responses read-only. Both declare limited access
+despite a `premium` tier label. Draft readiness now requires each ranking
+source to prove non-sample access; diagnostic ranks remain inspectable.
+All 915 local tests pass. Evidence: `docs/MODULAR_RANKING_SOURCE_TIER.md`;
+CI/review remain the gate.
 
 Earlier Draft evidence: `docs/MODULAR_DRAFT_API_SCORING.md`,
 `docs/MODULAR_DRAFT_RANKING_SCOPE.md` and
-`docs/MODULAR_DRAFT_PROJECTION_SCOPE.md`.
+`docs/MODULAR_DRAFT_PROJECTION_SCOPE.md`,
+`docs/MODULAR_PROJECTION_SOURCE_TIER.md`.
 
 PRs #37–#40 merged scoring/decision coverage, membership, Draft position-limit
 admission and operation capacity. Missing independent players no longer veto Trade/Waiver comparisons;

@@ -955,7 +955,7 @@ def command_fantasypros_board(args: argparse.Namespace) -> None:
         product="Draft FantasyPros board", league=args.league, horizon="preseason draft",
         readiness="READY" if ready else "INCOMPLETE",
         result=f"{len(result.players)} players; {'draft-ready' if ready else 'not draft-ready'}",
-        warnings=("Free-tier sample mode; this board is not draft-ready.",) if limited else
+        warnings=("Provider returned limited sample data; this board is not draft-ready.",) if limited else
                  ("Provider access, preseason scoring, or board coverage is incomplete; see metadata.",)
                  if not ready else (),
         limitations=("Expert rankings apply only to their declared draft horizon.",),
