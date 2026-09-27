@@ -16,7 +16,7 @@ from roster_theory.core.scoring_contract import (
 from roster_theory.providers.sleeper_scoring_rules import INDIVIDUALS, SLEEPER_LINEAR_RULES
 
 
-SCORING_CONTRACT_VERSION = "fantasypros-weekly-v1"
+SCORING_CONTRACT_VERSION = "fantasypros-weekly-v2"
 DRAFT_SCORING_CONTRACT_VERSION = "fantasypros-draft-season-v1"
 WEEKLY_ESTIMATE_POLICY_VERSION = "core-stats-conditional-v1"
 WEEKLY_RULES = SLEEPER_LINEAR_RULES
@@ -74,6 +74,10 @@ def _score_projection_row(
     observations = []
     for statistic in sorted({rule.statistic for rule, _ in assessment.active_rules}):
         aliases = (statistic, *_ALIASES.get(statistic, ()))
+        if statistic == "fum_lost" and source_schema == SCORING_CONTRACT_VERSION:
+            # FantasyPros's projection table calls this FL (Fumbles Lost), and
+            # its published API example scores `fumbles` as lost fumbles.
+            aliases = (*aliases, "fumbles")
         present = [(key, statistic_number(stats[key])) for key in aliases if key in stats]
         if not present:
             continue

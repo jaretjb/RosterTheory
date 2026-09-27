@@ -9,6 +9,9 @@ cache evidence. Restore usable league-scored estimates only when position-core
 forecast stats are observed and scoring rules otherwise resolve. Keep missing
 fields explicit; invalid, missing-core, unknown-rule and unscoped data stay
 unavailable. Carry estimate status through value boards and both analyses.
+The user's fumble-field challenge prompted checking FantasyPros's published
+projection table and API sample: its weekly `fumbles` means fumbles lost.
+Restore that weekly mapping without changing the separate Draft source contract.
 Trade decisions using estimates must be conditional; Waiver analysis may rank
 them but may not issue an affirmative claim/add label. Do not alter expert
 rankings, league-specific policy, Draft scoring, or Sleeper state. No new

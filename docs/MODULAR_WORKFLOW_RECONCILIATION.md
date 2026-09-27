@@ -86,10 +86,17 @@ have the observed position-core statistics needed for the older calculation.
 The repaired path uses each league's actual scoring multipliers on observed
 statistics and marks the result as an **estimate** when other active scoring
 fields are missing. It does not assert that those missing fields equal zero.
-In 8,356 of these rows, the numeric estimate differs from the older result
-because the old scorer counted a generic `fumbles` field as fumbles **lost**.
-The new scorer does not make that unsupported equivalence. Both reference
-maps show the same aggregate difference count.
+An initial comparison found 8,356 point differences because the strict scorer
+omitted the provider's `fumbles` field. That omission was incorrect for weekly
+FantasyPros projections: its [projection table](https://www.fantasypros.com/nfl/projections/qb.php/?loggedin=&week=draft)
+labels the projected category FL, meaning fumbles lost, and the
+[published API example](https://api.fantasypros.com/v2/docs) reconciles to
+its stated 293.7 standard points only when `fumbles: 2.85` receives the
+lost-fumble deduction. The weekly scoring contract now maps this provider
+field to `fum_lost`; Draft's separate source contract is unchanged. Both
+reference maps then show zero old/new point differences on the 12,861
+retained skill-player rows. They remain estimates because other active
+scoring fields are absent.
 Missing core statistics, invalid values, unknown rules and incomplete source
 scope still make a row unavailable.
 
@@ -101,5 +108,5 @@ fields remain in player warnings; the value-board report is
 and rank an estimated candidate, but a favorable estimate yields `WATCH`
 instead of an add/claim instruction. This restores analysis availability
 without claiming that any retained forecast or current live run is exact.
-The repaired slice passes 922 local tests, including provider preparation,
+The repaired slice passes 923 local tests, including provider preparation,
 value curves, Trade evaluation, and Waiver evaluation/search regressions.

@@ -25,7 +25,8 @@ from roster_theory.providers.fantasypros import (
 from roster_theory.trade.board_service import _canonical_projections, _fetch_value_inputs
 from roster_theory.trade.boards import build_projection_curves
 from roster_theory.providers.projection_scoring import (
-    SCORING_CONTRACT_VERSION, WEEKLY_RULES, score_projection_row, scoring_coverage,
+    SCORING_CONTRACT_VERSION, WEEKLY_RULES, score_draft_projection_row,
+    score_projection_row, scoring_coverage,
 )
 from tests.ma001_fixtures import PROFILES, rules
 
@@ -135,9 +136,28 @@ class ProviderScoringCoverageTests(unittest.TestCase):
         same = projection({"pass_td": "1", "pass_tds": 1}, {"pass_td": 6})
         self.assertEqual((same.league_points, same.coverage_status), (6, "complete"))
 
-    def test_ambiguous_fumbles_and_defense_aliases_do_not_prove_exact_events(self):
+    def test_fantasypros_fumbles_are_lost_fumbles_in_weekly_projections(self):
+        row = projection({"fumbles": 2.85}, {"fum_lost": -2})
+        self.assertEqual((row.league_points, row.coverage_status), (-5.7, "complete"))
+        # FantasyPros's published API example has 293.7 standard points;
+        # the stat line reconciles only when its `fumbles` is scored as lost.
+        sample = projection({"rush_yds": 1191.38, "rush_tds": 12.72,
+            "rec_yds": 780.2, "rec_tds": 4.32, "fumbles": 2.85},
+            {"rush_yd": .1, "rush_td": 6, "rec_yd": .1, "rec_td": 6,
+             "fum_lost": -2}, "RB")
+        self.assertAlmostEqual(sample.league_points, 293.7, places=1)
+        self.assertEqual(sample.coverage_status, "complete")
+        conflicting = projection({"fumbles": 1, "fumbles_lost": 2}, {"fum_lost": -2})
+        self.assertIn("invalid_statistic=fum_lost", conflicting.coverage_status)
+        draft_rules = assess_scoring_rules({"fum_lost": -2},
+            scope=ScoringScope("synthetic", 2027, "draft", "SEASON", None),
+            catalogue=WEEKLY_RULES, catalogue_version="draft-unchanged")
+        draft = score_draft_projection_row(
+            {"position_id": "RB", "stats": {"fumbles": 2.85}}, draft_rules)
+        self.assertIn("missing_statistic=fum_lost", scoring_coverage(draft))
+
+    def test_ambiguous_defense_aliases_do_not_prove_exact_events(self):
         for position, stats, setting in (
-            ("QB", {"fumbles": 1}, "fum_lost"),
             ("DST", {"def_ff": 1}, "def_st_ff"),
             ("DST", {"def_fr": 1}, "def_st_fum_rec"),
             ("DST", {"def_retd": 1}, "def_st_td"),
