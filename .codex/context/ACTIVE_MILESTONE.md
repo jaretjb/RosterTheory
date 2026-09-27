@@ -1,6 +1,25 @@
 # Active milestone
 
-## MA-002n - FantasyPros Draft ranking-source tier evidence
+## MA-002o - Reconcile working workflows before further migration
+
+Authorized by the user's September 26 request for a before-and-after review
+and fixes to confirmed regressions. Compare the accepted MA-001 baseline and
+preserved local metadata with current Draft, Trade and Waiver paths. Reconcile
+previously working behavior before changing it. Use only synthetic public
+fixtures and aggregate facts from ignored local evidence; do not publish player,
+league, account, credential or raw response data. No new provider calls or
+Sleeper mutations.
+
+Allowed: a focused report, regression tests and narrowly justified repairs to
+Draft room admission or in-season projection preparation when the same inputs
+demonstrate a lost workflow. Keep missing evidence visible and any approximate
+conclusion explicitly conditional. Do not claim complete provider coverage,
+change rankings or weights, transfer league policy, or begin structural MA-003
+or MA-004 work in this slice. Validate reference workflows, full suite, Ruff,
+context, privacy and CI. Stop at a tested PR against main; MA-002 and the
+remaining provider/rule evidence stay open.
+
+## Previous MA-002n - FantasyPros Draft ranking-source tier evidence (merged PR #48)
 
 Authorized by the user's September 26 request to continue after merging PR #47.
 Take a bounded #30 provider-evidence slice: inspect at most two read-only,

@@ -24,7 +24,7 @@ from roster_theory.providers.fantasypros import (
 from roster_theory.trade.board_service import _canonical_projections, _fetch_value_inputs
 from roster_theory.trade.boards import build_projection_curves
 from roster_theory.providers.projection_scoring import (
-    SCORING_CONTRACT_VERSION, WEEKLY_RULES, score_projection_row,
+    SCORING_CONTRACT_VERSION, WEEKLY_RULES, score_projection_row, scoring_coverage,
 )
 from tests.ma001_fixtures import PROFILES, rules
 
@@ -137,8 +137,10 @@ class ProviderScoringCoverageTests(unittest.TestCase):
         self.assertIn("missing_statistic=pass_yd", projection({}, {"pass_yd": .04}, "WR").coverage_status)
         for position in ("", "IDP"):
             self.assertIn("missing_position", projection({"rec": 4}, {"rec": .5}, position).coverage_status)
-        self.assertIn("unknown_applicability=fum_rec",
-                      projection({"fum_rec": 1}, {"fum_rec": 2}, "WR").coverage_status)
+        self.assertEqual(projection({}, {"fum_rec": 2}, "WR").coverage_status, "complete")
+        self.assertIn("missing_statistic=fum_rec",
+                      projection({}, {"fum_rec": 2}, "DST").coverage_status)
+        self.assertEqual(projection({"fum_rec": 1}, {"fum_rec": 2}, "DST").league_points, 2)
 
     def test_disabled_unknown_rules_and_invalid_multipliers_remain_distinct(self):
         row = projection({"pass_td": 1}, {"pass_td": 6, "bonus_pass_300": 0})
@@ -216,8 +218,18 @@ class ProviderScoringCoverageTests(unittest.TestCase):
                 catalogue=WEEKLY_RULES, catalogue_version=SCORING_CONTRACT_VERSION)
             self.assertEqual(len(assessment.active_rules), active_count)
             self.assertEqual(len(assessment.active_rules) + len(assessment.disabled_settings), len(scoring))
-            self.assertEqual([(issue.category, issue.setting) for issue in assessment.issues],
-                             [("unknown_applicability", "fum_rec")])
+            self.assertEqual(assessment.issues, ())
+            observed = {
+                rule.statistic: 0 for rule, _ in assessment.active_rules
+                if rule.setting != "fum_rec_td"
+            }
+            qb = score_projection_row({"position_id": "QB", "stats": observed}, assessment)
+            self.assertIn("missing_statistic=fum_rec_td", scoring_coverage(qb))
+            self.assertNotIn("fum_rec=", scoring_coverage(qb))
+            observed["fum_rec_td"] = 0
+            self.assertEqual(scoring_coverage(score_projection_row(
+                {"position_id": "QB", "stats": observed}, assessment
+            )), "complete")
             for position in ("QB", "RB", "WR", "TE", "K", "DST"):
                 empty = score_projection_row({"position_id": position, "stats": {}}, assessment)
                 self.assertFalse(empty.complete)

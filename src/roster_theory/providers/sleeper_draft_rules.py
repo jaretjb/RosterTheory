@@ -39,3 +39,21 @@ def require_draft_position_limits(draft: Mapping) -> CapabilityAssessment:
         raise CoverageIncomplete('Draft position-limit rules unresolved: ' + reasons +
             ' Obtain verified source rules before room recommendations; do not substitute app caps or change league settings to bypass this check.')
     return assessment
+
+
+def draft_position_limit_advisory(draft: Mapping) -> tuple[CapabilityAssessment, str | None]:
+    """Preserve read-only suggestions while refusing malformed explicit rules."""
+    assessment = assess_draft_position_limits(draft)
+    settings = draft.get('settings')
+    if not isinstance(settings, Mapping):
+        require_draft_position_limits(draft)
+    elif 'enforce_position_limits' in settings:
+        value = settings['enforce_position_limits']
+        if type(value) is not int or value not in (0, 1):
+            require_draft_position_limits(draft)
+    if assessment.scope_admitted:
+        return assessment, None
+    return assessment, (
+        "Sleeper position limits could not be verified. These are read-only pick "
+        "suggestions; check the league's position limits before choosing a player."
+    )

@@ -68,14 +68,16 @@ class HistoricalWaiverScoringTests(unittest.TestCase):
             season_stats=lambda season: {"qb": {"pass_yd": 250, "pass_td": 0, "gp": 1}},
             weekly_stats=lambda season, week: {"qb": {"pass_yd": 125, "pass_td": 0, "gp": 1}},
         )
-        for scoring, expected in (({"pass_yd": 0.04, "fum_rec": 2}, "fum_rec"),
-                                  ({"pass_yd": 0.04, "bonus_pass_300": 3}, "bonus_pass_300")):
-            with self.subTest(expected=expected):
-                evidence, _ = _performance_evidence(
-                    client=client, league_id="fixture", season=2026, current_week=2, players=players,
-                    scoring=scoring, as_of=NOW)
-                self.assertIsNone(evidence["qb"]["season_points"])
-                self.assertTrue(any(expected in warning for warning in evidence["qb"]["scoring_warnings"]))
+        evidence, _ = _performance_evidence(
+            client=client, league_id="fixture", season=2026, current_week=2, players=players,
+            scoring={"pass_yd": 0.04, "fum_rec": 2}, as_of=NOW)
+        self.assertEqual(evidence["qb"]["season_points"], 10)
+        self.assertFalse(evidence["qb"]["scoring_warnings"])
+        evidence, _ = _performance_evidence(
+            client=client, league_id="fixture", season=2026, current_week=2, players=players,
+            scoring={"pass_yd": 0.04, "bonus_pass_300": 3}, as_of=NOW)
+        self.assertIsNone(evidence["qb"]["season_points"])
+        self.assertTrue(any("bonus_pass_300" in warning for warning in evidence["qb"]["scoring_warnings"]))
 
     def test_invalid_nonfinite_stat_and_separate_league_scoring(self):
         left = assess_historical_rules({"pass_yd": 0.04, "pass_td": 4},
@@ -100,13 +102,13 @@ class HistoricalWaiverScoringTests(unittest.TestCase):
         self.assertEqual(score_historical_stats({"rec": 4}, rules, position="QB").require_points(), 2)
         self.assertFalse(score_historical_stats({}, rules, position="WR").complete)
 
-    def test_reference_rules_remain_limited_independently(self):
+    def test_reference_rules_classify_team_defense_recoveries_independently(self):
         for profile in PROFILES:
             with self.subTest(profile=profile):
                 assessment = assess_historical_rules(rules(profile)["scoring_settings"],
                     league_id=profile, season=2026, week=None)
-                self.assertNotEqual(assessment.support, "SUPPORTED")
-                self.assertIn("fum_rec", {issue.setting for issue in assessment.issues})
+                self.assertEqual(assessment.support, "SUPPORTED")
+                self.assertEqual(assessment.issues, ())
 
 
 if __name__ == "__main__":
