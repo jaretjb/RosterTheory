@@ -2,9 +2,9 @@
 
 Updated: September 27, 2026 (America/Los_Angeles)
 
-MA-003 merged in PR #51. Active MA-003b (#32) on
-`codex/ma-003-provider-budget` brings older Draft, diagnostic and accuracy
-commands into the shared FantasyPros budget. No live paid calls.
+MA-003 merged in PR #51; its provider-limit follow-up merged in PR #52 and
+closed #32. Active MA-004a establishes a Draft package by moving only Draft
+analysis behind a compatibility import. Decision behavior stays unchanged.
 
 Trade and Waiver use shared neutral value preparation; Waiver adapts its own
 snapshot. Provider retrieval, cache interpretation, identity, league scoring,
@@ -30,6 +30,6 @@ Sleeper documents `fum_rec` under Team Defense. Missing projection fields still
 prevent exact coverage. All public fixtures are synthetic. Trade retains its
 skill-player boundary; the 12-format matrix remains future validation.
 
-Open: #30 provider field/actual-source evidence, #31 position caps, #32 provider
-limits pending MA-003b merge, #33 Draft cap/season assumptions. Actual provider coverage is unverified;
-MA-002 remains open.
+Open: #30 provider field/actual-source evidence, #31 position caps, and #33
+Draft cap/season assumptions. Actual provider coverage is unverified; MA-002
+remains open. MA-004a is structural; no new league support is claimed.

@@ -1,8 +1,8 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-003 merged in PR #51; MA-003b request-limit follow-up active; MA-002 evidence follow-ups remain open
+Status: MA-003 and provider-limit follow-up merged in PRs #51-#52; MA-004a Draft extraction active; MA-002 evidence follow-ups remain open
 
-Date: September 25, 2026 (America/Los_Angeles)
+Updated: September 27, 2026 (America/Los_Angeles)
 
 References: [requirements](MODULAR_REQUIREMENTS.md), [architecture](MODULAR_ARCHITECTURE.md)
 
@@ -16,7 +16,8 @@ authorization. The current Draft closure and feature promotion gates remain.
 This document is the canonical requirement-to-work mapping. GitHub issues track
 delivery discussion and PR links; maintain IDs/status consistently here when
 issues are opened or closed. Do not create a second competing full backlog.
-Only the nearest milestone has a detailed implementation contract below.
+The active MA-004a slice has a detailed contract below; MA-001's baseline
+contract remains as a completed reference.
 
 MA-000 delivers the three planning documents, reconciliation links and issue
 sequence. It does not run providers, alter private settings or product code,
@@ -24,20 +25,17 @@ change recommendation policy, activate later work, or merge itself.
 
 ## 2. Sequence and traceability
 
-The user authorized MA-002 and, after merging PR #48, requested a before-and-after
-review of previously working workflows. ACTIVE_MILESTONE selects MA-002o
-regression reconciliation. Earlier MA-002 slices established scoring,
-decision-scoped coverage, membership and Draft rule checks, but live-workflow
-compatibility was not adequately established. Reconcile that behavior before
-more provider investigation or structural extraction. Remaining MA-002
-slices need their own detailed contracts and activation after the tested handoff;
-MA-003 was subsequently authorized by the user's September 27 request to remove
-Waiver's dependency on Trade preparation. MA-004 onward remain planned.
+MA-001 froze the reference behavior. MA-002 established scoring, membership and
+capability contracts, with #30 and #31 still open for source and rule evidence.
+MA-003 extracted shared Trade/Waiver preparation in PR #51; its shared provider
+limit follow-up merged in PR #52 and closed #32. The user then activated the
+first structural Draft slice, MA-004a, in ACTIVE_MILESTONE. Later MA-004 work
+and support promotion remain separate decisions.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
-follow-ups are #30/#31 (MA-002), #32 (MA-003), and #33 (MA-004); creating these
-issues does not activate them.
+open follow-ups are #30/#31 (MA-002) and #33 (MA-004). Creating an issue does
+not activate its implementation.
 
 MA-002a's [scoring contract](MODULAR_SCORING_CONTRACT.md) defines the additive
 scope, independent expectations and later behavior integration for #30. This
@@ -143,7 +141,39 @@ MA-002 through MA-004 can contain several sequential PRs. Do not turn their row
 titles into permission for a single large rewrite. Each activation identifies
 the next small issue/PR slice, allowed paths and stopping condition.
 
-## 3. MA-001: detailed next milestone contract
+### MA-004a: Draft analysis package foundation
+
+After merged PR #52, move the existing `draft_analysis.py` implementation into
+`draft/analysis.py` and add a `draft` package. Keep `draft_analysis.py` as a
+thin compatibility import so existing scripts, tests and users can still use
+the old path. Change internal imports to the new owner only where doing so
+does not create a cycle. The affected product files are the new package, the
+old analysis module and direct import sites; tests and this handoff may change.
+Do not move `simulation.py`, the watcher or the ranking stack in this PR.
+
+This is a source-ownership change, not a behavior correction. Preserve all
+public analysis names and signatures, Draft command spelling and output,
+serialized fields, decisions, reasons, numeric results, deterministic ties,
+policy caps, 2026 season assumptions and replay/build-hash checks. Do not
+auto-rewrite old artifacts or suppress an unexplained difference. A source
+hash may change because files move; compare declared semantic fields and keep
+exact-build replay enforcement. Issue #33's legal-versus-preference cap and
+season-evidence fixes require a separate, reviewed behavior PR. #30/#31 do
+not become proof of wider format support through this extraction.
+
+Acceptance: both synthetic reference leagues retain the reviewed Draft
+analysis and recommendation evidence; old and new analysis import paths expose
+the same callable objects; CLI parser and result contracts remain stable; the
+new `draft` module has no provider, storage, CLI or other-feature dependency.
+Focused `test_draft_analysis`, `test_simulation`, `test_mock_watcher`,
+`test_cli_discovery` and `test_modular_baseline` checks precede the full suite.
+Run Ruff, package/install smoke, context routing, staged privacy gate and CI.
+Review MA-001's fixed-seed Draft turn and strategy timing on the same machine
+against its proposed 20% runtime and 25% allocation review thresholds. Use
+synthetic fixtures and no paid calls or Sleeper writes. Stop at a tested PR;
+reverting that PR restores the old module layout without changing user data.
+
+## 3. MA-001: completed baseline contract
 
 ### Problem and outcome
 
