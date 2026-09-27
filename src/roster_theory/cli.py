@@ -23,6 +23,9 @@ from roster_theory.draft_preferences import load_draft_preferences
 from roster_theory.doctor import audit_setup, format_doctor
 from roster_theory.assistant import recommend_available
 from roster_theory.fantasypros import FantasyProsClient, FantasyProsError, describe_shape
+from roster_theory.application.provider_access import (
+    charge_fantasypros_request, charged_fantasypros_client,
+)
 from roster_theory.fantasypros_import import build_fantasypros_board
 from roster_theory.expert_accuracy_history import (
     fetch_accuracy_history,
@@ -52,7 +55,9 @@ from roster_theory.expert_rank_consistency import (
     build_weighted_ballot_preferences,
     enrich_ranked_csv_with_dispersion,
 )
-from roster_theory.grouped_rankings import export_grouped_rankings
+from roster_theory.grouped_rankings import (
+    export_grouped_rankings, load_fantasypros_expert_picker,
+)
 from roster_theory.league_boards import (
     build_league_board,
     fetch_board_sources,
@@ -439,8 +444,18 @@ def command_build_board(args: argparse.Namespace) -> None:
     print(f"Saved {output} ({len(board)} players)")
 
 
+def _charged_provider_client() -> FantasyProsClient:
+    return charged_fantasypros_client(FantasyProsClient)
+
+
+def _charged_expert_picker(scoring: str) -> Mapping[int, Mapping[str, str]]:
+    return load_fantasypros_expert_picker(
+        scoring, before_request=charge_fantasypros_request,
+    )
+
+
 def command_fantasypros_probe(args: argparse.Namespace) -> None:
-    client = FantasyProsClient()
+    client = _charged_provider_client()
     params = {"position": args.position, "scoring": args.scoring}
     calls = {
         "experts": lambda: client.ranking_experts(args.season),
@@ -473,7 +488,7 @@ def command_trade_sleeper_probe(args: argparse.Namespace) -> None:
 
 def command_trade_fantasypros_probe(args: argparse.Namespace) -> None:
     report = probe_fantasypros(
-        FantasyProsClient(),
+        _charged_provider_client(),
         season=args.season,
         week=args.week,
         historical_season=args.historical_season,
@@ -933,7 +948,7 @@ def command_fantasypros_board(args: argparse.Namespace) -> None:
     league = snapshot["current"]["league"]
     with interactive_progress("Refreshing Draft board"):
         result = build_fantasypros_board(
-            FantasyProsClient(),
+            _charged_provider_client(),
             season=int(league["season"]),
             league_id=league["league_id"],
             scoring_settings=league.get("scoring_settings", {}),
@@ -965,7 +980,7 @@ def command_fantasypros_board(args: argparse.Namespace) -> None:
 
 def command_fantasypros_grouped_rankings(args: argparse.Namespace) -> None:
     result = export_grouped_rankings(
-        FantasyProsClient(),
+        _charged_provider_client(),
         season=args.season,
         accuracy_path=args.accuracy,
         annual_accuracy_path=args.annual_accuracy,
@@ -977,6 +992,7 @@ def command_fantasypros_grouped_rankings(args: argparse.Namespace) -> None:
         specialist_ecr_shrinkage=args.specialist_ecr_shrinkage,
         expert_overrides_path=args.expert_overrides,
         max_skill_ranking_age_days=args.max_skill_ranking_age_days,
+        expert_picker_loader=_charged_expert_picker,
     )
     print(
         f"Saved grouped expert pools and rankings to {result.output_dir} "
@@ -985,7 +1001,10 @@ def command_fantasypros_grouped_rankings(args: argparse.Namespace) -> None:
 
 
 def command_fantasypros_accuracy_history(args: argparse.Namespace) -> None:
-    rows = fetch_accuracy_history(minimum_interval_seconds=args.minimum_interval)
+    rows = fetch_accuracy_history(
+        minimum_interval_seconds=args.minimum_interval,
+        before_request=charge_fantasypros_request,
+    )
     write_accuracy_history(rows, args.output)
     counts: dict[int, int] = {}
     for row in rows:
@@ -1321,7 +1340,7 @@ def command_setup_override(args: argparse.Namespace) -> None:
 
 def command_fantasypros_rank_consistency(args: argparse.Namespace) -> None:
     result = audit_expert_rank_consistency(
-        FantasyProsClient(),
+        _charged_provider_client(),
         season=args.season,
         expert_pool_path=args.expert_pool,
         scope=args.scope,
@@ -1381,7 +1400,7 @@ def command_fantasypros_league_boards(args: argparse.Namespace) -> None:
     sleeper_path.write_text(json.dumps(sleeper_players, indent=2, sort_keys=True), encoding="utf-8")
     with interactive_progress("Refreshing Draft board sources"):
         projections, adp, source_metadata = fetch_board_sources(
-            FantasyProsClient(), season=args.season
+            _charged_provider_client(), season=args.season
         )
     source_dir = Path(args.source_dir)
     projection_rows = [

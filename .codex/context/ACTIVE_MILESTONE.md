@@ -1,6 +1,18 @@
 # Active milestone
 
-## MA-003 - Extract shared in-season preparation
+## MA-003b - Complete the shared FantasyPros request limit (#32)
+
+Authorized by the user's September 27 request to finish the provider request-limit
+follow-up after MA-003 merged. Make the remaining Draft, diagnostic and historical
+accuracy entry points share the existing account-wide daily ledger and request
+pacing. Keep the old ledger path and schema, count each real HTTP attempt including
+retries, and preserve cache hits without a charge. Fail closed on invalid ledgers,
+exhausted budget or lock contention. Use synthetic transport and process tests;
+make no live paid-provider calls, league writes, or feature-policy changes. Record
+the compatibility and rollback limits, run the repository gates, and stop at a
+tested pull request. Issue #32 remains open until this follow-up is merged.
+
+## Previous MA-003 - Extract shared in-season preparation (merged PR #51)
 
 Authorized by the user's September 27 request. Extract factual preparation from
 Trade so Trade and Waiver call one shared implementation without either feature

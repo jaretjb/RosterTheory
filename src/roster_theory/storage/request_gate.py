@@ -60,8 +60,8 @@ def reserve_requests(path: Path, count: int, *, today: date | None = None) -> in
         return remaining
 
 
-def pace_request(path: Path, *, minimum_spacing_seconds: float = 1.05) -> None:
-    """Space starts across processes; a crashed request remains charged."""
+def pace_request(path: Path, *, minimum_spacing_seconds: float = 1.05) -> datetime:
+    """Space starts across processes and return the recorded request-start time."""
 
     pacing_path = path.with_name("request_pacing.json")
     with _process_lock(path.with_suffix(".lock")):
@@ -75,4 +75,6 @@ def pace_request(path: Path, *, minimum_spacing_seconds: float = 1.05) -> None:
                     time.sleep(minimum_spacing_seconds - elapsed)
             except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
                 raise ValueError(f"Provider pacing ledger is invalid: {pacing_path}") from exc
-        atomic_write_json(pacing_path, {"started_at": datetime.now(timezone.utc).isoformat()})
+        started_at = datetime.now(timezone.utc)
+        atomic_write_json(pacing_path, {"started_at": started_at.isoformat()})
+        return started_at

@@ -6,7 +6,7 @@ import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Mapping
+from typing import Callable, Iterable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -97,6 +97,7 @@ def fetch_accuracy_history(
     *,
     minimum_interval_seconds: float = 1.0,
     timeout_seconds: float = 20.0,
+    before_request: Callable[[], None] | None = None,
 ) -> list[AnnualAccuracy]:
     rows: list[AnnualAccuracy] = []
     last_request = 0.0
@@ -108,6 +109,8 @@ def fetch_accuracy_history(
             ACCURACY_URL.format(year=year),
             headers={"Accept": "text/html", "User-Agent": "RosterTheory/0.1"},
         )
+        if before_request is not None:
+            before_request()
         try:
             with urlopen(request, timeout=timeout_seconds) as response:
                 html = response.read().decode("utf-8", errors="replace")

@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-003 shared preparation extraction active; MA-002 evidence follow-ups remain open
+Status: MA-003 merged in PR #51; MA-003b request-limit follow-up active; MA-002 evidence follow-ups remain open
 
 Date: September 25, 2026 (America/Los_Angeles)
 
