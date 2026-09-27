@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002 authorized; PR #45 ranking scope merged; MA-002l projection scope active
+Status: MA-002 authorized; PR #46 projection scope merged; MA-002m source tier active
 
 Date: September 25, 2026 (America/Los_Angeles)
 
@@ -25,8 +25,8 @@ change recommendation policy, activate later work, or merge itself.
 ## 2. Sequence and traceability
 
 The user authorized MA-002 on September 26 and requested continuation after
-merging PR #45. ACTIVE_MILESTONE selects MA-002l Draft API preseason projection
-scope, a bounded #30 follow-up. PRs #37–#45 brought scoring, decision-scoped
+merging PR #46. ACTIVE_MILESTONE selects MA-002m provider projection-source
+tier evidence, a bounded #30 follow-up. PRs #37–#46 brought scoring, decision-scoped
 coverage, membership, Draft rule admission and operation capacity onto main. Remaining MA-002
 slices need their own detailed contracts and activation after the tested handoff;
 MA-003 onward remain **planned, not authorized**.
@@ -99,6 +99,12 @@ requests week-zero projections and requires provider-declared season, week and
 position before raw statistics become Draft points. Rejected sources cannot
 invalidate independent position responses through duplicate IDs. Provider field
 semantics and actual-source coverage remain open under #30.
+
+MA-002m's [projection-source tier evidence](MODULAR_PROJECTION_SOURCE_TIER.md)
+observes aggregate sample-tier preseason responses without publishing player
+data. It prevents a sample or unverified projection source from making an API
+Draft board ready even when the expert directory looks premium. Actual premium
+field coverage and unresolved source semantics remain under #30.
 
 | ID | Milestone / proposed issue title | Depends on | Requirements | Exit evidence |
 | --- | --- | --- | --- | --- |

@@ -51,6 +51,7 @@ class SyntheticDraftClient:
         self.projection_requests.append(params)
         position = params["position"]
         return {"season": season, "week": "0", "positions": position,
+                "public_api_limited": False,
                 "players": self.projected.get(position, []),
                 **self.scope_by_position.get(position, {})}
 
@@ -149,6 +150,26 @@ class DraftApiScoringTests(unittest.TestCase):
         independent = draft_board(client, {"rec": 0.5})
         self.assertEqual(independent.metadata["top_180_projection_coverage"], 1.0)
         self.assertTrue(independent.metadata["draft_ready"])
+
+        limited = draft_board(SyntheticDraftClient(
+            ranked, projected, scope_by_position={"RB": {"public_api_limited": True}},
+        ), {"rec": 0.5})
+        self.assertEqual(limited.metadata["top_180_projection_coverage"], 1.0)
+        self.assertFalse(limited.metadata["checks"]["premium_projection_sources"])
+        self.assertTrue(limited.metadata["public_api_limited"])
+        self.assertIn("sample_only_source", [
+            issue["reason"] for issue in limited.metadata["projection_issues"]
+        ])
+        self.assertFalse(limited.metadata["draft_ready"])
+
+        unknown_tier = draft_board(SyntheticDraftClient(
+            ranked, projected, scope_by_position={"WR": {"public_api_limited": None}},
+        ), {"rec": 0.5})
+        self.assertFalse(unknown_tier.metadata["checks"]["premium_projection_sources"])
+        self.assertIn("unverified_api_tier", [
+            issue["reason"] for issue in unknown_tier.metadata["projection_issues"]
+        ])
+        self.assertFalse(unknown_tier.metadata["draft_ready"])
 
         class SparseExperts(SyntheticDraftClient):
             def consensus_rankings(self, season, **params):

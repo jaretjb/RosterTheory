@@ -217,8 +217,18 @@ def build_fantasypros_board(
             "declared_type": projection_response.get("type"),
             "declared_ros": projection_response.get("ros"),
             "fallback_for": projection_response.get("fallback_for"),
+            "public_api_limited": projection_response.get("public_api_limited"),
+            "api_tier": projection_response.get("tier"),
             "scope_issues": scope_issues,
         })
+        if projection_response.get("public_api_limited") is not False:
+            projection_issues.append({
+                "position": position,
+                "reason": (
+                    "sample_only_source" if projection_response.get("public_api_limited") is True
+                    else "unverified_api_tier"
+                ),
+            })
         if scope_issues:
             projection_issues.append({
                 "position": position, "reason": "source_scope_mismatch:" + ";".join(scope_issues),
@@ -388,6 +398,9 @@ def build_fantasypros_board(
             source["scope_issues"] for source in projection_sources
         ),
         "premium_api": expert_response.get("public_api_limited") is False,
+        "premium_projection_sources": all(
+            source["public_api_limited"] is False for source in projection_sources
+        ),
         "multi_year_accuracy": weight_source == "multi_year_2021_2025",
         "at_least_five_current_experts": sum(count > 0 for count in returned_counts.values()) >= 5,
         "at_least_150_ranked_skill_players": len(board) >= 150,
@@ -401,7 +414,10 @@ def build_fantasypros_board(
             "season": season,
             "scoring": scoring,
             "weight_source": weight_source,
-            "public_api_limited": bool(expert_response.get("public_api_limited")),
+            "public_api_limited": (
+                expert_response.get("public_api_limited") is True
+                or any(source["public_api_limited"] is True for source in projection_sources)
+            ),
             "api_tier": expert_response.get("tier"),
             "selected_experts": selected_metadata,
             "selected_expert_count": len(selected_metadata),
