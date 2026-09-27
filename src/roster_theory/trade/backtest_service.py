@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +13,7 @@ from roster_theory.providers.cache import (
     atomic_write_json,
     cache_key,
 )
+from roster_theory.storage.request_gate import pace_request, reserve_requests
 from roster_theory.trade.backtest import (
     DraftProxyBacktest,
     DraftProxyForecast,
@@ -302,17 +302,17 @@ def run_historical_draft_proxy_study(
         seasons, weeks, cache_dir=target_cache, budget=budget
     )
     if plan.fantasypros_calls:
-        budget.reserve(plan.fantasypros_calls)
-        atomic_write_json(target_budget, budget.to_json())
+        reserve_requests(target_budget, plan.fantasypros_calls)
     values: dict[str, dict[str, Any]] = dict(cached)
-    provider = client or FantasyProsClient()
-    last_request = 0.0
+    provider = client or FantasyProsClient(
+        before_retry=lambda: (
+            reserve_requests(target_budget, 1), pace_request(target_budget)
+        )
+    )
     for call in plan.calls:
         if call.fresh_cache_hit:
             continue
-        elapsed = time.monotonic() - last_request
-        if last_request and elapsed < 1.05:
-            time.sleep(1.05 - elapsed)
+        pace_request(target_budget)
         params = dict(call.parameters)
         season = int(call.name.split("_")[1])
         if call.name.startswith("points_"):
@@ -325,7 +325,6 @@ def run_historical_draft_proxy_study(
         }
         atomic_write_json(paths[call.name], record)
         values[call.name] = record
-        last_request = time.monotonic()
     rows = _collect_rows(values, seasons, weeks, load_historical_byes(bye_path))
     backtest = run_draft_proxy_backtest(rows)
     output = write_draft_proxy_backtest(output_path, backtest)

@@ -11,6 +11,8 @@ from typing import Any, Iterable, Mapping, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from roster_theory.providers.inseason_experts import CurrentExpert, normalize_current_experts
+
 
 INSEASON_ACCURACY_URL = "https://www.fantasypros.com/nfl/accuracy/?year={year}"
 DEFAULT_YEARS = (2021, 2022, 2023, 2024, 2025)
@@ -45,19 +47,6 @@ class InSeasonAccuracy:
     overall_percentile: float
     source_url: str
     retrieved_at: str
-
-
-@dataclass(frozen=True, slots=True)
-class CurrentExpert:
-    expert_id: str
-    name: str
-    source_name: str
-    position_updates: tuple[tuple[str, str], ...]
-    latest_weekly_accuracy: tuple[tuple[str, int], ...]
-    prior_weekly_accuracy: tuple[tuple[str, int], ...]
-
-    def update_for(self, position: str) -> str | None:
-        return dict(self.position_updates).get(position.upper())
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,33 +220,6 @@ def load_inseason_accuracy(path: str | Path) -> tuple[InSeasonAccuracy, ...]:
         )
         for row in rows
     )
-
-
-def normalize_current_experts(value: Mapping[str, Any]) -> tuple[CurrentExpert, ...]:
-    result: list[CurrentExpert] = []
-    for raw in value.get("experts") or ():
-        if not isinstance(raw, Mapping) or raw.get("expert_id") is None:
-            continue
-        position_updates = raw.get("positions") or {}
-        weekly = raw.get("accuracy_weekly") or {}
-        prior = raw.get("accuracy_weekly_last_season") or {}
-        result.append(
-            CurrentExpert(
-                expert_id=str(raw["expert_id"]),
-                name=str(raw.get("name") or raw["expert_id"]).strip(),
-                source_name=str(raw.get("source") or "Unknown").strip(),
-                position_updates=tuple(
-                    sorted((str(key).upper(), str(item)) for key, item in position_updates.items())
-                ),
-                latest_weekly_accuracy=tuple(
-                    sorted((str(key).upper(), int(item)) for key, item in weekly.items())
-                ),
-                prior_weekly_accuracy=tuple(
-                    sorted((str(key).upper(), int(item)) for key, item in prior.items())
-                ),
-            )
-        )
-    return tuple(sorted(result, key=lambda item: int(item.expert_id)))
 
 
 def accuracy_from_expert_directory(

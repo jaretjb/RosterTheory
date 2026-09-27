@@ -230,7 +230,7 @@ class ProviderScoringCoverageTests(unittest.TestCase):
         )
         direct = FantasyProsAdapter(provider).weekly_projections(2027, 4, "ALL", scoring,
                                                                 league_id="synthetic")
-        with tempfile.TemporaryDirectory() as directory, patch("roster_theory.trade.board_service.time.sleep"):
+        with tempfile.TemporaryDirectory() as directory, patch("roster_theory.storage.request_gate.time.sleep"):
             kwargs = dict(client=provider, cache_dir=Path(directory),
                           budget_path=Path(directory) / "budget.json", ranking_positions=("QB",))
             prepared = _fetch_value_inputs(SimpleNamespace(snapshot=snapshot), **kwargs).projection_sets[0]
