@@ -163,6 +163,13 @@ def _draft_ranking_scope_issues(
     return issues
 
 
+def _api_tier_issue(response: Mapping[str, Any]) -> str | None:
+    limited = response.get("public_api_limited")
+    if limited is False:
+        return None
+    return "sample_only_source" if limited is True else "unverified_api_tier"
+
+
 def build_fantasypros_board(
     client: FantasyProsClient,
     *,
@@ -221,13 +228,9 @@ def build_fantasypros_board(
             "api_tier": projection_response.get("tier"),
             "scope_issues": scope_issues,
         })
-        if projection_response.get("public_api_limited") is not False:
+        if (tier_issue := _api_tier_issue(projection_response)) is not None:
             projection_issues.append({
-                "position": position,
-                "reason": (
-                    "sample_only_source" if projection_response.get("public_api_limited") is True
-                    else "unverified_api_tier"
-                ),
+                "position": position, "reason": tier_issue,
             })
         if scope_issues:
             projection_issues.append({
@@ -289,6 +292,7 @@ def build_fantasypros_board(
     rows: list[dict[str, Any]] = []
     ranking_sources: list[dict[str, Any]] = []
     ranking_issues: list[dict[str, Any]] = []
+    ranking_tier_issues: list[dict[str, Any]] = []
     accuracy_for_board: dict[str, AccuracyRecord] = {}
     returned_counts = {expert_id: 0 for expert_id, _ in selected}
     for expert_id, record in selected:
@@ -306,8 +310,14 @@ def build_fantasypros_board(
             "declared_scoring": ecr_response.get("scoring"),
             "declared_ranking_type": ecr_response.get("ranking_type_name"),
             "fallback_for": ecr_response.get("fallback_for"),
+            "public_api_limited": ecr_response.get("public_api_limited"),
+            "api_tier": ecr_response.get("tier"),
             "scope_issues": ecr_scope_issues,
         })
+        if (tier_issue := _api_tier_issue(ecr_response)) is not None:
+            ranking_tier_issues.append({
+                "position": position, "source": "ecr", "reason": tier_issue,
+            })
         if ecr_scope_issues:
             ranking_issues.append({
                 "position": position, "source": "ecr", "reason": ";".join(ecr_scope_issues),
@@ -335,8 +345,15 @@ def build_fantasypros_board(
                 "declared_scoring": response.get("scoring"),
                 "declared_ranking_type": response.get("ranking_type_name"),
                 "fallback_for": response.get("fallback_for"),
+                "public_api_limited": response.get("public_api_limited"),
+                "api_tier": response.get("tier"),
                 "scope_issues": scope_issues,
             })
+            if (tier_issue := _api_tier_issue(response)) is not None:
+                ranking_tier_issues.append({
+                    "position": position, "source": "expert", "expert_id": expert_id,
+                    "reason": tier_issue,
+                })
             if scope_issues:
                 ranking_issues.append({
                     "position": position, "source": "expert", "expert_id": expert_id,
@@ -398,6 +415,7 @@ def build_fantasypros_board(
             source["scope_issues"] for source in projection_sources
         ),
         "premium_api": expert_response.get("public_api_limited") is False,
+        "premium_ranking_sources": not ranking_tier_issues,
         "premium_projection_sources": all(
             source["public_api_limited"] is False for source in projection_sources
         ),
@@ -416,6 +434,7 @@ def build_fantasypros_board(
             "weight_source": weight_source,
             "public_api_limited": (
                 expert_response.get("public_api_limited") is True
+                or any(source["public_api_limited"] is True for source in ranking_sources)
                 or any(source["public_api_limited"] is True for source in projection_sources)
             ),
             "api_tier": expert_response.get("tier"),
@@ -435,5 +454,6 @@ def build_fantasypros_board(
             "projection_issues": projection_issues,
             "ranking_sources": ranking_sources,
             "ranking_issues": ranking_issues,
+            "ranking_tier_issues": ranking_tier_issues,
         },
     )
