@@ -1,7 +1,9 @@
 import unittest
+from unittest.mock import MagicMock, patch
 
 from roster_theory.expert_accuracy_history import (
     AnnualAccuracy,
+    fetch_accuracy_history,
     parse_accuracy_page,
     recency_accuracy_scores,
 )
@@ -19,6 +21,20 @@ def annual(year: int, name: str, rank: int, field_size: int = 101) -> AnnualAccu
 
 
 class ExpertAccuracyHistoryTests(unittest.TestCase):
+    def test_history_fetch_charges_each_html_request(self) -> None:
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b"<html></html>"
+        charges: list[int] = []
+        with (
+            patch("roster_theory.expert_accuracy_history.urlopen", return_value=response) as fetch,
+            patch("roster_theory.expert_accuracy_history.parse_accuracy_page", return_value=[]),
+        ):
+            self.assertEqual(fetch_accuracy_history(
+                years=(2024, 2025), minimum_interval_seconds=0,
+                before_request=lambda: charges.append(1),
+            ), [])
+        self.assertEqual((fetch.call_count, len(charges)), (2, 2))
+
     def test_parses_object_and_legacy_string_experts(self) -> None:
         html = (
             '<script>[{"id":1,"rank":1,"expert":{"label":"Alpha - Site"},'

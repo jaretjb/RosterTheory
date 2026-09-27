@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from roster_theory.grouped_rankings import (
     SelectedExpert,
@@ -14,6 +15,7 @@ from roster_theory.grouped_rankings import (
     export_grouped_rankings,
     filter_recent_experts,
     load_historical_experts,
+    load_fantasypros_expert_picker,
     load_expert_pool_overrides,
     load_recency_historical_experts,
     parse_fantasypros_expert_picker,
@@ -24,6 +26,26 @@ FIXTURES = Path(__file__).parent / "fixtures" / "provider"
 
 
 class GroupedRankingsTests(unittest.TestCase):
+    def test_picker_charges_only_after_validating_scoring(self) -> None:
+        charges: list[int] = []
+        with self.assertRaisesRegex(ValueError, "No FantasyPros expert-picker URL"):
+            load_fantasypros_expert_picker(
+                "INVALID", before_request=lambda: charges.append(1),
+            )
+        self.assertEqual(charges, [])
+
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b"<html></html>"
+        with (
+            patch("roster_theory.grouped_rankings.urlopen", return_value=response) as fetch,
+            patch("roster_theory.grouped_rankings.parse_fantasypros_expert_picker",
+                  return_value={1: {"name": "Synthetic Expert"}}),
+        ):
+            load_fantasypros_expert_picker(
+                "HALF", before_request=lambda: charges.append(1),
+            )
+        self.assertEqual((fetch.call_count, len(charges)), (1, 1))
+
     def test_all_cross_position_feed_requires_explicit_draft_type(self) -> None:
         self.assertEqual(
             _consensus_params("ALL", "HALF", experts="show"),

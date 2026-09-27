@@ -136,6 +136,7 @@ def load_fantasypros_expert_picker(
     scoring: str,
     *,
     timeout_seconds: float = 20.0,
+    before_request: Callable[[], None] | None = None,
 ) -> dict[int, dict[str, str]]:
     normalized_scoring = scoring.upper()
     try:
@@ -146,6 +147,8 @@ def load_fantasypros_expert_picker(
         url,
         headers={"Accept": "text/html", "User-Agent": "RosterTheory/0.1"},
     )
+    if before_request is not None:
+        before_request()
     try:
         with urlopen(request, timeout=timeout_seconds) as response:
             html = response.read().decode("utf-8", errors="replace")

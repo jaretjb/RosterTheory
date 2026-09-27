@@ -6,16 +6,19 @@ import ast
 import json
 import multiprocessing
 import tempfile
+import time
 import unittest
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.error import URLError
 
+from roster_theory.application.provider_access import charged_fantasypros_client
 from roster_theory.core.errors import RequestBudgetExceeded
 from roster_theory.fantasypros import FantasyProsClient
-from roster_theory.storage.request_gate import pace_request, reserve_requests
+from roster_theory.providers.cache import RequestDeduplicator
+from roster_theory.storage.request_gate import _process_lock, pace_request, reserve_requests
 from roster_theory.waiver_inputs import _waiver_value_refresh, build_waiver_inputs
 
 
@@ -30,6 +33,12 @@ def _reserve_worker(path: str, results: object) -> None:
 def _pace_worker(path: str, results: object) -> None:
     pace_request(Path(path), minimum_spacing_seconds=0.5)
     results.put(datetime.now(timezone.utc).timestamp())
+
+
+def _hold_lock_worker(path: str, ready: object) -> None:
+    with _process_lock(Path(path).with_suffix(".lock")):
+        ready.put("held")
+        time.sleep(30)
 
 
 class SharedValuePreparationTests(unittest.TestCase):
@@ -163,6 +172,91 @@ class SharedValuePreparationTests(unittest.TestCase):
                         client.get("nfl/news")
             self.assertEqual(fetch.call_count, 1)
             self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["used"], 1)
+
+    def test_direct_client_charges_each_attempt_and_cache_hits_charge_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "budget.json"
+            client = charged_fantasypros_client(
+                lambda **options: FantasyProsClient(
+                    api_key="synthetic-test-key", retries=1, **options,
+                ), path, minimum_spacing_seconds=0,
+            )
+            cache = RequestDeduplicator()
+            response = unittest.mock.MagicMock()
+            response.__enter__.return_value.read.return_value = b'{}'
+            response.__enter__.return_value.headers = {}
+            with patch("roster_theory.fantasypros.urlopen", return_value=response) as fetch:
+                first, hit = cache.get_or_call("rankings", {"week": 1},
+                    lambda: client.get("nfl/2026/rankings"))
+                second, cached = cache.get_or_call("rankings", {"week": 1},
+                    lambda: client.get("nfl/2026/rankings"))
+            self.assertEqual((first, second, hit, cached), ({}, {}, False, True))
+            self.assertEqual(fetch.call_count, 1)
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["used"], 1)
+
+            with patch("roster_theory.fantasypros.urlopen", side_effect=URLError("offline")) as fetch, \
+                 patch("roster_theory.fantasypros.time.sleep"):
+                with self.assertRaisesRegex(Exception, "Unable to retrieve"):
+                    client.get("nfl/2026/projections")
+            self.assertEqual(fetch.call_count, 2)
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["used"], 3)
+
+    def test_cli_probe_uses_charged_client(self):
+        from roster_theory.cli import command_fantasypros_probe
+
+        response = unittest.mock.MagicMock()
+        response.__enter__.return_value.read.return_value = b'{}'
+        response.__enter__.return_value.headers = {}
+        with (
+            patch("roster_theory.cli.FantasyProsClient",
+                  side_effect=lambda **options: FantasyProsClient(
+                      api_key="synthetic-test-key", retries=0, **options,
+                  )),
+            patch("roster_theory.application.provider_access.charge_fantasypros_request") as charge,
+            patch("roster_theory.fantasypros.urlopen", return_value=response) as fetch,
+            patch("roster_theory.cli._print_json"),
+        ):
+            command_fantasypros_probe(SimpleNamespace(
+                endpoint="players", season=2026, position="RB", scoring="HALF",
+            ))
+        charge.assert_called_once()
+        fetch.assert_called_once()
+
+    def test_existing_ledger_rollover_and_corruption_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "budget.json"
+            today = date(2026, 9, 27)
+            path.write_text(json.dumps({"limit": 500, "used": 499,
+                                        "budget_date": today.isoformat()}), encoding="utf-8")
+            self.assertEqual(reserve_requests(path, 1, today=today), 0)
+            with self.assertRaises(RequestBudgetExceeded):
+                reserve_requests(path, 1, today=today)
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["used"], 500)
+            self.assertEqual(reserve_requests(path, 1, today=date(2026, 9, 28)), 499)
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual((saved["used"], saved["budget_date"]), (1, "2026-09-28"))
+            path.write_text("{invalid", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                reserve_requests(path, 1, today=today)
+            self.assertEqual(path.read_text(encoding="utf-8"), "{invalid")
+
+    def test_dead_process_releases_lock_but_live_lock_times_out(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "budget.json"
+            context = multiprocessing.get_context("spawn")
+            ready = context.Queue()
+            worker = context.Process(target=_hold_lock_worker, args=(str(path), ready))
+            worker.start()
+            try:
+                self.assertEqual(ready.get(timeout=5), "held")
+                with self.assertRaises(TimeoutError):
+                    with _process_lock(path.with_suffix(".lock"), timeout_seconds=0.1):
+                        pass
+            finally:
+                worker.terminate()
+                worker.join(timeout=5)
+            self.assertFalse(worker.is_alive())
+            self.assertEqual(reserve_requests(path, 1), 499)
 
 
 if __name__ == "__main__":

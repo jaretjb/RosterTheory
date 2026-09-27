@@ -36,6 +36,7 @@ class FantasyProsClient:
     timeout_seconds: float = 20.0
     retries: int = 1
     before_retry: Callable[[], None] | None = None
+    before_attempt: Callable[[], None] | None = None
     request_count: int = field(default=0, init=False)
     last_get_metadata: dict[str, Any] = field(default_factory=dict, init=False)
 
@@ -60,6 +61,8 @@ class FantasyProsClient:
         for attempt in range(self.retries + 1):
             if attempt and self.before_retry is not None:
                 self.before_retry()
+            if self.before_attempt is not None:
+                self.before_attempt()
             try:
                 self.request_count += 1
                 with urlopen(request, timeout=self.timeout_seconds) as response:
