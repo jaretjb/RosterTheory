@@ -10,6 +10,13 @@ from roster_theory.core.models import FantasyTeam, LeagueRules, Player
 CAPACITY_OVERAGE_CODES = frozenset({"ACTIVE_CAPACITY_EXCEEDED", "RESERVE_CAPACITY_EXCEEDED"})
 
 
+def require_no_taxi_settings(settings: Mapping[str, object], *, context: str) -> None:
+    """Reject an unproven taxi membership rule in a roster settings payload."""
+    for key in ("taxi_slots", "slots_taxi"):
+        if key in settings and (type(settings[key]) is not int or settings[key] != 0):
+            raise RosterIllegal(f"{context} unsupported or unknown: {key}={settings[key]!r}")
+
+
 @dataclass(frozen=True, slots=True)
 class MembershipIssue:
     code: str

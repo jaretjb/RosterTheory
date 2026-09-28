@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Mapping
 
-from roster_theory.mock_watcher import roster_positions_from_draft
+from roster_theory.draft.watcher import roster_positions_from_draft
 from roster_theory.rankings import normalize_name
 from roster_theory.draft.simulation import (
     Player,

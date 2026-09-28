@@ -1,6 +1,26 @@
 # Active milestone
 
-## MA-004c - Move Draft advice into its package
+## MA-004d - Move Draft watcher decisions into its package
+
+Authorized by the user's September 27 request after MA-004c merged in PR #56.
+Make one bounded, behavior-preserving PR from current main. Move the watcher's
+Draft state transitions, room timing and recommendation logic from
+`mock_watcher.py` to `draft/watcher.py`. Keep the existing import path for
+callers, including currently imported private helpers. Leave Sleeper polling
+and human report formatting in their current entry point for later application
+and presentation extraction. Update safe internal imports to the Draft owner.
+Put the existing taxi membership admission check behind a neutral core helper
+so the new Draft module does not import a provider; preserve the provider path.
+Use the MA-004d contract in `docs/MODULAR_MIGRATION_PLAN.md`, architecture
+sections 2 and 4-6, and MA-001 synthetic compatibility, semantic and
+performance evidence. Preserve watcher decisions, report fields, CLI behavior,
+sorting, policy caps, season assumptions, schemas and replay checks. Leave
+ranking policy, issue #33 fixes, provider calls and Sleeper state untouched.
+Run focused and full tests, Ruff, package/import smoke, context and privacy
+gates, CI, and fixed-seed Draft performance comparison. Open one PR with
+before-and-after evidence, then stop without merging. No new issue is needed.
+
+## Previous MA-004c - Move Draft advice into its package (merged PR #56)
 
 Authorized by the user's September 27 request after MA-004b merged in PR #55.
 Make one behavior-preserving extraction PR from current main: move the

@@ -3,17 +3,20 @@
 Updated: September 27, 2026 (America/Los_Angeles)
 
 MA-003 merged in PR #51; its provider-limit follow-up merged in PR #52 and
-closed #32. MA-004a and MA-004b moved Draft analysis and simulation into a
-Draft package in merged PRs #54-#55. Active MA-004c moves Draft advice behind
-a compatibility import; decisions and output remain unchanged.
+closed #32. MA-004a through MA-004c moved Draft analysis, simulation and
+advice into a Draft package in merged PRs #54-#56. Active MA-004d moves Draft
+watcher state and recommendations into the package; decisions and output stay
+unchanged.
 
-MA-004c is prepared on `codex/ma-004c-draft-assistant`. Old/new advice imports
-resolve to one module, and the moved implementation AST is identical. Both
-synthetic profiles retain their Draft semantic hashes. Focused tests (141), the
-full suite (938), Ruff and context routing pass locally. Five-repeat fixed-seed
-Draft turn and strategy medians changed by -0.6% to +2.6%; allocation peaks
-are unchanged. No provider or Sleeper operation occurred. Watcher and policy
-changes require later slices.
+MA-004c's behavior-preserving advice extraction merged in PR #56. MA-004d is
+prepared on `codex/ma-004d-draft-watcher`: `mock_watcher.py` retains polling
+and report formatting while Draft state and recommendations live in
+`draft/watcher.py`. Old and new imports share the moved callables. All 940 tests,
+Ruff, context routing, wheel build and clean-install smoke pass locally. Both
+synthetic profiles retain their complete Draft turn and strategy hashes.
+Five-repeat medians changed by -21.5% to +3.8%; Python allocation peaks are
+unchanged. CI/review remain the merge gate. Ranking policy and #33 remain
+separate. No provider call or Sleeper write occurred.
 
 Trade and Waiver use shared neutral preparation while keeping separate decisions.
 Waiver adapts its own snapshot. A process-safe ledger coordinates FantasyPros
