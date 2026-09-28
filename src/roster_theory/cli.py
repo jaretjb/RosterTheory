@@ -76,7 +76,8 @@ from roster_theory.mock_evidence import (
     load_mock_evidence,
 )
 from roster_theory.draft.watcher import ACQUISITION_MODES, parse_draft_id
-from roster_theory.mock_watcher import MockDraftWatcher, format_mock_report
+from roster_theory.application.draft_watcher import MockDraftWatcher
+from roster_theory.presentation.draft_watcher import format_mock_report
 from roster_theory.rankings import (
     add_vbd,
     load_accuracy,

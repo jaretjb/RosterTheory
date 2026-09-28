@@ -2,10 +2,12 @@ import unittest
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
+from roster_theory.application import draft_watcher as application_watcher
 from roster_theory.draft import watcher as draft_watcher
 from roster_theory.draft_analysis import HistoricalPositionCurves
 from roster_theory.draft_preferences import DraftPreference, DraftPreferenceBook
 from roster_theory import mock_watcher as legacy_watcher
+from roster_theory.presentation import draft_watcher as presentation_watcher
 from roster_theory.mock_watcher import (
     MockDraftWatcher,
     _compact_decision_signal,
@@ -29,6 +31,14 @@ from roster_theory.simulation import Player
 
 
 class MockWatcherTests(unittest.TestCase):
+    def test_polling_and_formatting_compatibility_imports_share_new_owners(self) -> None:
+        self.assertIs(legacy_watcher.MockDraftWatcher, application_watcher.MockDraftWatcher)
+        self.assertIs(legacy_watcher.format_mock_report, presentation_watcher.format_mock_report)
+        self.assertIs(
+            legacy_watcher._expert_disagreement_warning,
+            presentation_watcher._expert_disagreement_warning,
+        )
+
     def test_moved_watcher_imports_share_the_draft_implementation(self) -> None:
         for name in (
             "MockDraftState",
