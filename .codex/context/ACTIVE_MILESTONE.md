@@ -1,6 +1,24 @@
 # Active milestone
 
-## MA-005b - Exercise Trade and Waiver evaluations across the half-PPR shapes
+## MA-002q - Verify #31 Sleeper Draft position-limit source semantics
+
+Authorized by the user's September 28 request after PR #61 merged. Inspect the
+two redacted reference profiles and current public Sleeper source documentation
+for Draft enforcement and positional maximums. Use the MA-002 row of
+`docs/MODULAR_MIGRATION_PLAN.md`, its MA-002e/MA-002f contracts, MR-01, MR-03,
+MR-05, MR-10, MR-13 and MR-14, and architecture sections 3.1-3.2 and 5.
+Map only verified source fields; never derive maxima from roster slots, Draft
+preferences or platform defaults. If source mapping remains unverified, keep
+both affected reference scopes LIMITED and record the missing evidence and
+recovery path. No private history, league calibration transfer, decision-policy
+change, Sleeper write or MA-005 support promotion. Run focused/full tests, Ruff,
+package/import smoke, context/privacy gates and CI. Open one evidence PR without
+merging; close #31 only if all its acceptance criteria are met.
+
+## Previous MA-005b - Exercise Trade and Waiver evaluations across the half-PPR shapes (merged PR #61)
+
+The synthetic matrix merged in PR #61. See
+`docs/MODULAR_INSEASON_MATRIX.md`; it made no support-promotion claim.
 
 Authorized by the user's September 28 request after merging PR #60. Use
 invented rosters to run Trade diagnosis and one entered package, and Waiver

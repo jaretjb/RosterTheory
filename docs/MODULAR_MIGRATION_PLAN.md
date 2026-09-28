@@ -31,8 +31,10 @@ MA-003 extracted shared Trade/Waiver preparation in PR #51; its shared provider
 limit follow-up merged in PR #52 and closed #32. MA-004a through MA-004e established
 Draft analysis, simulation, advice and watcher ownership in PRs #54-#58.
 MA-004f corrected issue #33's Draft legality and season evidence in merged PR #59.
-MA-005a inventoried the half-PPR roster family in merged PR #60. Active MA-005b
-exercises synthetic Trade/Waiver evaluations without support promotion.
+MA-005a inventoried the half-PPR roster family in merged PR #60. MA-005b
+exercised synthetic Trade/Waiver evaluations in merged PR #61 without support
+promotion. Active MA-002q verifies #31 Draft position-limit source semantics
+for the two redacted reference profiles.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
@@ -70,6 +72,10 @@ over-limit rosters without hiding them. It permits conditional Trade comparisons
 and independent Waiver searches while user acquisitions still require legal
 capacity and reserve state. Positional-cap source mapping and full admission
 remain under #31.
+
+MA-002q's [Draft source check](MODULAR_POSITION_LIMIT_SOURCE.md) finds no
+verified per-position maximum mapping for either reference profile. Their
+Draft position-limit scopes remain LIMITED; #31 stays open.
 
 MA-002g's [historical scoring evidence](MODULAR_HISTORICAL_SCORING.md) keeps
 partial Sleeper season/recent-week point totals out of Waiver rankings while
