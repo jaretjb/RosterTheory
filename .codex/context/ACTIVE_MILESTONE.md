@@ -1,6 +1,22 @@
 # Active milestone
 
-## MA-004b - Move Draft simulation into its package
+## MA-004c - Move Draft advice into its package
+
+Authorized by the user's September 27 request after MA-004b merged in PR #55.
+Make one behavior-preserving extraction PR from current main: move the
+implementation of `src/roster_theory/assistant.py` into
+`src/roster_theory/draft/assistant.py`, retain the old import path as a
+compatibility adapter, and update safe internal imports. Use the MA-004c
+contract in `docs/MODULAR_MIGRATION_PLAN.md`, architecture sections 2 and 4-6,
+and MA-001 synthetic compatibility, semantic and performance evidence. Preserve
+Draft advice, sorting, scores, signatures, commands, output fields, schemas,
+and replay checks. Leave watcher, ranking policy, issue #33 fixes, provider
+calls, and Sleeper state untouched. Run focused and full tests, Ruff,
+package/import smoke, context and privacy gates, CI, and the fixed-seed Draft
+performance comparison. Open one PR with before-and-after evidence, then stop
+without merging. No new issue is needed.
+
+## Previous MA-004b - Move Draft simulation into its package (merged PR #55)
 
 Authorized by the user's September 27 request to proceed after MA-004a merged
 in PR #54. Make one behavior-preserving extraction PR: move the implementation

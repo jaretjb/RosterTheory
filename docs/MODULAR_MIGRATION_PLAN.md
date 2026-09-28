@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-003 and provider-limit follow-up merged in PRs #51-#52; MA-004a Draft extraction active; MA-002 evidence follow-ups remain open
+Status: MA-004a and MA-004b merged in PRs #54-#55; MA-004c Draft advice extraction active; MA-002 evidence follow-ups remain open
 
 Updated: September 27, 2026 (America/Los_Angeles)
 
@@ -16,7 +16,7 @@ authorization. The current Draft closure and feature promotion gates remain.
 This document is the canonical requirement-to-work mapping. GitHub issues track
 delivery discussion and PR links; maintain IDs/status consistently here when
 issues are opened or closed. Do not create a second competing full backlog.
-The active MA-004a slice has a detailed contract below; MA-001's baseline
+The active MA-004c slice has a detailed contract below; MA-001's baseline
 contract remains as a completed reference.
 
 MA-000 delivers the three planning documents, reconciliation links and issue
@@ -28,9 +28,10 @@ change recommendation policy, activate later work, or merge itself.
 MA-001 froze the reference behavior. MA-002 established scoring, membership and
 capability contracts, with #30 and #31 still open for source and rule evidence.
 MA-003 extracted shared Trade/Waiver preparation in PR #51; its shared provider
-limit follow-up merged in PR #52 and closed #32. The user then activated the
-first structural Draft slice, MA-004a, in ACTIVE_MILESTONE. Later MA-004 work
-and support promotion remain separate decisions.
+limit follow-up merged in PR #52 and closed #32. MA-004a and MA-004b established
+Draft analysis and simulation ownership in PRs #54-#55. The active MA-004c
+slice moves Draft advice; later MA-004 work and support promotion remain
+separate decisions.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
@@ -199,6 +200,35 @@ Draft turn and two-trial strategy timing and Python allocation on the same machi
 with five measured repetitions after warm-up against the 20% and 25% review
 thresholds. No paid provider calls or Sleeper writes. Stop at a tested PR;
 reverting it restores the prior module layout without changing user data.
+
+### MA-004c: Draft advice package extraction
+
+After merged PR #55, move the existing `assistant.py` implementation to
+`draft/assistant.py`. Keep `assistant.py` as a compatibility import for public
+and currently imported private names. Change internal imports to the new owner
+only where no cycle results. The affected product files are the new module,
+compatibility adapter and direct import sites; focused tests and the Modular
+handoff may change. Do not move watcher or ranking implementations in this PR.
+
+This is a source-ownership change. Preserve `recommend_available` and its
+sorting, scores and output fields; preserve signatures, Draft commands, result
+fields, decisions, reasons, deterministic ties, policy caps, season assumptions,
+schemas and exact-build replay checks. A source hash may change with the move;
+compare complete semantic evidence without suppressing unexplained differences.
+Issue #33's cap and season fixes require a separate behavior PR. No wider
+league support or new calibration follows from this extraction.
+
+Acceptance: old and new assistant imports expose the same callable objects;
+both synthetic reference leagues retain reviewed Draft turn and strategy
+evidence; CLI parser and result contracts stay stable. Run focused assistant,
+simulation, watcher, CLI and modular baseline tests, then the full suite, Ruff,
+package/install smoke, context routing, staged privacy gate and CI. Compare
+MA-001's fixed-seed Draft turn and two-trial strategy timing and Python
+allocation on the same machine with five measured repetitions after warm-up
+against the 20% and 25% review thresholds. Use synthetic inputs only. Open one
+tested PR with before-and-after evidence, then stop without merging it. No new
+issue is needed; reverting the PR restores the prior layout without user data
+changes.
 
 ## 3. MA-001: completed baseline contract
 

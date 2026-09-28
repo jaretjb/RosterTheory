@@ -3,17 +3,17 @@
 Updated: September 27, 2026 (America/Los_Angeles)
 
 MA-003 merged in PR #51; its provider-limit follow-up merged in PR #52 and
-closed #32. MA-004a moved Draft analysis into a Draft package in merged PR #54.
-Active MA-004b moves simulation into that package behind a compatibility import.
-Decision behavior stays unchanged.
+closed #32. MA-004a and MA-004b moved Draft analysis and simulation into a
+Draft package in merged PRs #54-#55. Active MA-004c moves Draft advice behind
+a compatibility import; decisions and output remain unchanged.
 
-MA-004b is prepared on `codex/ma-004b-draft-simulation`. Both synthetic
-reference profiles retain their Draft semantic hashes, and old/new simulation
-imports resolve to one module. Focused tests (149), the full suite (937), Ruff,
-package/install smoke and context routing pass locally. Five-repeat fixed-seed
-Draft turn and strategy medians changed by -3.4% to +0.4%; allocation peaks are
-unchanged. No provider or Sleeper operation occurred. Watcher and policy changes
-require later slices.
+MA-004c is prepared on `codex/ma-004c-draft-assistant`. Old/new advice imports
+resolve to one module, and the moved implementation AST is identical. Both
+synthetic profiles retain their Draft semantic hashes. Focused tests (141), the
+full suite (938), Ruff and context routing pass locally. Five-repeat fixed-seed
+Draft turn and strategy medians changed by -0.6% to +2.6%; allocation peaks
+are unchanged. No provider or Sleeper operation occurred. Watcher and policy
+changes require later slices.
 
 Trade and Waiver use shared neutral preparation while keeping separate decisions.
 Waiver adapts its own snapshot. A process-safe ledger coordinates FantasyPros
