@@ -25,7 +25,7 @@ from roster_theory.core.provenance import canonical_json, stable_hash
 from roster_theory.core.run_contract import (
     build_run_manifest, evaluation_as_of, load_run_manifest, save_run_manifest,
 )
-from roster_theory.mock_watcher import reconcile_draft_state, recommend_for_state
+from roster_theory.draft.watcher import reconcile_draft_state, recommend_for_state
 from roster_theory.simulation import compare_strategies
 from roster_theory.trade.boards import valuation_gaps
 from roster_theory.trade.evaluation import PlayerAsset, TradePackage, diagnose_roster, evaluate_trade

@@ -1,5 +1,5 @@
 """Sleeper roster field and IR rule translation, without source-default guesses."""
-from roster_theory.core.roster import assess_reserve_eligibility
+from roster_theory.core.roster import assess_reserve_eligibility, require_no_taxi_settings
 from roster_theory.core.errors import RosterIllegal
 
 
@@ -12,9 +12,7 @@ def capacity_setting(settings, key):
 
 def require_draft_membership_settings(settings):
     """A draft-only payload cannot prove all league rules; reject known taxi modes."""
-    for key in ("taxi_slots", "slots_taxi"):
-        if key in settings and (type(settings[key]) is not int or settings[key] != 0):
-            raise RosterIllegal(f"Draft roster membership unsupported or unknown: {key}={settings[key]!r}")
+    require_no_taxi_settings(settings, context="Draft roster membership")
 
 
 def require_draft_snapshot_membership(snapshot):

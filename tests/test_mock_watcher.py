@@ -2,8 +2,10 @@ import unittest
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
+from roster_theory.draft import watcher as draft_watcher
 from roster_theory.draft_analysis import HistoricalPositionCurves
 from roster_theory.draft_preferences import DraftPreference, DraftPreferenceBook
+from roster_theory import mock_watcher as legacy_watcher
 from roster_theory.mock_watcher import (
     MockDraftWatcher,
     _compact_decision_signal,
@@ -27,6 +29,21 @@ from roster_theory.simulation import Player
 
 
 class MockWatcherTests(unittest.TestCase):
+    def test_moved_watcher_imports_share_the_draft_implementation(self) -> None:
+        for name in (
+            "MockDraftState",
+            "_validate_sleeper_cpu_snapshot",
+            "_transition",
+            "live_position_pace",
+            "parse_draft_id",
+            "policy_pair_for_scoring",
+            "reconcile_draft_state",
+            "recommend_for_state",
+            "room_survival_probabilities",
+        ):
+            with self.subTest(name=name):
+                self.assertIs(getattr(legacy_watcher, name), getattr(draft_watcher, name))
+
     @staticmethod
     def draft(*, status: str = "drafting") -> dict:
         return {
@@ -468,7 +485,7 @@ class MockWatcherTests(unittest.TestCase):
                 }
             ]
 
-        with patch("roster_theory.mock_watcher.rank_user_candidates", side_effect=fake_rank):
+        with patch("roster_theory.draft.watcher.rank_user_candidates", side_effect=fake_rank):
             report = recommend_for_state(
                 state,
                 draft,
