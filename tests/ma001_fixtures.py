@@ -52,12 +52,21 @@ class ReferenceFixture:
         ) for p in self.bundle.players)
 
 
-def reference_fixture(profile='reference_a', *, open_slot=False, sparse=False):
-    """Full league size/capacity; synthetic three-week estimates, not provider forecasts."""
+def reference_fixture(profile='reference_a', *, open_slot=False, sparse=False,
+                      roster_shape=None):
+    """Synthetic three-week estimates; matrix shapes carry no transferred policy."""
     config = rules(profile)
+    league_id = profile
+    team_count = config['team_count']
+    roster_positions = config['roster_positions']
+    if roster_shape is not None:
+        team_count, flexes, bench = roster_shape
+        roster_positions = ('QB', 'RB', 'RB', 'WR', 'WR', 'TE', *flexes, 'K', 'DEF',
+                            *('BN',) * bench)
+        league_id = f"synthetic-{team_count}-{'-'.join(flexes)}-{bench}"
     league = normalize_league({
-        'league_id': profile, 'season': '2026', 'total_rosters': config['team_count'],
-        'roster_positions': config['roster_positions'],
+        'league_id': league_id, 'season': '2026', 'total_rosters': team_count,
+        'roster_positions': roster_positions,
         'scoring_settings': config['scoring_settings'], 'settings': config['settings'],
     })
     starters = tuple(p for p in league.roster_positions if p != 'BN')
@@ -102,12 +111,12 @@ def reference_fixture(profile='reference_a', *, open_slot=False, sparse=False):
     owned = dict(owner)
     weeks = tuple(EvaluationWeek(w, False, league.team_count, True, (), True) for w in (1, 2, 3))
     manifest = AnalysisManifest.build(
-        league_id=profile, user_id='synthetic-owner-1', current_week=1,
+        league_id=league_id, user_id='synthetic-owner-1', current_week=1,
         horizon_start=1, horizon_end=3, configuration={'rules': league, 'fixture': profile},
         normalized_inputs=(players, teams, weeks), data_stamps=(stamp,),
     )
     trade = TradeSnapshot(
-        1, 'TRADE ASSISTANT', profile, AS_OF, 'ROS', True, league, '1', tuple(teams),
+        1, 'TRADE ASSISTANT', league_id, AS_OF, 'ROS', True, league, '1', tuple(teams),
         tuple(p for p in players if p.positions[0] in ('QB', 'RB', 'WR', 'TE')),
         weeks, tuple(sorted(owner)),
         tuple(p.player_id for p in players if p.player_id not in owned),

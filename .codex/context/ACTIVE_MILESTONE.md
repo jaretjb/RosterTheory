@@ -1,6 +1,20 @@
 # Active milestone
 
-## MA-005a - Inventory the bounded half-PPR roster matrix
+## MA-005b - Exercise Trade and Waiver evaluations across the half-PPR shapes
+
+Authorized by the user's September 28 request after merging PR #60. Use
+invented rosters to run Trade diagnosis and one entered package, and Waiver
+full/open-slot evaluation, across all 12 MA-005a roster shapes. Keep independent
+lineup and package arithmetic; prove a missing add projection blocks its Waiver
+case without hiding an independent Trade diagnosis. Do not apply any existing
+league's decision-policy calibration to a new shape or claim feature readiness.
+Use the MA-005b contract in `docs/MODULAR_MIGRATION_PLAN.md`, MR-02, MR-04,
+MR-05, MR-07, MR-13 and MR-14, and architecture sections 3.1-3.3 and 6.
+Synthetic inputs only; no provider calls, Sleeper writes, policy change or
+support promotion. Run focused/full tests, Ruff, import, context/privacy gates
+and CI. Open one PR and stop without merging.
+
+## Previous MA-005a - Inventory the bounded half-PPR roster matrix (merged PR #60)
 
 Authorized by the user's September 28 request after merging PR #59. This first
 MA-005 slice records synthetic structural evidence for the 12 target roster
