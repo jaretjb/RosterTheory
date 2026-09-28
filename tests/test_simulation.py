@@ -10,6 +10,7 @@ from roster_theory.assistant import recommend_available
 from roster_theory.draft_analysis import HistoricalPositionCurves
 from roster_theory.simulation import (
     Player,
+    DraftSeasonSchedule,
     RankVorpCurve,
     _construction_filtered_available,
     _construction_policy_config,
@@ -30,7 +31,7 @@ from roster_theory.simulation import (
     acquisition_adp_metadata,
     apply_acquisition_adp,
     bounded_multi_turn_rollout,
-    compare_strategies,
+    compare_strategies as _compare_strategies,
     deterministic_roster_strength,
     expert_ordered_projection_players,
     expected_roster_score,
@@ -46,6 +47,24 @@ from roster_theory.simulation import (
     survival_probability,
     weekly_use_roster_strength,
 )
+
+
+SYNTHETIC_SCHEDULE = DraftSeasonSchedule(
+    2026,
+    {**{team: 8 for team in (
+        "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN",
+        "DET", "GB", "HOU", "IND", "JAX", "KC", "LAC", "LAR", "LV", "MIA",
+        "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB",
+        "TEN", "WAS",
+    )}, "CAR": 5, "KC": 5, "CIN": 6},
+    17,
+)
+
+
+def compare_strategies(*args, **kwargs):
+    kwargs.setdefault("season", 2026)
+    kwargs.setdefault("schedule", SYNTHETIC_SCHEDULE)
+    return _compare_strategies(*args, **kwargs)
 
 
 class SimulationTests(unittest.TestCase):
@@ -1735,10 +1754,12 @@ class SimulationTests(unittest.TestCase):
         )
         baseline = {"QB": 170}
         covered = deterministic_roster_strength(
-            [starter, different_bye], ["QB"], baseline
+            [starter, different_bye], ["QB"], baseline,
+            season=2026, schedule=SYNTHETIC_SCHEDULE,
         )
         uncovered = deterministic_roster_strength(
-            [starter, same_bye], ["QB"], baseline
+            [starter, same_bye], ["QB"], baseline,
+            season=2026, schedule=SYNTHETIC_SCHEDULE,
         )
         self.assertEqual(covered["base_lineup_score"], 340)
         self.assertAlmostEqual(covered["bye_coverage_points"], 6.0)

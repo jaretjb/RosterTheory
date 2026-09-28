@@ -9,6 +9,47 @@ from roster_theory.core.models import FantasyTeam, LeagueRules, Player
 
 CAPACITY_OVERAGE_CODES = frozenset({"ACTIVE_CAPACITY_EXCEEDED", "RESERVE_CAPACITY_EXCEEDED"})
 
+_DRAFT_SLOT_ELIGIBILITY = {
+    "QB": frozenset({"QB"}),
+    "RB": frozenset({"RB"}),
+    "WR": frozenset({"WR"}),
+    "TE": frozenset({"TE"}),
+    "K": frozenset({"K"}),
+    "DST": frozenset({"DST"}),
+    "FLEX": frozenset({"RB", "WR", "TE"}),
+    "WRRB_FLEX": frozenset({"RB", "WR"}),
+    "REC_FLEX": frozenset({"WR", "TE"}),
+    "BN": frozenset({"QB", "RB", "WR", "TE", "K", "DST"}),
+}
+
+
+def draft_roster_fits(positions: Sequence[str], roster_slots: Sequence[str]) -> bool:
+    """Whether players can occupy distinct active slots, without acquisition policy."""
+    slots = tuple(sorted(str(slot).upper().replace("DEF", "DST") for slot in roster_slots))
+    players = tuple(sorted(str(position).upper().replace("DEF", "DST") for position in positions))
+    if len(players) > len(slots) or any(slot not in _DRAFT_SLOT_ELIGIBILITY for slot in slots):
+        return False
+    if any(position not in _DRAFT_SLOT_ELIGIBILITY["BN"] for position in players):
+        return False
+    return _draft_roster_fits(players, slots)
+
+
+def _draft_roster_fits(players: tuple[str, ...], slots: tuple[str, ...]) -> bool:
+    occupied: dict[int, int] = {}
+
+    def assign(player_index: int, visited: set[int]) -> bool:
+        for slot_index, slot in enumerate(slots):
+            if slot_index in visited or players[player_index] not in _DRAFT_SLOT_ELIGIBILITY[slot]:
+                continue
+            visited.add(slot_index)
+            other = occupied.get(slot_index)
+            if other is None or assign(other, visited):
+                occupied[slot_index] = player_index
+                return True
+        return False
+
+    return all(assign(index, set()) for index in range(len(players)))
+
 
 def require_no_taxi_settings(settings: Mapping[str, object], *, context: str) -> None:
     """Reject an unproven taxi membership rule in a roster settings payload."""

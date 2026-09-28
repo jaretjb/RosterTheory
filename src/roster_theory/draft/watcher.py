@@ -9,13 +9,13 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Iterable, Mapping
 
 from roster_theory.draft.analysis import HistoricalPositionCurves
-from roster_theory.core.roster import require_no_taxi_settings
+from roster_theory.core.roster import draft_roster_fits, require_no_taxi_settings
 from roster_theory.draft_preferences import DraftPreferenceBook, evaluate_draft_preferences
 from roster_theory.rankings import normalize_name
 from roster_theory.specialist_preferences import defense_draft_rank, defense_draft_sort_key
 from roster_theory.draft.simulation import (
     Player,
-    POSITION_CAPS,
+    DRAFT_PREFERENCE_CAPS,
     SKILL_POSITIONS,
     _filled_starter_slots,
     acquisition_adp_metadata,
@@ -508,7 +508,11 @@ def _seat_position_factor(
     round_no: int,
 ) -> float:
     counts = Counter(item.position for item in roster)
-    if counts[player.position] >= POSITION_CAPS.get(player.position, 99):
+    if not draft_roster_fits(
+        [*(item.position for item in roster), player.position], tuple(roster_positions)
+    ):
+        return 0.0
+    if counts[player.position] >= DRAFT_PREFERENCE_CAPS.get(player.position, 99):
         return 0.0
     dedicated = Counter(
         position for position in roster_positions if position in SKILL_POSITIONS
@@ -935,6 +939,15 @@ def recommend_for_state(
     user_roster = adjusted_rosters[state.draft_slot]
     market_user_roster = market_rosters[state.draft_slot]
     roster_positions = configured_roster_positions
+    if not draft_roster_fits(
+        [player.position for player in user_roster], roster_positions
+    ):
+        return {
+            "recommendations": {},
+            "unmatched_user_picks": unmatched,
+            "roster_legality": "invalid",
+            "reason": "Current picks cannot fit the declared Draft slots; verify edited picks and league rules.",
+        }
     special_rounds = sum(position in {"K", "DEF", "DST"} for position in roster_positions)
     skill_rounds = max(1, state.rounds - special_rounds)
     replacement_baselines = market_replacement_baselines(

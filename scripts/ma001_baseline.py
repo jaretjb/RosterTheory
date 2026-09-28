@@ -26,7 +26,8 @@ from roster_theory.core.run_contract import (
     build_run_manifest, evaluation_as_of, load_run_manifest, save_run_manifest,
 )
 from roster_theory.draft.watcher import reconcile_draft_state, recommend_for_state
-from roster_theory.simulation import compare_strategies
+from roster_theory.simulation import DraftSeasonSchedule, compare_strategies
+from roster_theory.schedule_inputs import NFL_TEAMS
 from roster_theory.trade.boards import valuation_gaps
 from roster_theory.trade.evaluation import PlayerAsset, TradePackage, diagnose_roster, evaluate_trade
 from roster_theory.trade.search import SearchConfig, search_league
@@ -124,7 +125,11 @@ def workloads(profile, metrics=None):
             1, rules(profile)['roster_positions'], 15, trials=2, seed=2026,
             strategies=('scenario_safe',), include_special_teams=True,
             availability_rates=(0.1,), availability_samples=2, bench_weights=(0.2,),
-            rank_weights=(0.0,), include_trial_records=True),
+            rank_weights=(0.0,), include_trial_records=True, season=2026,
+            schedule=DraftSeasonSchedule(2026, {
+                **{team: 8 for team in NFL_TEAMS},
+                'ARI': 14, 'BUF': 7, 'CAR': 5, 'DEN': 10,
+            }, 17)),
         'trade_diagnose': lambda: diagnose_roster(fixture.trade, projections=fixture.projections),
         'trade_exact': trade,
         'trade_unequal': lambda: trade(True),

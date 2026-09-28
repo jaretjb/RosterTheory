@@ -1,5 +1,6 @@
 import unittest
 
+from roster_theory.draft.simulation import DraftSeasonSchedule
 from roster_theory.mock_analysis import (
     build_draft_board_replay_reports,
     evaluate_mock_rosters,
@@ -69,7 +70,10 @@ class MockAnalysisTests(unittest.TestCase):
             }
         }
 
-        result = evaluate_mock_rosters(report, board, draft)
+        result = evaluate_mock_rosters(
+            report, board, draft, season=2026,
+            schedule=DraftSeasonSchedule(2026, {"BUF": 7}, 17),
+        )
 
         self.assertEqual(result["unmatched_skill_picks"], [])
         self.assertEqual(set(result["channels"]), {"0.00", "0.50", "1.00"})

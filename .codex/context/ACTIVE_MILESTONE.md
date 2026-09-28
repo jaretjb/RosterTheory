@@ -1,6 +1,25 @@
 # Active milestone
 
-## MA-004e - Complete Draft watcher effect and presentation boundaries
+## MA-004f - Correct Draft legal capacity and season evidence (#33)
+
+Authorized by the user's September 27 request after merging PR #58. Make one
+reviewed Draft behavior PR from current main for issue #33. Distinguish roster
+capacity and slot eligibility from the existing Draft acquisition preferences;
+keep selected strategy objectives, preference caps, ties, and K/DST treatment
+unless an independently tested legality case requires a named correction.
+Remove the implicit 2026 bye-week default. Require an explicit season-matched,
+validated schedule for bye-aware Draft simulation and completed-mock scoring;
+reject missing, wrong-season, and incomplete evidence before evaluation.
+Use the MA-004f contract in `docs/MODULAR_MIGRATION_PLAN.md`, requirements
+MR-01, MR-05 through MR-07 and MR-13, and architecture sections 3.2 and 5-6.
+Use synthetic examples for third-QB legality, every 10/12-team snake slot,
+final rosters, edits/undos, and schedule failures. Record before/after decision
+differences, fixed-seed timing and an absolute Draft response-time budget. Run
+focused and full tests, Ruff, package/import smoke, context/privacy gates and
+CI. No paid provider calls or Sleeper writes. Open one PR and stop without
+merging. Do not promote wider format support or alter Trade/Waiver policy.
+
+## Previous MA-004e - Complete Draft watcher effect and presentation boundaries (merged PR #58)
 
 Authorized by the user's September 27 request to continue after MA-004d merged
 in PR #57. Make one bounded, behavior-preserving PR from current main. Move

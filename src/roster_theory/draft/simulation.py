@@ -13,6 +13,8 @@ from itertools import combinations
 from statistics import NormalDist, fmean, median, pstdev
 from typing import Any, Iterable, Mapping
 
+from roster_theory.core.errors import ScheduleIncomplete
+from roster_theory.core.roster import draft_roster_fits
 from roster_theory.draft.analysis import HistoricalPositionCurves
 from roster_theory.specialist_preferences import (
     defense_draft_rank,
@@ -22,7 +24,8 @@ from roster_theory.specialist_preferences import (
 
 SKILL_POSITIONS = ("QB", "RB", "WR", "TE")
 DRAFT_POSITIONS = (*SKILL_POSITIONS, "K", "DST")
-POSITION_CAPS = {"QB": 2, "RB": 6, "WR": 7, "TE": 2, "K": 1, "DST": 1}
+DRAFT_PREFERENCE_CAPS = {"QB": 2, "RB": 6, "WR": 7, "TE": 2, "K": 1, "DST": 1}
+POSITION_CAPS = DRAFT_PREFERENCE_CAPS  # Old import path; these are not league limits.
 MARKET_POSITION_PRIOR = {"QB": 0.13, "RB": 0.31, "WR": 0.33, "TE": 0.10, "K": 0.065, "DST": 0.065}
 OPPONENT_POSITION_STRESS_PROFILES = (
     "raw",
@@ -30,18 +33,38 @@ OPPONENT_POSITION_STRESS_PROFILES = (
     "early_wr",
     "middle_qb_te",
 )
-# Official 2026 NFL schedule release; update this year-specific map with the board season.
-NFL_BYE_WEEKS_2026 = {
-    "CAR": 5, "KC": 5,
-    "CIN": 6, "DET": 6, "MIA": 6, "MIN": 6,
-    "BUF": 7, "JAX": 7, "LAC": 7, "WAS": 7,
-    "HOU": 8, "NO": 8, "NYG": 8, "SF": 8,
-    "PIT": 9, "TEN": 9,
-    "CHI": 10, "DEN": 10, "PHI": 10, "TB": 10,
-    "ATL": 11, "CLE": 11, "GB": 11, "LAR": 11, "NE": 11, "SEA": 11,
-    "BAL": 13, "IND": 13, "LV": 13, "NYJ": 13,
-    "ARI": 14, "DAL": 14,
-}
+@dataclass(frozen=True, slots=True)
+class DraftSeasonSchedule:
+    """Season-bound bye evidence; the application validates its source document."""
+
+    season: int
+    bye_weeks: Mapping[str, int]
+    active_games: int
+
+
+def _require_draft_schedule(
+    schedule: DraftSeasonSchedule | None, season: int | None,
+    roster: Iterable[Player] = (),
+) -> DraftSeasonSchedule:
+    if schedule is None or season is None:
+        raise ScheduleIncomplete(
+            "Draft bye schedule and league season are required; prepare the season's "
+            "schedule with 'roster-theory inputs schedule refresh <league>'."
+        )
+    if type(season) is not int or type(schedule.season) is not int or schedule.season != season:
+        raise ScheduleIncomplete("Draft bye schedule season does not match the league season")
+    if type(schedule.active_games) is not int or schedule.active_games < 1:
+        raise ScheduleIncomplete("Draft bye schedule active-game count is invalid")
+    if not isinstance(schedule.bye_weeks, Mapping) or any(
+        type(week) is not int or week < 1 or week > schedule.active_games + 1
+        for week in schedule.bye_weeks.values()
+    ):
+        raise ScheduleIncomplete("Draft bye schedule contains invalid bye weeks")
+    missing = sorted({player.team for player in roster if player.team}
+                     - set(schedule.bye_weeks))
+    if missing:
+        raise ScheduleIncomplete("Draft bye schedule omits player teams: " + ", ".join(missing))
+    return schedule
 
 
 @dataclass(frozen=True, slots=True)
@@ -622,7 +645,7 @@ def _top3_dst_guard_candidates(
         player
         for player in available
         if player.position == "DST"
-        and _can_draft(player, roster_list)
+        and _policy_allows_draft(player, roster_list, positions)
         and defense_draft_rank(player.team) is not None
         and defense_draft_rank(player.team) <= maximum_user_dst_rank
         and survival_probability(
@@ -1544,8 +1567,64 @@ def _expert_order_constrained_candidates(
     return ordered
 
 
-def _can_draft(player: Player, roster: list[Player]) -> bool:
-    return Counter(item.position for item in roster)[player.position] < POSITION_CAPS.get(player.position, 99)
+def _can_draft(
+    player: Player, roster: list[Player], roster_positions: Iterable[str] | None = None,
+) -> bool:
+    """Check identity and slot capacity, never a Draft acquisition preference."""
+    if player.position not in DRAFT_POSITIONS or any(item.key == player.key for item in roster):
+        return False
+    if roster_positions is None:
+        return True  # Position-only check; a caller must supply slots for capacity.
+    return draft_roster_fits(
+        [*(item.position for item in roster), player.position], tuple(roster_positions)
+    )
+
+
+def _policy_allows_draft(
+    player: Player, roster: list[Player], roster_positions: Iterable[str] | None = None,
+    total_user_picks: int | None = None,
+) -> bool:
+    """Apply the selected Draft's existing acquisition preference after legality."""
+    if Counter(item.position for item in roster)[player.position] >= DRAFT_PREFERENCE_CAPS.get(player.position, 99):
+        return False
+    positions = _draft_slots(roster_positions, total_user_picks)
+    return _can_draft(player, roster, positions)
+
+
+def _draft_slots(
+    roster_positions: Iterable[str] | None, total_user_picks: int | None,
+) -> tuple[str, ...] | None:
+    if roster_positions is None:
+        return None
+    positions = tuple(roster_positions)
+    if total_user_picks is not None:
+        positions += ("BN",) * max(0, total_user_picks - len(positions))
+    return positions
+
+
+def _draft_candidate_lists(
+    available: Iterable[Player], roster: list[Player],
+    roster_positions: Iterable[str] | None, total_user_picks: int | None = None,
+) -> tuple[list[Player], list[Player]]:
+    """Assess each position's capacity once for a whole candidate board."""
+    slots = _draft_slots(roster_positions, total_user_picks)
+    counts = Counter(item.position for item in roster)
+    roster_keys = {item.key for item in roster}
+    legal_positions = {
+        position for position in DRAFT_POSITIONS
+        if slots is None or draft_roster_fits(
+            [*(item.position for item in roster), position], slots
+        )
+    }
+    legal = [
+        player for player in available
+        if player.position in legal_positions and player.key not in roster_keys
+    ]
+    preferred = [
+        player for player in legal
+        if counts[player.position] < DRAFT_PREFERENCE_CAPS.get(player.position, 99)
+    ]
+    return preferred, legal
 
 
 def market_replacement_baselines(
@@ -1803,11 +1882,16 @@ def deterministic_roster_strength(
     roster: Iterable[Player],
     roster_positions: Iterable[str],
     replacement_baselines: Mapping[str, float],
-    bye_weeks: Mapping[str, int] = NFL_BYE_WEEKS_2026,
-    active_games: int = 17,
+    *,
+    season: int | None = None,
+    schedule: DraftSeasonSchedule | None = None,
 ) -> dict[str, float]:
     """Score known-bye reserve value above the waiver floor without randomness."""
-    players = [player for player in roster if player.position in SKILL_POSITIONS]
+    roster_players = list(roster)
+    schedule = _require_draft_schedule(schedule, season, roster_players)
+    bye_weeks = schedule.bye_weeks
+    active_games = schedule.active_games
+    players = [player for player in roster_players if player.position in SKILL_POSITIONS]
     positions = tuple(roster_positions)
     base_lineup_score, base_starters = _optimal_lineup(players, positions)
     starter_keys = {player.key for player in base_starters}
@@ -2411,6 +2495,13 @@ def _two_pick_path_value(
     current_value = after_value - base_value
     raw_options: list[tuple[float, Player]] = []
     after_counts = Counter(player.position for player in after)
+    next_slots = _draft_slots(roster_positions, total_user_picks)
+    legal_next_positions = {
+        position for position in SKILL_POSITIONS
+        if next_slots is None or draft_roster_fits(
+            [*(player.position for player in after), position], next_slots
+        )
+    }
     after_skill_count = sum(after_counts.get(position, 0) for position in SKILL_POSITIONS)
     remaining_after_next = total_user_picks - after_skill_count - 1
     starter_slots = len(_starter_eligibility(roster_positions))
@@ -2439,7 +2530,8 @@ def _two_pick_path_value(
     for player in available:
         if (
             player.key == candidate.key
-            or after_counts[player.position] >= POSITION_CAPS.get(player.position, 99)
+            or after_counts[player.position] >= DRAFT_PREFERENCE_CAPS.get(player.position, 99)
+            or player.position not in legal_next_positions
         ):
             continue
         if not preserves_path_by_position.get(player.position, True):
@@ -2768,11 +2860,13 @@ def rank_user_candidates(
             row["positional_guardrail"] = dict(guardrail)
             row["near_tie_scarcity_config"] = dict(scarcity_config)
         return constrained
+    preferred, legal = _draft_candidate_lists(
+        available, roster, roster_positions, total_user_picks
+    )
     candidates = [
         player
-        for player in available
-        if _can_draft(player, roster)
-        and _preserves_starter_path(player, roster, roster_positions, total_user_picks)
+        for player in preferred
+        if _preserves_starter_path(player, roster, roster_positions, total_user_picks)
         and (
             bench_before_starters is None
             or _within_precompletion_bench_cap(
@@ -2784,7 +2878,10 @@ def rank_user_candidates(
         )
     ]
     if not candidates:
-        candidates = [player for player in available if _can_draft(player, roster)] or available
+        candidates = preferred or legal
+    if not candidates:
+        raise ValueError("No legally eligible Draft candidate remains on the board")
+    preference_override = not preferred
     consensus_band = _consensus_candidate_band(policy, round_no)
     if consensus_band is not None:
         expert_ranked = sorted(
@@ -3261,6 +3358,7 @@ def rank_user_candidates(
                 ),
                 "consensus_candidate_band": consensus_band,
                 "final_score": round(score, 3),
+                **({"draft_preference_override": True} if preference_override else {}),
             }
         )
     immediate_starter_paths = [
@@ -3299,8 +3397,12 @@ def _opponent_pick(
     rng: random.Random,
     round_position_rates: Mapping[int, Mapping[str, float]] | None = None,
     market_noise: float = 2.5,
+    roster_positions: Iterable[str] | None = None,
 ) -> Player:
-    candidates = [player for player in available if _can_draft(player, roster)] or available
+    preferred, legal = _draft_candidate_lists(available, roster, roster_positions)
+    candidates = preferred or legal
+    if not candidates:
+        raise ValueError("No legally eligible opponent Draft candidate remains on the board")
     # Always keep the best available market values in view. Sorting by distance
     # from the current pick allowed an elite player who slipped to become less
     # likely to be drafted on every subsequent pick.
@@ -3360,7 +3462,11 @@ def _rollout_room_survival_probabilities(
 
     def seat_factor(player: Player, roster: list[Player], round_no: int) -> float:
         counts = Counter(item.position for item in roster)
-        if counts[player.position] >= POSITION_CAPS.get(player.position, 99):
+        if not draft_roster_fits(
+            [*(item.position for item in roster), player.position], positions
+        ):
+            return 0.0
+        if counts[player.position] >= DRAFT_PREFERENCE_CAPS.get(player.position, 99):
             return 0.0
         if counts[player.position] < dedicated[player.position]:
             if player.position in {"QB", "TE"}:
@@ -3450,7 +3556,7 @@ def bounded_multi_turn_rollout(
         player
         for player in forced_candidates
         if player in initial_available
-        and _can_draft(player, initial_rosters[draft_slot])
+        and _policy_allows_draft(player, initial_rosters[draft_slot], positions)
     ]
     remaining_after_forced = max(
         0,
@@ -3614,6 +3720,7 @@ def bounded_multi_turn_rollout(
                             branch_rng,
                             round_position_rates=scenario_round_rates,
                             market_noise=market_noise,
+                            roster_positions=positions,
                         )
                         beam_available.remove(chosen)
                         beam_rosters[slot].append(chosen)
@@ -3717,7 +3824,8 @@ def bounded_multi_turn_rollout(
         "seed": seed,
         "position_run_sigma": position_run_sigma,
         "pruned_path_count": pruned_path_count,
-        "position_caps": dict(POSITION_CAPS),
+        "position_caps": dict(DRAFT_PREFERENCE_CAPS),
+        "position_caps_scope": "draft_acquisition_preference",
         "channels": list(channels),
         "candidates": summaries,
     }
@@ -3804,7 +3912,10 @@ def compare_strategies(
     include_draft_pick_records: bool = False,
     opponent_market_noise: float = 2.5,
     opponent_position_profile: str = "raw",
+    season: int | None = None,
+    schedule: DraftSeasonSchedule | None = None,
 ) -> list[dict[str, Any]]:
+    schedule = _require_draft_schedule(schedule, season)
     strategies = tuple(strategies)
     bench_weights = tuple(float(weight) for weight in bench_weights)
     if not bench_weights:
@@ -4010,7 +4121,7 @@ def compare_strategies(
                                     player
                                     for player in available
                                     if player.position == position
-                                    and _can_draft(player, rosters[slot])
+                                    and _policy_allows_draft(player, rosters[slot], roster_positions)
                                 ]
                                 if position_players:
                                     market_options.append(
@@ -4071,7 +4182,7 @@ def compare_strategies(
                                 player
                                 for player in available
                                 if player.position == special_position
-                                and _can_draft(player, rosters[slot])
+                                and _policy_allows_draft(player, rosters[slot], roster_positions)
                                 and (
                                     special_candidate_keys is None
                                     or player.key in special_candidate_keys
@@ -4263,6 +4374,7 @@ def compare_strategies(
                         rng,
                         round_position_rates=effective_round_position_rates,
                         market_noise=opponent_market_noise,
+                        roster_positions=roster_positions,
                     )
                 rosters[slot].append(chosen)
                 available.remove(chosen)
@@ -4319,6 +4431,8 @@ def compare_strategies(
                         ],
                         roster_positions,
                         rank_baselines,
+                        season=season,
+                        schedule=schedule,
                     )
                     for slot, slot_roster in rosters.items()
                 }
