@@ -5,6 +5,7 @@ from typing import Any, Iterable, Mapping
 from roster_theory.draft.watcher import roster_positions_from_draft
 from roster_theory.rankings import normalize_name
 from roster_theory.draft.simulation import (
+    DraftSeasonSchedule,
     Player,
     SKILL_POSITIONS,
     deterministic_roster_strength,
@@ -137,6 +138,8 @@ def evaluate_mock_rosters(
     *,
     rank_weights: Iterable[float] = (0.0, 0.5, 1.0),
     bench_weight: float = 0.30,
+    season: int | None = None,
+    schedule: DraftSeasonSchedule | None = None,
 ) -> dict[str, Any]:
     """Evaluate a completed mock with the watcher's deterministic team metric."""
     rows = list(board)
@@ -219,7 +222,8 @@ def evaluate_mock_rosters(
         weekly_use = {}
         for slot, keys in roster_player_keys.items():
             strength = deterministic_roster_strength(
-                [adjusted[key] for key in keys], roster_positions, baselines
+                [adjusted[key] for key in keys], roster_positions, baselines,
+                season=season, schedule=schedule,
             )
             weekly_use[slot] = weekly_use_roster_strength(
                 [adjusted[key] for key in keys], roster_positions, baselines

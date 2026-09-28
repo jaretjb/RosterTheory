@@ -732,10 +732,11 @@ class MockWatcherTests(unittest.TestCase):
         initial = watcher.poll_once(now=100.0)
         self.assertTrue(initial["is_user_turn"])
         expected_slots = [1, 2, 2, 1, 1, 2, 2, 1, 1, 2]
+        legal_player_ids = [3, 7, 6, 1, 2, 9, 8, 4, 5, 10]
         for number, slot in enumerate(expected_slots, start=1):
             responses["picks"] = [
                 *responses["picks"],
-                self.pick(number, slot, str(number)),
+                self.pick(number, slot, str(legal_player_ids[number - 1])),
             ]
             if number == len(expected_slots):
                 responses["draft"]["status"] = "complete"
@@ -796,8 +797,10 @@ class MockWatcherTests(unittest.TestCase):
                 "slots_def": 1,
             }
         )
+        legal_player_ids = [3, 7, 6, 1, 2, 9, 8, 4, 5, 10]
         picks = [
-            self.pick(number, 1 if number in {1, 4, 5, 8, 9} else 2, str(number))
+            self.pick(number, 1 if number in {1, 4, 5, 8, 9} else 2,
+                      str(legal_player_ids[number - 1]))
             for number in range(1, 11)
         ]
         board = [
@@ -1094,16 +1097,16 @@ class MockWatcherTests(unittest.TestCase):
             }
         )
         picks = [
-            self.pick(number, slot, str(number))
-            for number, slot in (
-                (1, 1),
-                (2, 2),
-                (3, 2),
-                (4, 1),
-                (5, 1),
-                (6, 2),
-                (7, 2),
-                (8, 1),
+            self.pick(number, slot, str(player_id))
+            for number, slot, player_id in (
+                (1, 1, 3),
+                (2, 2, 7),
+                (3, 2, 6),
+                (4, 1, 1),
+                (5, 1, 2),
+                (6, 2, 9),
+                (7, 2, 8),
+                (8, 1, 4),
             )
         ]
         state = reconcile_draft_state(draft, picks, 1)

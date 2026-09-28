@@ -201,6 +201,11 @@ def _format_recommendation_rows(
         if row.get("starter_deferred") and expected_next:
             effect = _display_number(row.get("starter_deferral_effect"))
             lines.append(f"     Defers starter; expects {expected_next} next (effect {effect})")
+        if row.get("draft_preference_override"):
+            lines.append(
+                "     Fits declared roster slots; outside Draft acquisition preference. "
+                "Check Sleeper position limits before picking."
+            )
     return lines
 
 

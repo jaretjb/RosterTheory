@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-004a through MA-004d merged in PRs #54-#57; MA-004e watcher boundary extraction active; MA-002 evidence follow-ups remain open
+Status: MA-004a through MA-004e merged in PRs #54-#58; MA-004f Draft legality/season correction active; MA-002 evidence follow-ups remain open
 
 Updated: September 27, 2026 (America/Los_Angeles)
 
@@ -16,7 +16,7 @@ authorization. The current Draft closure and feature promotion gates remain.
 This document is the canonical requirement-to-work mapping. GitHub issues track
 delivery discussion and PR links; maintain IDs/status consistently here when
 issues are opened or closed. Do not create a second competing full backlog.
-The active MA-004e slice has a detailed contract below; MA-001's baseline
+The active MA-004f slice has a detailed contract below; MA-001's baseline
 contract remains as a completed reference.
 
 MA-000 delivers the three planning documents, reconciliation links and issue
@@ -28,11 +28,10 @@ change recommendation policy, activate later work, or merge itself.
 MA-001 froze the reference behavior. MA-002 established scoring, membership and
 capability contracts, with #30 and #31 still open for source and rule evidence.
 MA-003 extracted shared Trade/Waiver preparation in PR #51; its shared provider
-limit follow-up merged in PR #52 and closed #32. MA-004a through MA-004d established
-Draft analysis, simulation, advice and watcher-decision ownership in PRs #54-#57.
-The active MA-004e slice moves watcher effects and presentation; later MA-004
-work and support promotion remain
-separate decisions.
+limit follow-up merged in PR #52 and closed #32. MA-004a through MA-004e established
+Draft analysis, simulation, advice and watcher ownership in PRs #54-#58.
+The active MA-004f slice corrects issue #33's Draft legality and season evidence;
+support promotion remains a separate decision.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
@@ -285,6 +284,29 @@ Use synthetic five-repeat watcher timing and allocation evidence on the same
 machine, with complete semantic report and text hashes equal. Open one tested
 PR with before-and-after evidence, then stop without merging. No new issue is
 needed; reverting it restores the prior layout without user data changes.
+
+### MA-004f: Draft legal capacity and season evidence (#33)
+
+After merged PR #58, make one behavior PR that separates legal roster
+eligibility/capacity from the existing Draft acquisition preferences. An
+otherwise legal third QB must be distinguishable from a policy-disfavored pick.
+Do not infer Sleeper position maxima from starter slots or app preferences;
+retain the existing unknown-rule advisory when enforcement is unresolved.
+Keep selected strategy objectives, deterministic ties, K/DST treatment and
+exact-build replay checks. Any intentionally changed decision gets a named
+synthetic before/after case and migration impact.
+
+Remove the implicit 2026 bye schedule from deterministic Draft strength.
+Require explicit season-matched schedule evidence, validated at the CLI edge,
+before bye-aware simulation or completed-mock scoring. Missing, incomplete or
+wrong-season evidence fails with a recovery path; no private schedule, provider
+call or Sleeper write is needed for tests. Exercise all 10/12-team snake slots,
+final roster capacity and starter feasibility, edits/undos and schedule failure
+cases using synthetic players and rules. Review same-machine fixed-seed Draft
+timing/memory against MA-001 and record an absolute Draft clock budget before
+MA-005. Run focused/full tests, Ruff, package/install smoke, context/privacy
+gates and CI. Open one PR and stop without merging. Revert that PR to roll back;
+no user data is migrated.
 
 ## 3. MA-001: completed baseline contract
 

@@ -36,7 +36,10 @@ from roster_theory.expert_inputs import (
     inspect_expert_inputs,
     refresh_expert_inputs,
 )
-from roster_theory.schedule_inputs import inspect_schedule_input, prepare_schedule_input
+from roster_theory.schedule_inputs import (
+    default_schedule_path, inspect_schedule_input, prepare_schedule_input,
+    validate_schedule_document,
+)
 from roster_theory.season_prepare import inspect_season_inputs, prepare_season_inputs
 from roster_theory.private_setup import (
     ARTIFACTS as SETUP_ARTIFACTS,
@@ -87,6 +90,7 @@ from roster_theory.rankings import (
     weighted_consensus,
 )
 from roster_theory.draft.simulation import (
+    DraftSeasonSchedule,
     OPPONENT_POSITION_STRESS_PROFILES,
     compare_strategies,
 )
@@ -1581,12 +1585,38 @@ def command_manual_board(args: argparse.Namespace) -> None:
     ))
 
 
+def _load_draft_schedule(season: int, league_key: str) -> DraftSeasonSchedule:
+    schedule_path = default_schedule_path(season)
+    if not schedule_path.is_file():
+        raise ScheduleIncomplete(
+            f"Draft schedule for season {season} is missing; run "
+            f"'roster-theory inputs schedule refresh {league_key}'."
+        )
+    try:
+        schedule_document = json.loads(schedule_path.read_text(encoding="utf-8"))
+        schedule_validation = validate_schedule_document(
+            schedule_document, expected_season=season
+        )
+    except (OSError, ValueError, TypeError, ScheduleIncomplete) as exc:
+        raise ScheduleIncomplete(
+            f"Draft schedule for season {season} is invalid: {exc}. Run "
+            f"'roster-theory inputs schedule refresh {league_key}'."
+        ) from exc
+    return DraftSeasonSchedule(
+        season, schedule_document["bye_weeks"], schedule_validation["weeks"] - 1
+    )
+
+
 def command_simulate(args: argparse.Namespace) -> None:
     config = find_league_config(args.league, _config_path(args))
     snapshot = _load_snapshot(args.league, args.snapshot)
     league = snapshot["current"]["league"]
     drafts = snapshot["current"].get("drafts", [])
     draft = drafts[0]["draft"] if drafts else {}
+    season = int(league["season"])
+    if draft.get("season") not in (None, "", str(season), season):
+        raise ScheduleIncomplete("Draft season does not match the configured league season")
+    schedule = _load_draft_schedule(season, args.league)
     teams = int(league.get("total_rosters") or draft.get("settings", {}).get("teams") or 0)
     rounds = int(draft.get("settings", {}).get("rounds") or len(league.get("roster_positions", [])))
     board = _load_board(args.board)
@@ -1627,6 +1657,8 @@ def command_simulate(args: argparse.Namespace) -> None:
                 history_weight=args.history_weight,
                 opponent_market_noise=args.opponent_market_noise,
                 opponent_position_profile=args.opponent_position_profile,
+                season=season,
+                schedule=schedule,
             )
             for slot in slots
         }
