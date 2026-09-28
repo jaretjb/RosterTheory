@@ -2,33 +2,29 @@
 
 Updated: September 28, 2026 (America/Los_Angeles)
 
-MA-003 merged in PR #51; its provider-limit follow-up merged in PR #52 and
-closed #32. MA-004a through MA-004e moved Draft analysis, simulation, advice
-and watcher ownership into the Draft/application/presentation packages in
-merged PRs #54-#58.
+MA-003 shared preparation and provider limits merged in PRs #51-#52; #32 closed.
+MA-004a-e moved Draft ownership in PRs #54-#58.
 
-MA-004f corrected #33 in merged PR #59; GitHub closed it. Draft slot capacity
-is separate from acquisition preferences. Invalid rosters give no recommendation;
-bye-aware work requires season-matched schedules. Reference hashes remained
-unchanged. All reference snake seats passed; the slowest of 66 turn medians
-was 0.421 s against the 2 s budget. Full suite (950) and Ruff passed. Evidence:
-`docs/MODULAR_DRAFT_ISSUE_33.md`.
+MA-004f corrected #33 in PR #59. Draft slot capacity is distinct from
+acquisition preferences; invalid rosters stop and bye-aware work requires a
+season-matched schedule. Reference hashes and all snake seats passed; slowest
+median 0.421 s against 2 s. Evidence: `docs/MODULAR_DRAFT_ISSUE_33.md`.
 
-MA-005a checked 12 synthetic half-PPR roster shapes, slot fit, lineup and
-membership in merged PR #60. Active MA-005b runs Trade and Waiver evaluations
-on those shapes, with independent arithmetic and missing-evidence checks.
-Evidence: `docs/MODULAR_HALF_PPR_MATRIX.md` and
+MA-005a/b tested 12 synthetic half-PPR shapes, then Trade/Waiver evaluations,
+in PRs #60-#61. Evidence: `docs/MODULAR_HALF_PPR_MATRIX.md` and
 `docs/MODULAR_INSEASON_MATRIX.md`. No support promotion.
 
-Trade and Waiver use shared neutral preparation while keeping separate decisions.
-Waiver adapts its own snapshot. A process-safe ledger coordinates FantasyPros
-budget and pacing across current entry points. Synthetic tests cover dependency
-direction, snapshot reuse, concurrent reservations, pacing and retries. Evidence:
+Active MA-002q checks #31 Draft position-limit source semantics. Reference A
+omits enforcement; B declares `1`. Neither source inventory nor API docs maps
+positional maxima. Both scopes remain LIMITED. Evidence and recovery:
+`docs/MODULAR_POSITION_LIMIT_SOURCE.md`. #31 remains open.
+
+Trade/Waiver share neutral preparation and a process-safe FantasyPros budget
+ledger while keeping decisions separate. Evidence:
 `docs/MODULAR_SHARED_PREPARATION.md`.
 
-MA-002p restored conditional Trade/Waiver forecasts. Trade decisions using
-estimates remain conditional; Waiver cannot affirmatively add/claim. Draft
-scoring is unchanged. Evidence: `docs/MODULAR_WORKFLOW_RECONCILIATION.md`.
+MA-002p restored conditional Trade/Waiver forecasts; Waiver cannot affirmatively
+add/claim from estimates. Evidence: `docs/MODULAR_WORKFLOW_RECONCILIATION.md`.
 
 Baseline: `docs/MODULAR_BASELINE.md`. Implementation loads the active milestone
 and `IMPLEMENTATION_POLICY.md`. Open: #30 provider evidence and #31 position caps.
