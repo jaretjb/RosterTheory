@@ -1,6 +1,21 @@
 # Active milestone
 
-## MA-004f - Correct Draft legal capacity and season evidence (#33)
+## MA-005a - Inventory the bounded half-PPR roster matrix
+
+Authorized by the user's September 28 request after merging PR #59. This first
+MA-005 slice records synthetic structural evidence for the 12 target roster
+shapes (10/12 teams, three flex layouts, five/six bench places). Test normalized
+league shape, Draft slot interpretation/capacity, neutral lineup assignment and
+roster membership with independent expected results. Record the exact reference
+profiles and operation-specific blockers separately; a shape passing mechanics
+must not become a Draft, Trade or Waiver readiness or calibration claim.
+Use the MA-005a contract in `docs/MODULAR_MIGRATION_PLAN.md`, MR-01, MR-02,
+MR-05, MR-13 and MR-14, and architecture sections 3.1-3.2 and 6. No provider
+calls, league writes, policy changes or support promotion. Run focused/full
+tests, Ruff, package/import smoke, context/privacy gates and CI. Open one PR
+with the matrix and limitations, then stop without merging.
+
+## Previous MA-004f - Correct Draft legal capacity and season evidence (merged PR #59; closed #33)
 
 Authorized by the user's September 27 request after merging PR #58. Make one
 reviewed Draft behavior PR from current main for issue #33. Distinguish roster

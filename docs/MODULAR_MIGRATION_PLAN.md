@@ -30,12 +30,13 @@ capability contracts, with #30 and #31 still open for source and rule evidence.
 MA-003 extracted shared Trade/Waiver preparation in PR #51; its shared provider
 limit follow-up merged in PR #52 and closed #32. MA-004a through MA-004e established
 Draft analysis, simulation, advice and watcher ownership in PRs #54-#58.
-The active MA-004f slice corrects issue #33's Draft legality and season evidence;
-support promotion remains a separate decision.
+MA-004f corrected issue #33's Draft legality and season evidence in merged PR #59.
+The active MA-005a slice inventories the half-PPR roster family without support
+promotion.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
-open follow-ups are #30/#31 (MA-002) and #33 (MA-004). Creating an issue does
+open follow-ups are #30/#31 (MA-002); #33 closed with PR #59. Creating an issue does
 not activate its implementation.
 
 MA-002a's [scoring contract](MODULAR_SCORING_CONTRACT.md) defines the additive
@@ -307,6 +308,26 @@ timing/memory against MA-001 and record an absolute Draft clock budget before
 MA-005. Run focused/full tests, Ruff, package/install smoke, context/privacy
 gates and CI. Open one PR and stop without merging. Revert that PR to roll back;
 no user data is migrated.
+
+### MA-005a: Synthetic half-PPR roster-shape inventory
+
+After merged PR #59, enumerate all 12 combinations of 10/12 teams, one RB/WR
+flex, one RB/WR/TE flex or two RB/WR/TE flexes, and five/six bench places.
+Use invented players and half-PPR rule maps only. Check normalized roster shape,
+Draft room slot translation and legal fit, neutral lineup assignment against an
+independent point oracle, and active/open membership capacity. Check that
+unverified Draft position-limit evidence remains LIMITED, even when structural
+checks pass. Preserve both exact reference profiles and name their separate
+source/operation blockers. Document command and ancillary-mode limits without
+claiming a complete feature run, policy validation or league calibration.
+
+Acceptance: 12 distinct synthetic shapes pass structural checks; one invalid
+extra player fails Draft fit; each full and one-open roster has correct capacity;
+all three flex layouts have independent lineup totals; both reference profiles
+retain their existing semantic baseline. Focused/full tests, Ruff, import,
+context/privacy gates and CI pass. Do not call providers, alter recommendation
+policy, enable wider formats or advertise MA-005 completion. Open one PR and
+stop without merging. A revert removes only this inventory and test coverage.
 
 ## 3. MA-001: completed baseline contract
 

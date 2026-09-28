@@ -1,22 +1,22 @@
 # Modular migration handoff
 
-Updated: September 27, 2026 (America/Los_Angeles)
+Updated: September 28, 2026 (America/Los_Angeles)
 
 MA-003 merged in PR #51; its provider-limit follow-up merged in PR #52 and
 closed #32. MA-004a through MA-004e moved Draft analysis, simulation, advice
 and watcher ownership into the Draft/application/presentation packages in
 merged PRs #54-#58.
 
-Active MA-004f corrects issue #33 on `codex/ma-004f-draft-legal-season`.
-Draft slot capacity is separate from unchanged acquisition preferences; QB3
-can fit yet remain disfavored. Invalid rosters give no recommendation. Draft
-simulation and mock scoring require season-matched schedule evidence. Both
-fixed-seed reference hashes remain unchanged. All 10/12 snake seats and 66
-Draft turns have synthetic checks; the slowest median is 0.421 s against the
-2 s budget. Focused tests (120), full suite (950) and Ruff pass. Evidence:
-`docs/MODULAR_DRAFT_ISSUE_33.md`. CI/review remain the merge gate. No paid
-provider call, Sleeper write, wider-format promotion or Trade/Waiver policy
-change occurred.
+MA-004f corrected #33 in merged PR #59; GitHub closed it. Draft slot capacity
+is separate from acquisition preferences. Invalid rosters give no recommendation;
+bye-aware work requires season-matched schedules. Reference hashes remained
+unchanged. All reference snake seats passed; the slowest of 66 turn medians
+was 0.421 s against the 2 s budget. Full suite (950) and Ruff passed. Evidence:
+`docs/MODULAR_DRAFT_ISSUE_33.md`.
+
+Active MA-005a checks 12 synthetic half-PPR roster shapes, slot fit, lineup and
+membership. Draft rules, provider coverage and policy readiness remain separate.
+Evidence: `docs/MODULAR_HALF_PPR_MATRIX.md`. No support promotion.
 
 Trade and Waiver use shared neutral preparation while keeping separate decisions.
 Waiver adapts its own snapshot. A process-safe ledger coordinates FantasyPros
@@ -29,6 +29,5 @@ estimates remain conditional; Waiver cannot affirmatively add/claim. Draft
 scoring is unchanged. Evidence: `docs/MODULAR_WORKFLOW_RECONCILIATION.md`.
 
 Baseline: `docs/MODULAR_BASELINE.md`. Implementation loads the active milestone
-and `IMPLEMENTATION_POLICY.md`. Open: #30 provider evidence, #31 position caps,
-and #33 pending MA-004f review/merge. Actual provider coverage and wider format
-support remain unverified.
+and `IMPLEMENTATION_POLICY.md`. Open: #30 provider evidence and #31 position caps.
+Actual provider coverage and wider format support remain unverified.
