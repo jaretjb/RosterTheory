@@ -31,8 +31,8 @@ MA-003 extracted shared Trade/Waiver preparation in PR #51; its shared provider
 limit follow-up merged in PR #52 and closed #32. MA-004a through MA-004e established
 Draft analysis, simulation, advice and watcher ownership in PRs #54-#58.
 MA-004f corrected issue #33's Draft legality and season evidence in merged PR #59.
-The active MA-005a slice inventories the half-PPR roster family without support
-promotion.
+MA-005a inventoried the half-PPR roster family in merged PR #60. Active MA-005b
+exercises synthetic Trade/Waiver evaluations without support promotion.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
@@ -328,6 +328,25 @@ retain their existing semantic baseline. Focused/full tests, Ruff, import,
 context/privacy gates and CI pass. Do not call providers, alter recommendation
 policy, enable wider formats or advertise MA-005 completion. Open one PR and
 stop without merging. A revert removes only this inventory and test coverage.
+
+### MA-005b: Trade and Waiver evaluation across the roster family
+
+After merged PR #60, exercise the existing synthetic Trade/Waiver paths over
+the 12 MA-005a half-PPR shapes. Use invented rosters and explicit three-week
+points. Cover Trade diagnosis and one entered, equal-size RB exchange, plus
+Waiver full-roster and one-open-slot add evaluation. Check independent lineup
+totals and package deltas, source/league binding, projection coverage, legal
+drop/open-slot behavior and read-only results. Remove the add player's
+projection to prove that affected Waiver evaluation stops while independent
+Trade diagnosis remains available. Keep policy validation separate: no
+existing reference league's decision thresholds transfer to new shapes.
+
+Acceptance: all 12 synthetic shapes produce the expected Trade and Waiver
+evaluation evidence; missing add evidence fails visibly; both exact reference
+semantic baselines remain unchanged. Focused/full tests, Ruff, import,
+context/privacy gates and CI pass. Do not call providers, alter decisions,
+run full candidate search or advertise feature support. Open one PR and stop
+without merging. Revert to remove only synthetic fixture and test additions.
 
 ## 3. MA-001: completed baseline contract
 

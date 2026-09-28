@@ -14,9 +14,11 @@ unchanged. All reference snake seats passed; the slowest of 66 turn medians
 was 0.421 s against the 2 s budget. Full suite (950) and Ruff passed. Evidence:
 `docs/MODULAR_DRAFT_ISSUE_33.md`.
 
-Active MA-005a checks 12 synthetic half-PPR roster shapes, slot fit, lineup and
-membership. Draft rules, provider coverage and policy readiness remain separate.
-Evidence: `docs/MODULAR_HALF_PPR_MATRIX.md`. No support promotion.
+MA-005a checked 12 synthetic half-PPR roster shapes, slot fit, lineup and
+membership in merged PR #60. Active MA-005b runs Trade and Waiver evaluations
+on those shapes, with independent arithmetic and missing-evidence checks.
+Evidence: `docs/MODULAR_HALF_PPR_MATRIX.md` and
+`docs/MODULAR_INSEASON_MATRIX.md`. No support promotion.
 
 Trade and Waiver use shared neutral preparation while keeping separate decisions.
 Waiver adapts its own snapshot. A process-safe ledger coordinates FantasyPros
