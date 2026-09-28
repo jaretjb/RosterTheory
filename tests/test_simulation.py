@@ -2,6 +2,8 @@ import random
 import unittest
 from dataclasses import replace
 
+import roster_theory.simulation as legacy_simulation
+from roster_theory.draft import simulation as draft_simulation
 from roster_theory.assistant import recommend_available
 from roster_theory.draft_analysis import HistoricalPositionCurves
 from roster_theory.simulation import (
@@ -45,6 +47,12 @@ from roster_theory.simulation import (
 
 
 class SimulationTests(unittest.TestCase):
+    def test_legacy_path_uses_the_new_simulation_module(self) -> None:
+        self.assertIs(legacy_simulation, draft_simulation)
+        for name in ("Player", "compare_strategies", "rank_user_candidates", "_filled_starter_slots"):
+            with self.subTest(name=name):
+                self.assertIs(getattr(legacy_simulation, name), getattr(draft_simulation, name))
+
     @staticmethod
     def player(
         name: str,

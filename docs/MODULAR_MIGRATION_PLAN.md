@@ -173,6 +173,33 @@ against its proposed 20% runtime and 25% allocation review thresholds. Use
 synthetic fixtures and no paid calls or Sleeper writes. Stop at a tested PR;
 reverting that PR restores the old module layout without changing user data.
 
+### MA-004b: Draft simulation package extraction
+
+After merged PR #54, move the existing `simulation.py` implementation to
+`draft/simulation.py`. Keep `simulation.py` as a compatibility import so existing
+users, tests and scripts can still import every public and currently used private
+name. Change production import sites to the new owner only when no cycle results.
+The affected product files are the new module, compatibility adapter and direct
+import sites; tests and the Modular handoff may change. Do not move watcher,
+ranking or preference implementations in this PR.
+
+This is a source-ownership change. Preserve all Draft decisions, reasons,
+numerical outputs, deterministic ties, commands, result fields, policy caps,
+2026 season assumptions, schemas and exact-build replay checks. A source hash
+may change with the move; compare complete semantic evidence without suppressing
+an unexplained difference. Issue #33's cap and season fixes require a separate
+behavior PR. Do not claim wider league support or new calibration.
+
+Acceptance: old and new simulation imports expose the same objects; both
+synthetic reference leagues retain reviewed Draft turn and strategy evidence;
+CLI parser and result contracts stay stable. Run focused simulation, watcher,
+Draft, CLI and modular baseline tests, then the full suite, Ruff, package/install
+smoke, context routing, staged privacy gate and CI. Compare MA-001's fixed-seed
+Draft turn and two-trial strategy timing and Python allocation on the same machine
+with five measured repetitions after warm-up against the 20% and 25% review
+thresholds. No paid provider calls or Sleeper writes. Stop at a tested PR;
+reverting it restores the prior module layout without changing user data.
+
 ## 3. MA-001: completed baseline contract
 
 ### Problem and outcome

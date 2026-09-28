@@ -5,7 +5,7 @@ from collections import Counter
 from typing import Any, Iterable, Mapping
 
 from roster_theory.rankings import normalize_name
-from roster_theory.simulation import next_pick_for_slot, survival_probability
+from roster_theory.draft.simulation import next_pick_for_slot, survival_probability
 
 
 def _picked_keys(picks: Iterable[Mapping[str, Any]]) -> set[str]:
@@ -66,4 +66,3 @@ def recommend_available(
         available,
         key=lambda player: (-float(player["mvor_score"]), float(player.get("rank_score") or math.inf)),
     )[:limit]
-

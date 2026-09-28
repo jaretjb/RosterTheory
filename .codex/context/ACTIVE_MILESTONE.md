@@ -1,6 +1,24 @@
 # Active milestone
 
-## MA-004a - Establish the Draft analysis package
+## MA-004b - Move Draft simulation into its package
+
+Authorized by the user's September 27 request to proceed after MA-004a merged
+in PR #54. Make one behavior-preserving extraction PR: move the implementation
+of `src/roster_theory/simulation.py` into `draft/simulation.py`, retain the old
+import path as a compatibility adapter, and update internal imports only where
+they do not create a cycle. Use the MA-004b contract in
+`docs/MODULAR_MIGRATION_PLAN.md`, architecture sections 2 and 4-6, and MA-001's
+synthetic compatibility, semantic and performance evidence. Preserve all public
+and currently imported private simulation names, signatures, Draft commands,
+results, decisions, reasons, tie behavior, policy caps, season assumptions,
+schemas and exact-build replay checks. Do not change watcher workflows, ranking
+policy, hard-coded pick preferences, issue #33's cap/season rules, supported
+formats, paid provider data, or Sleeper state. Run focused Draft/reference tests,
+the full suite, Ruff, package/import smoke, context and staged privacy gates,
+CI and same-machine fixed-seed Draft performance comparison. Stop at a tested
+PR; later MA-004 work needs separate activation.
+
+## Previous MA-004a - Establish the Draft analysis package (merged PR #54)
 
 Authorized by the user's September 27 request to set the next milestone after
 MA-003b merged in PR #52. Make one behavior-preserving Draft extraction PR:

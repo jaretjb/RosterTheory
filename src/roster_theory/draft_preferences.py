@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from roster_theory.rankings import normalize_name
-from roster_theory.simulation import Player
+from roster_theory.draft.simulation import Player
 
 
 REQUIRED_FIELDS = {
