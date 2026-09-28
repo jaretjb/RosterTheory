@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-004a through MA-004c merged in PRs #54-#56; MA-004d Draft watcher extraction active; MA-002 evidence follow-ups remain open
+Status: MA-004a through MA-004d merged in PRs #54-#57; MA-004e watcher boundary extraction active; MA-002 evidence follow-ups remain open
 
 Updated: September 27, 2026 (America/Los_Angeles)
 
@@ -16,7 +16,7 @@ authorization. The current Draft closure and feature promotion gates remain.
 This document is the canonical requirement-to-work mapping. GitHub issues track
 delivery discussion and PR links; maintain IDs/status consistently here when
 issues are opened or closed. Do not create a second competing full backlog.
-The active MA-004d slice has a detailed contract below; MA-001's baseline
+The active MA-004e slice has a detailed contract below; MA-001's baseline
 contract remains as a completed reference.
 
 MA-000 delivers the three planning documents, reconciliation links and issue
@@ -28,9 +28,10 @@ change recommendation policy, activate later work, or merge itself.
 MA-001 froze the reference behavior. MA-002 established scoring, membership and
 capability contracts, with #30 and #31 still open for source and rule evidence.
 MA-003 extracted shared Trade/Waiver preparation in PR #51; its shared provider
-limit follow-up merged in PR #52 and closed #32. MA-004a through MA-004c established
-Draft analysis, simulation and advice ownership in PRs #54-#56. The active MA-004d
-slice moves Draft watcher decisions; later MA-004 work and support promotion remain
+limit follow-up merged in PR #52 and closed #32. MA-004a through MA-004d established
+Draft analysis, simulation, advice and watcher-decision ownership in PRs #54-#57.
+The active MA-004e slice moves watcher effects and presentation; later MA-004
+work and support promotion remain
 separate decisions.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
@@ -257,6 +258,33 @@ against the 20% and 25% review thresholds. Use synthetic inputs only. Open one
 tested PR with before-and-after evidence, then stop without merging. No new
 issue is needed; reverting the PR restores the old source layout without user
 data changes.
+
+### MA-004e: Draft watcher application and presentation boundaries
+
+After merged PR #57, move `MockDraftWatcher` polling into
+`application/draft_watcher.py` and the human report formatter and its private
+helpers into `presentation/draft_watcher.py`. Keep `mock_watcher.py` as an
+import-only compatibility path for old public and currently used private names.
+The CLI imports each new owner directly; Draft decisions remain in
+`draft/watcher.py`. Do not change ranking policy, issue #33's cap and season
+rules, or any provider behavior.
+
+Preserve GET-only polling, duplicate and changed-turn handling, caching,
+warnings, report schema, human text and color output, JSON collection and exit
+codes. Compare equivalent synthetic watcher reports and rendered text before
+and after. Source relocation may change build hashes; retain exact-build replay
+enforcement. No paid provider calls, Sleeper writes, wider league support or
+new calibration follow from this extraction.
+
+Acceptance: old and new imports expose the same moved class and formatter;
+application imports Draft/provider infrastructure but no presentation, while
+presentation imports no provider, application or evaluation module. Focused
+watcher, CLI, admission, reference and boundary tests precede the full suite.
+Run Ruff, package/install smoke, context routing, staged privacy gate and CI.
+Use synthetic five-repeat watcher timing and allocation evidence on the same
+machine, with complete semantic report and text hashes equal. Open one tested
+PR with before-and-after evidence, then stop without merging. No new issue is
+needed; reverting it restores the prior layout without user data changes.
 
 ## 3. MA-001: completed baseline contract
 

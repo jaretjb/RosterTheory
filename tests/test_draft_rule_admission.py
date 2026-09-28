@@ -51,7 +51,7 @@ class DraftRoomAdmissionTests(unittest.TestCase):
         client.draft_picks.return_value = []
         client.last_get_metadata = {}
         watcher = MockDraftWatcher(client, room['draft_id'], [], claimed_slot=1)
-        with patch('roster_theory.mock_watcher.recommend_for_state', return_value={}) as recommend:
+        with patch('roster_theory.application.draft_watcher.recommend_for_state', return_value={}) as recommend:
             result = watcher.poll_once(now=100)
         self.assertEqual(result['position_limit_status'], 'LIMITED')
         self.assertIn('position limits', ' '.join(result['warnings']))
@@ -83,7 +83,7 @@ class DraftRoomAdmissionTests(unittest.TestCase):
         client.draft.return_value = room
         client.draft_picks.return_value = []
         watcher = MockDraftWatcher(client, room['draft_id'], [], claimed_slot=1)
-        with patch('roster_theory.mock_watcher.recommend_for_state', return_value={'recommendations': {}}) as recommend:
+        with patch('roster_theory.application.draft_watcher.recommend_for_state', return_value={'recommendations': {}}) as recommend:
             first = watcher.poll_once(now=100)
             duplicate = watcher.poll_once(now=101)
             self.assertEqual(first['recommendation'], duplicate['recommendation'])

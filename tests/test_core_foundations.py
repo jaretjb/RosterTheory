@@ -290,6 +290,27 @@ class ReplacementTests(unittest.TestCase):
 
 
 class ImportBoundaryTests(unittest.TestCase):
+    def test_watcher_effects_and_presentation_do_not_import_each_other(self) -> None:
+        root = Path(__file__).parents[1] / "src" / "roster_theory"
+        for path, prohibited in (
+            (root / "application" / "draft_watcher.py", "roster_theory.presentation"),
+            (root / "presentation" / "draft_watcher.py", "roster_theory.application"),
+        ):
+            with self.subTest(path=path.name, owner=path.parent.name):
+                imports = []
+                for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                    if isinstance(node, ast.ImportFrom) and node.module:
+                        imports.append(node.module)
+                    elif isinstance(node, ast.Import):
+                        imports.extend(alias.name for alias in node.names)
+                self.assertFalse(
+                    any(name == prohibited or name.startswith(prohibited + ".") for name in imports)
+                )
+                if path.parent.name == "presentation":
+                    self.assertFalse(
+                        any(name.startswith("roster_theory.") for name in imports)
+                    )
+
     def test_draft_watcher_decisions_do_not_import_effects_or_other_assistants(self) -> None:
         path = Path(__file__).parents[1] / "src" / "roster_theory" / "draft" / "watcher.py"
         prohibited = (

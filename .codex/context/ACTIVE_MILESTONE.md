@@ -1,6 +1,24 @@
 # Active milestone
 
-## MA-004d - Move Draft watcher decisions into its package
+## MA-004e - Complete Draft watcher effect and presentation boundaries
+
+Authorized by the user's September 27 request to continue after MA-004d merged
+in PR #57. Make one bounded, behavior-preserving PR from current main. Move
+`MockDraftWatcher` polling into `application/draft_watcher.py` and the human
+watcher formatter into `presentation/draft_watcher.py`. Keep `mock_watcher.py`
+as a compatibility import for all previously exposed public and currently used
+private names; point safe internal imports at the new owners. Do not change the
+Draft state/recommendation implementation moved in MA-004d. Use the MA-004e
+contract in `docs/MODULAR_MIGRATION_PLAN.md`, architecture sections 2 and 4-6,
+and MA-001 synthetic compatibility, semantic and performance evidence. Preserve
+watcher polling cadence, GET-only calls, state/cache behavior, report fields,
+warnings, human/JSON output, CLI commands and exit codes, schemas and replay
+checks. Leave ranking policy, issue #33 fixes, provider calls and Sleeper state
+untouched. Run focused and full tests, Ruff, package/import smoke, context and
+privacy gates, CI and synthetic watcher before-and-after comparison. Open one
+PR with evidence and stop without merging. No new issue is needed.
+
+## Previous MA-004d - Move Draft watcher decisions into its package (merged PR #57)
 
 Authorized by the user's September 27 request after MA-004c merged in PR #56.
 Make one bounded, behavior-preserving PR from current main. Move the watcher's

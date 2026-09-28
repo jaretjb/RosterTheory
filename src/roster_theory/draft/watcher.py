@@ -34,10 +34,6 @@ from roster_theory.sleeper_adp import scoring_adp_field
 
 
 ACQUISITION_MODES = ("human_league", "sleeper_cpu")
-EXPERT_DISAGREEMENT_SD_THRESHOLD = 6.0
-EXPERT_DISAGREEMENT_RELATIVE_THRESHOLD = 0.25
-EXPERT_DISAGREEMENT_MIN_EXPERTS = 8
-EXPERT_DISAGREEMENT_MIN_WEIGHT_COVERAGE = 0.8
 
 
 def _validate_sleeper_cpu_snapshot(
