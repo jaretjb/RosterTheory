@@ -127,7 +127,10 @@ class LeagueBoardTests(unittest.TestCase):
                             "total_rosters": 1,
                             "roster_positions": ["RB"],
                             "scoring_settings": {"rec": 0},
-                        }
+                            "settings": {"reserve_slots": 0, "taxi_slots": 0},
+                        },
+                        "rosters": [{"roster_id": 1, "players": [],
+                                     "starters": [], "reserve": [], "taxi": []}],
                     },
                 },
                 ranking_path=ranking_path,

@@ -1,6 +1,23 @@
 # Active milestone
 
-## MA-002s - Complete #30 scoring evidence acceptance
+## MA-002t - Complete remaining #31 membership admission evidence
+
+Authorized by the user's request after PR #64 merged. Audit issue #31 against
+the current Modular implementation and the MA-002 row of
+`docs/MODULAR_MIGRATION_PLAN.md`. Close the Draft saved-snapshot membership gap:
+unknown or malformed roster roles and invalid ownership must not become ready;
+preserve explicit zero versus unavailable taxi evidence and permitted temporary
+capacity overages. Use MR-01, MR-03, MR-05 and MR-10 plus architecture sections
+3.1-3.2 and 5. Test both reference rosters and open-slot/reserve variants,
+three-feature admission and old saved-evidence behavior with synthetic inputs.
+Do not infer Sleeper position maxima from slots or app preferences; keep both
+reference position-limit scopes LIMITED unless a verified source mapping and
+league-specific values are supplied. No private history, league-setting changes,
+calibration transfer, Sleeper write or support promotion. Run focused/full tests,
+Ruff, package/import and context/privacy gates, then open one PR for review.
+Close #31 only when every acceptance criterion is evidenced.
+
+## Previous MA-002s - Complete #30 scoring evidence acceptance (merged PR #64; closed #30)
 
 Authorized by the user's September 28 request after PR #63 merged. Audit #30's
 full acceptance list against the current Modular implementation. Correct the

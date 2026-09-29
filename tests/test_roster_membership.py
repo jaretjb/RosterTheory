@@ -21,13 +21,28 @@ from tests.test_trade_evaluation import projection_fixture, board_fixture
 from tests.test_waiver_evaluation import waiver_snapshot, NOW
 from tests.test_waiver_evaluation import weeks, projections, values, legality
 from roster_theory.waiver.evaluation import evaluate_waiver
-from tests.ma001_fixtures import PROFILES, reference_fixture
+from tests.ma001_fixtures import PROFILES, reference_fixture, rules
 
 
 class RosterMembershipTests(unittest.TestCase):
     def setUp(self):
         self.rules = LeagueRules("fixture", 2026, 2, ("QB", "RB", "BN"), (), reserve_slots=1, taxi_slots=0)
         self.team = FantasyTeam("1", "owner", "Fixture", ("qb", "rb", "ir"), ("qb", "rb"), ("ir",))
+
+    def draft_snapshot(self, profile="reference_a", *, open_slot=False):
+        fixture = reference_fixture(profile, open_slot=open_slot)
+        config = rules(profile)
+        return {"schema_version": 1, "current": {
+            "league": {"league_id": profile, "season": "2026",
+                "total_rosters": config["team_count"],
+                "roster_positions": config["roster_positions"],
+                "scoring_settings": config["scoring_settings"],
+                "settings": dict(config["settings"])},
+            "rosters": [{"roster_id": int(team.roster_id),
+                "players": list(team.player_ids), "starters": list(team.starter_ids),
+                "reserve": list(team.reserve_ids), "taxi": []}
+                for team in fixture.bundle.teams],
+        }}
 
     def test_taxi_survives_provider_normalization_and_never_counts_as_active(self):
         team = normalize_teams([], [{"roster_id": 1, "players": ["qb", "ir", "taxi"],
@@ -110,6 +125,58 @@ class RosterMembershipTests(unittest.TestCase):
                 self.assertEqual(result.rosters[0].open_active_slots, int(open_slot))
                 self.assertFalse(reserve_eligibility(f.bundle.league, f.bundle.teams[0], f.bundle.players))
 
+    def test_draft_snapshot_admits_complete_reference_membership_and_open_slots(self):
+        for profile in PROFILES:
+            for open_slot in (False, True):
+                with self.subTest(profile=profile, open_slot=open_slot):
+                    assessment = require_draft_snapshot_membership(
+                        self.draft_snapshot(profile, open_slot=open_slot))
+                    self.assertEqual(len(assessment.rosters), rules(profile)["team_count"])
+                    self.assertEqual(assessment.rosters[0].open_active_slots, int(open_slot))
+                    self.assertEqual(len(assessment.rosters[0].reserve_ids),
+                                     int(bool(rules(profile)["settings"]["reserve_slots"])))
+
+    def test_draft_snapshot_rejects_ambiguous_or_invalid_membership(self):
+        for field in ("players", "starters", "reserve"):
+            snapshot = self.draft_snapshot()
+            del snapshot["current"]["rosters"][0][field]
+            with self.subTest(missing=field), self.assertRaisesRegex(RosterIllegal, "refresh"):
+                require_draft_snapshot_membership(snapshot)
+        snapshot = self.draft_snapshot()
+        snapshot["current"]["rosters"][1]["players"].append("r1_0")
+        with self.assertRaisesRegex(RosterIllegal, "DUPLICATE_OWNERSHIP"):
+            require_draft_snapshot_membership(snapshot)
+        snapshot = self.draft_snapshot()
+        snapshot["current"]["rosters"].pop()
+        with self.assertRaisesRegex(RosterIllegal, "roster count"):
+            require_draft_snapshot_membership(snapshot)
+        snapshot = self.draft_snapshot()
+        snapshot["schema_version"] = 999
+        with self.assertRaisesRegex(RosterIllegal, "schema"):
+            require_draft_snapshot_membership(snapshot)
+        snapshot = self.draft_snapshot()
+        snapshot["current"]["league"]["settings"].pop("taxi_slots")
+        with self.assertRaisesRegex(RosterIllegal, "taxi capacity"):
+            require_draft_snapshot_membership(snapshot)
+        snapshot = self.draft_snapshot("reference_b")
+        snapshot["current"]["league"]["settings"].pop("reserve_slots")
+        with self.assertRaisesRegex(RosterIllegal, "reserve capacity"):
+            require_draft_snapshot_membership(snapshot)
+        snapshot = self.draft_snapshot()
+        snapshot["current"]["rosters"][0]["taxi"] = "r1_0"
+        with self.assertRaisesRegex(RosterIllegal, "refresh"):
+            require_draft_snapshot_membership(snapshot)
+
+    def test_draft_snapshot_preserves_explicit_zero_and_temporary_overage(self):
+        snapshot = self.draft_snapshot()
+        for roster in snapshot["current"]["rosters"]:
+            del roster["taxi"]
+        assessment = require_draft_snapshot_membership(snapshot)
+        self.assertEqual(assessment.rosters[0].taxi_ids, ())
+        snapshot["current"]["rosters"][0]["players"].append("synthetic-extra")
+        assessment = require_draft_snapshot_membership(snapshot)
+        self.assertIn("ACTIVE_CAPACITY_EXCEEDED", {row.code for row in assessment.issues})
+
     def test_reserve_rules_distinguish_missing_disabled_and_enabled(self):
         player = Player("ir", "Reserve", ("RB",), injury_status="Out")
         self.assertEqual(reserve_eligibility(self.rules, self.team, (player,))[0].status, "UNKNOWN")
@@ -138,8 +205,10 @@ class RosterMembershipTests(unittest.TestCase):
             waiver_current(waiver, now=NOW)
         with self.assertRaisesRegex(RosterIllegal, "taxi"):
             reconcile_draft_state({"settings": {"teams": 10, "rounds": 15, "taxi_slots": 2}}, (), 1)
+        draft = self.draft_snapshot()
+        draft["current"]["rosters"][0]["taxi"] = ["r1_0"]
         with self.assertRaisesRegex(RosterIllegal, "TAXI_UNSUPPORTED"):
-            require_draft_snapshot_membership({"current": {"rosters": [{"taxi": ["taxi"]}]}})
+            require_draft_snapshot_membership(draft)
 
     def test_typed_restore_rejects_lost_membership_but_preserves_new_records(self):
         for taxis in ((), None, ("taxi",)):
