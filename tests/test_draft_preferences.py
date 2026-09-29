@@ -4,6 +4,13 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
+from roster_theory.application.draft_preferences import (
+    load_draft_preferences as application_load_draft_preferences,
+)
+from roster_theory.draft.preferences import (
+    DraftPreferenceBook as DraftOwnedPreferenceBook,
+    evaluate_draft_preferences as draft_evaluate_draft_preferences,
+)
 from roster_theory.draft_preferences import (
     DraftPreferenceBook,
     evaluate_draft_preferences,
@@ -26,6 +33,11 @@ FIELDS = (
 
 
 class DraftPreferenceTests(unittest.TestCase):
+    def test_compatibility_imports_share_the_new_owners(self):
+        self.assertIs(DraftPreferenceBook, DraftOwnedPreferenceBook)
+        self.assertIs(evaluate_draft_preferences, draft_evaluate_draft_preferences)
+        self.assertIs(load_draft_preferences, application_load_draft_preferences)
+
     @staticmethod
     def board() -> list[dict]:
         return [

@@ -1,5 +1,9 @@
 # Issue #31: Draft saved-snapshot membership admission
 
+Historical PR #65 evidence. Issue #31 closed after this PR; its notes about
+the issue remaining open reflect the review state at the time. The LIMITED
+reference scopes and unresolved positional-cap source mapping remain current.
+
 September 28, 2026. Base: merged PR #64 (`b82db25`). This slice closes a
 remaining saved-source admission gap. It does not infer Sleeper positional caps
 or declare either reference league ready.
@@ -39,10 +43,11 @@ distinguishes positional maximums from roster slots and describes a separate
 Draft enforcement toggle. The [public draft API reference](https://docs.sleeper.com/#get-a-specific-draft)
 does not identify positional maximum fields, unlimited sentinels or missing
 field semantics. The two redacted reference profiles have no verified maximums;
-reference A also lacks an enforcement declaration. Both remain LIMITED, and
-#31 stays open until fresh league-specific source evidence and a verified API
-mapping support independent Draft and in-season admission. Do not substitute
-roster slots or Draft acquisition preferences for those maximums.
+reference A also lacks an enforcement declaration. Both remain LIMITED. At the
+time, #31 was held open pending fresh league-specific source evidence and a
+verified API mapping for independent Draft and in-season admission. The issue
+subsequently closed after PR #65; those facts remain separate support gates.
+Do not substitute roster slots or Draft acquisition preferences for maximums.
 
 Rollback: revert this PR as a unit. No source file or saved artifact is
 migrated. A rejected old source can be refreshed read-only or inspected with

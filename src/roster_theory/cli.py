@@ -19,7 +19,7 @@ from roster_theory.draft.analysis import (
     historical_position_pick_curves,
     simulation_round_tendencies,
 )
-from roster_theory.draft_preferences import load_draft_preferences
+from roster_theory.application.draft_preferences import load_draft_preferences
 from roster_theory.doctor import audit_setup, format_doctor
 from roster_theory.draft.assistant import recommend_available
 from roster_theory.fantasypros import FantasyProsClient, FantasyProsError, describe_shape

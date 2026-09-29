@@ -8,7 +8,7 @@ from typing import Any, Iterable, Mapping
 
 from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.draft.analysis import HistoricalPositionCurves
-from roster_theory.draft_preferences import DraftPreferenceBook
+from roster_theory.draft.preferences import DraftPreferenceBook
 from roster_theory.providers.sleeper_draft_rules import draft_position_limit_advisory
 from roster_theory.sleeper import SleeperClient
 from roster_theory.draft.watcher import (

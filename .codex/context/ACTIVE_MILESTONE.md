@@ -1,6 +1,29 @@
 # Active milestone
 
-## MA-002t - Complete remaining #31 membership admission evidence
+Earlier sections preserve the status at the time of those slices. Issue #31
+closed after PR #65; their open-issue instructions are historical.
+
+## MA-004g - Move Draft preference ownership into the Draft package
+
+Authorized by the user's September 29 request after merged PRs #65 and #66.
+Move Draft preference records and overlay decisions from the top-level module
+to `draft/preferences.py`. Keep CSV reading and strict board matching at the
+application boundary in `application/draft_preferences.py`; keep the old
+`draft_preferences.py` import path as a compatibility adapter. Update safe
+internal imports to the new owners without introducing cycles.
+
+Preserve preference file validation, league scope, identity matching, source
+hashes, recommendation ordering and scores, target/caution output, warning
+texts, signatures, CLI behavior, serialized fields, and replay checks.
+Preserve the original callable and class objects through compatibility imports.
+Use synthetic fixtures and the MA-001 baseline to verify equivalence. No
+provider call, support promotion, policy change, or league data mutation.
+Position-cap source mapping and actual provider coverage remain separate.
+Run focused and full tests, Ruff, import/package smoke, context/privacy gates,
+then open one PR against main for review and leave it unmerged. If behavior
+needs to change, explain it before implementation.
+
+## Previous MA-002t - Complete remaining #31 membership admission evidence (merged PR #65; #31 closed)
 
 Authorized by the user's request after PR #64 merged. Audit issue #31 against
 the current Modular implementation and the MA-002 row of
