@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-005a/b and MA-002q merged through PR #62; MA-002r Draft source evidence active; MA-002 follow-ups remain open
+Status: MA-002r merged in PR #63; MA-002s #30 acceptance closure active; #31 and wider support evidence remain open
 
 Updated: September 27, 2026 (America/Los_Angeles)
 
@@ -80,6 +80,12 @@ Draft position-limit scopes remain LIMITED; #31 stays open.
 MA-002r's [preseason fumble mapping](MODULAR_DRAFT_FUMBLES_SOURCE.md) uses
 FantasyPros's documented `fumbles` field for lost fumbles in the Draft API
 scorer only. Other missing fields and reference support limits remain under #30.
+
+MA-002s's [#30 acceptance review](MODULAR_SCORING_ISSUE_30.md) corrects the
+original legacy-core false-complete case and reconciles the issue's scorer,
+provider, three-feature, reference, compatibility and safety evidence. An
+unknown provider field remains missing; #30 closure does not certify actual
+source delivery or wider format support.
 
 MA-002g's [historical scoring evidence](MODULAR_HISTORICAL_SCORING.md) keeps
 partial Sleeper season/recent-week point totals out of Waiver rankings while

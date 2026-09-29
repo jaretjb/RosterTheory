@@ -30,7 +30,7 @@ def observations():
     adapter = FantasyProsAdapter(FakeClient())
     unsupported = adapter.weekly_projections(2026, 1, 'QB', {**scoring, 'bonus_pass_300': 3})
     team = normalize_teams([], [{'roster_id': 1, 'players': ['active', 'taxi'],
-                                 'starters': ['active'], 'taxi': ['taxi']}])[0]
+                                 'starters': ['active'], 'reserve': [], 'taxi': ['taxi']}])[0]
     qbs = [Player(str(i), 'Synthetic QB', 'QB', 100, i, 10, i, team='ARI') for i in range(3)]
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / 'budget.json'
@@ -43,6 +43,7 @@ def observations():
         atomic_write_json(path, first.to_json())
         atomic_write_json(path, second.to_json())
         used = json.loads(path.read_text())['used']
+    bye_parameter = inspect.signature(deterministic_roster_strength).parameters.get('bye_weeks')
     return {
         'missing_statistics': {'missing_points': missing.points, 'missing_complete': missing.complete,
             'explicit_zero_complete': zero.complete, 'expected': 'Missing TD is unknown; explicit zero is complete.'},
@@ -54,7 +55,7 @@ def observations():
             'expected': 'Preserve taxi membership for capability rejection; never infer active membership.'},
         'draft_cap': {'third_qb_allowed': _can_draft(qbs[2], qbs[:2]),
             'expected': 'Distinguish legal roster capacity from feature recommendation policy.'},
-        'draft_season': {'default_byes': inspect.signature(deterministic_roster_strength).parameters['bye_weeks'].default,
+        'draft_season': {'default_byes': bye_parameter.default if bye_parameter else None,
             'expected': 'Require season-matched schedule evidence, not an implicit 2026 default.'},
         'budget_contention': {'accepted_reservations': 998, 'persisted_used': used, 'limit': 500,
             'expected': 'Only one reservation succeeds under shared process-safe accounting.'},

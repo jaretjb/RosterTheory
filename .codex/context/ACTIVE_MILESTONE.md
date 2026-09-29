@@ -1,6 +1,22 @@
 # Active milestone
 
-## MA-002r - Map documented preseason FantasyPros lost fumbles (#30)
+## MA-002s - Complete #30 scoring evidence acceptance
+
+Authorized by the user's September 28 request after PR #63 merged. Audit #30's
+full acceptance list against the current Modular implementation. Correct the
+remaining legacy core scorer false-completeness case without changing its
+diagnostic points or recommendation policy; preserve explicit missing,
+invalid, unsupported and position-irrelevant evidence. Use the MA-002 row of
+`docs/MODULAR_MIGRATION_PLAN.md`, MR-01, MR-02, MR-04, MR-06, MR-09 and MR-10,
+and architecture sections 3.1 and 5. Prove both reference maps independently,
+the Draft/Trade/Waiver readiness boundaries, saved-result compatibility and
+MA-001 semantics with synthetic public evidence. Do not assume omitted provider
+fields are zero or promote support, rankings or league calibration. No private
+history, paid provider request or Sleeper write. Run focused/full tests, Ruff,
+package/import smoke, context/privacy gates and CI. Open one PR without
+merging; close #30 only when every acceptance criterion is demonstrated.
+
+## Previous MA-002r - Map documented preseason FantasyPros lost fumbles (#30; merged PR #63)
 
 Authorized by the user's September 28 request after PR #62 merged. Take one
 bounded #30 scoring-source slice: verify whether FantasyPros preseason
