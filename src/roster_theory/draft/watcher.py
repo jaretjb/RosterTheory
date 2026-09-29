@@ -10,7 +10,7 @@ from typing import Any, Iterable, Mapping
 
 from roster_theory.draft.analysis import HistoricalPositionCurves
 from roster_theory.core.roster import draft_roster_fits, require_no_taxi_settings
-from roster_theory.draft_preferences import DraftPreferenceBook, evaluate_draft_preferences
+from roster_theory.draft.preferences import DraftPreferenceBook, evaluate_draft_preferences
 from roster_theory.rankings import normalize_name
 from roster_theory.specialist_preferences import defense_draft_rank, defense_draft_sort_key
 from roster_theory.draft.simulation import (

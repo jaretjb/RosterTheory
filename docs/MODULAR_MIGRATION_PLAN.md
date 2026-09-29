@@ -1,8 +1,8 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: #30 closed in PR #64; MA-002t #31 membership admission active; position-limit source and wider support evidence remain open
+Status: #30 closed in PR #64; #31 closed after PR #65; MA-004g Draft preference extraction active; position-limit source and wider support validation separate
 
-Updated: September 28, 2026 (America/Los_Angeles)
+Updated: September 29, 2026 (America/Los_Angeles)
 
 References: [requirements](MODULAR_REQUIREMENTS.md), [architecture](MODULAR_ARCHITECTURE.md)
 
@@ -16,7 +16,7 @@ authorization. The current Draft closure and feature promotion gates remain.
 This document is the canonical requirement-to-work mapping. GitHub issues track
 delivery discussion and PR links; maintain IDs/status consistently here when
 issues are opened or closed. Do not create a second competing full backlog.
-The active MA-004f slice has a detailed contract below; MA-001's baseline
+The active MA-004g slice has a detailed contract below; MA-001's baseline
 contract remains as a completed reference.
 
 MA-000 delivers the three planning documents, reconciliation links and issue
@@ -26,20 +26,20 @@ change recommendation policy, activate later work, or merge itself.
 ## 2. Sequence and traceability
 
 MA-001 froze the reference behavior. MA-002 established scoring, membership and
-capability contracts, with #30 and #31 still open for source and rule evidence.
+capability contracts. #30 closed in PR #64; #31 closed after PR #65. Source
+mapping and wider support validation remain separate from issue closure.
 MA-003 extracted shared Trade/Waiver preparation in PR #51; its shared provider
 limit follow-up merged in PR #52 and closed #32. MA-004a through MA-004e established
 Draft analysis, simulation, advice and watcher ownership in PRs #54-#58.
 MA-004f corrected issue #33's Draft legality and season evidence in merged PR #59.
 MA-005a inventoried the half-PPR roster family in merged PR #60. MA-005b
 exercised synthetic Trade/Waiver evaluations in merged PR #61 without support
-promotion. Active MA-002q verifies #31 Draft position-limit source semantics
-for the two redacted reference profiles.
+promotion. MA-002q checked Draft position-limit source semantics for the two
+redacted reference profiles. PR #66 clarified trust in user-confirmed state.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
-Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). Verified
-open follow-ups are #30/#31 (MA-002); #33 closed with PR #59. Creating an issue does
-not activate its implementation.
+Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). #30, #31,
+and #33 are closed. Creating an issue does not activate its implementation.
 
 MA-002a's [scoring contract](MODULAR_SCORING_CONTRACT.md) defines the additive
 scope, independent expectations and later behavior integration for #30. This
@@ -75,7 +75,7 @@ remain under #31.
 
 MA-002q's [Draft source check](MODULAR_POSITION_LIMIT_SOURCE.md) finds no
 verified per-position maximum mapping for either reference profile. Their
-Draft position-limit scopes remain LIMITED; #31 stays open.
+Draft position-limit scopes remain LIMITED.
 
 MA-002r's [preseason fumble mapping](MODULAR_DRAFT_FUMBLES_SOURCE.md) uses
 FantasyPros's documented `fumbles` field for lost fumbles in the Draft API
@@ -90,8 +90,8 @@ source delivery or wider format support.
 MA-002t's [#31 membership review](MODULAR_MEMBERSHIP_ISSUE_31.md) rejects
 Draft saved snapshots with missing or invalid current roster roles, duplicate
 ownership or unavailable taxi capacity before building boards. Permitted
-temporary roster overages remain visible. Positional maxima still require
-verified Sleeper source evidence before #31 can close.
+temporary roster overages remain visible. #31 closed after PR #65. Positional
+maxima still require verified Sleeper source evidence for future support claims.
 
 MA-002g's [historical scoring evidence](MODULAR_HISTORICAL_SCORING.md) keeps
 partial Sleeper season/recent-week point totals out of Waiver rankings while
@@ -330,6 +330,20 @@ timing/memory against MA-001 and record an absolute Draft clock budget before
 MA-005. Run focused/full tests, Ruff, package/install smoke, context/privacy
 gates and CI. Open one PR and stop without merging. Revert that PR to roll back;
 no user data is migrated.
+
+### MA-004g: Draft preference ownership
+
+After merged PRs #65 and #66, move preference records and overlay decisions
+to `draft/preferences.py`. Move CSV loading and strict board matching to
+`application/draft_preferences.py`; the old top-level path remains a
+compatibility import. The Draft module performs no file or provider access.
+Update safe internal imports without cycles. Preserve validation errors,
+league scope, source hashes, preference calls, candidate ordering, report
+fields, CLI behavior and saved-evidence compatibility. Compare both reference
+fixtures and synthetic target/caution cases; old/new imports must expose the
+same objects. Run focused/full tests, Ruff, package/import, context and privacy
+gates. No provider validation or support promotion. Open one PR and leave it
+unmerged; reverting it restores old ownership without changing user data.
 
 ### MA-005a: Synthetic half-PPR roster-shape inventory
 
