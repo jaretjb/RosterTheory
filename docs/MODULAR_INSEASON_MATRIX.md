@@ -52,7 +52,7 @@ as zero and does not become a league-wide veto.
 retains the MA-001 exact-reference semantic tests. It does not exercise full
 candidate searches, multi-asset Trades, waiver claims, game locks, reserve
 rules, live provider semantics, source freshness or decision-policy validation
-for the ten other roster shapes. Draft rule admission still awaits #31; actual
-FantasyPros field/coverage evidence still awaits #30. No support is promoted
-from this matrix. Reverting this PR removes only the synthetic fixture option,
-tests and evidence document.
+for the ten other roster shapes. #30 and #31 subsequently closed, but actual
+provider delivery and Draft position-limit source mapping remain separate
+support gates. No support is promoted from this matrix. Reverting this PR
+removes only the synthetic fixture option, tests and evidence document.

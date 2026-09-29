@@ -28,9 +28,10 @@ reference Draft scopes stay LIMITED. Evidence:
 #31 closed after PR #65. PR #66 clarified that user-confirmed merges and closures
 do not need rechecking. Closure does not promote provider or league support.
 
-Active MA-004g moves Draft preference ownership into the Draft package while
-preserving CSV loading, decisions, output, and old import paths. This is a
-source-ownership change with no provider operation or support validation.
+MA-004g moved Draft preferences in PR #67. Active MA-005c checks full
+Waiver search on both exact synthetic references with each league's own
+fixture policy. Six full/open/missing-add cases passed locally; live data and
+provider support remain separate. Evidence: `docs/MODULAR_WAIVER_SEARCH_MATRIX.md`.
 
 Trade/Waiver share neutral preparation and a provider budget ledger while
 keeping decisions separate. Evidence: `docs/MODULAR_SHARED_PREPARATION.md`.
