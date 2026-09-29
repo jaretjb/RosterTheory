@@ -1,21 +1,19 @@
 # Active milestone
 
-## Active WA-027b - Preserve each league's saved specialist weights
+## Active WA-027b - Validate the normalized specialist method for existing leagues
 
-Authorized by the user's September 29 correction during a private-league Waiver
-readiness check. Restore the original raw season-point scoring method for
-private Waiver policies saved before the normalized method was introduced.
-Keep the saved league-specific numeric weights in ignored private files and
-preserve the current normalized method for explicitly labeled policies.
-Show the method used in decision evidence. Add synthetic regression tests for
-both methods. Repair the read-only Waiver refresh's missing Sleeper winners
-bracket fetch so its championship horizon can be derived from current league
-evidence, with a focused regression test. Validate the two private policies
-offline, and then retry the authorized read-only private-league readiness/run
-only if completeness permits.
+Authorized by the user's September 29 correction. Use the normalized K/DST
+method for both existing private league policies instead of restoring raw-point
+scoring. Compare complete controlled cases, including productive incumbents,
+clear upgrades, small samples, and scale changes. Tune each policy separately;
+keep numeric settings and backups in ignored private files. Do not claim
+empirical accuracy from fixtures or convert old coefficients arithmetically.
+Keep PR #69 focused on the read-only Sleeper winners-bracket repair and the
+status handoff; remove the proposed raw-method compatibility code. Retry the
+requested live Waiver run only if required league-scored evidence is complete.
 Do not transfer calibration between leagues, submit a Sleeper action, or
 promote provider support. Run focused/full tests, Ruff, context/privacy gates;
-open one PR against main and leave it unmerged for review.
+update PR #69 and leave it unmerged for review.
 
 MA-005c merged in PR #68. Wider MA-005 and MA-006 support validation remains
 separate from this Waiver repair.

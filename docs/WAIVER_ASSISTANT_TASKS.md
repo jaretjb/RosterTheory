@@ -1044,3 +1044,8 @@ four-week streaming edge, and is absent from the claim plan. San Francisco and
 New England remain the two affirmative DST alternatives. The operational
 league policy matches the validated override, all 676 tests and Ruff pass, and
 no Sleeper write occurred.
+
+September 29 follow-up WA-027b: both private policies use the normalized
+specialist method after complete controlled hold/upgrade cases. The previous
+raw coefficients were not converted numerically; fixture outcomes do not prove
+real-world accuracy. Private policy values remain ignored.

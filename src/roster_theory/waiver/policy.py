@@ -20,7 +20,7 @@ from roster_theory.waiver.evaluation import (
 )
 from roster_theory.waiver.snapshot import ACQUIRABLE_STATES, AcquisitionState
 from roster_theory.waiver.priority import weekly_rank_eligible
-from roster_theory.waiver.specialists import raw_specialist_performance, specialist_performance
+from roster_theory.waiver.specialists import specialist_performance
 
 
 DEFAULT_WAIVER_CONFIG_DIR = Path("config/waiver")
@@ -118,21 +118,14 @@ class WaiverDecisionPolicy:
     emerging_near_threshold_fraction: float
     policy_hash: str
     specialist_prior_games: float = 2.0
-    specialist_method: str = "NORMALIZED_SEASON_V1"
 
     def __post_init__(self) -> None:
         for field in fields(self):
             item = getattr(self, field.name)
             if isinstance(item, (int, float)) and not isfinite(item):
                 raise ValueError(f"Waiver policy {field.name} must be finite")
-        if self.specialist_method == "NORMALIZED_SEASON_V1":
-            if not 0 < self.dst_season_points_weight < self.kicker_season_points_weight < 1:
-                raise ValueError("Normalized production weights must satisfy 0 < DST < K < 1")
-        elif self.specialist_method == "RAW_SEASON_POINTS_V1":
-            if min(self.dst_season_points_weight, self.kicker_season_points_weight) < 0:
-                raise ValueError("Raw season-point weights must be nonnegative")
-        else:
-            raise ValueError("Unsupported specialist performance method")
+        if not 0 < self.dst_season_points_weight < self.kicker_season_points_weight < 1:
+            raise ValueError("Normalized production weights must satisfy 0 < DST < K < 1")
         if self.specialist_prior_games <= 0:
             raise ValueError("Specialist prior games must be positive")
 
@@ -248,17 +241,12 @@ def load_waiver_policy(
                  "dst_season_points_weight", "prior_games"}
     if set(special) - supported:
         raise ValueError("Unsupported special-team override(s): " + ", ".join(sorted(set(special) - supported)))
-    specialist_method = special.get("method")
-    if specialist_method is None:
-        specialist_method = ("RAW_SEASON_POINTS_V1" if any(
-            name in special for name in ("kicker_season_points_weight", "dst_season_points_weight")
-        ) else "NORMALIZED_SEASON_V1")
-    if specialist_method not in {"NORMALIZED_SEASON_V1", "RAW_SEASON_POINTS_V1"}:
+    if special.get("method", "NORMALIZED_SEASON_V1") != "NORMALIZED_SEASON_V1":
         raise ValueError("Unsupported specialist performance method")
-    default_k, default_dst = ((0.75, 0.40) if specialist_method == "NORMALIZED_SEASON_V1"
-                              else (0.0, 0.0))
-    kicker_season_points_weight = float(special.get("kicker_season_points_weight", default_k))
-    dst_season_points_weight = float(special.get("dst_season_points_weight", default_dst))
+    if "method" not in special and any(name in special for name in ("kicker_season_points_weight", "dst_season_points_weight")):
+        raise ValueError("Legacy raw-point weights require migration to method NORMALIZED_SEASON_V1 and fractional weights")
+    kicker_season_points_weight = float(special.get("kicker_season_points_weight", 0.75))
+    dst_season_points_weight = float(special.get("dst_season_points_weight", 0.40))
     elite_cutoff = int(special_numeric["elite_dst_ros_rank_cutoff"])
     if special_numeric["current_week_weight"] <= 1:
         raise ValueError("Special-team current-week weight must be above 1")
@@ -442,7 +430,6 @@ def load_waiver_policy(
         kicker_season_points_weight=kicker_season_points_weight,
         dst_season_points_weight=dst_season_points_weight,
         specialist_prior_games=float(special.get("prior_games", 2.0)),
-        specialist_method=specialist_method,
         kicker_current_week_gain_floor=special_numeric[
             "kicker_current_week_gain_floor"
         ],
@@ -1567,34 +1554,16 @@ def _assess_special_team_candidate(
     stream_floor = (policy.kicker_current_week_gain_floor if position == "K"
                     else policy.dst_current_week_gain_floor)
     dst = selected.dst_streaming
-    weight = policy.kicker_season_points_weight if position == "K" else policy.dst_season_points_weight
-    if policy.specialist_method == "RAW_SEASON_POINTS_V1":
-        performance = raw_specialist_performance(
-            position=position,
-            add_rank=ownership.current_week_add_rank if selected.same_position else None,
-            drop_rank=ownership.current_week_drop_rank if selected.same_position else None,
-            season_add_rank=ownership.season_add_rank,
-            season_drop_rank=ownership.season_drop_rank,
-            recent_add_rank=ownership.recent_add_rank,
-            recent_drop_rank=ownership.recent_drop_rank,
-            ros_add_rank=ownership.rest_of_season_add_rank,
-            ros_drop_rank=ownership.rest_of_season_drop_rank,
-            add_points=ownership.season_add_points,
-            drop_points=ownership.season_drop_points,
-            current_week_delta=selected.current_week_delta,
-            weight=weight,
-        )
-    else:
-        performance = specialist_performance(
-            add_rank=ownership.current_week_add_rank if selected.same_position else None,
-            drop_rank=ownership.current_week_drop_rank if selected.same_position else None,
-            add_points=ownership.season_add_points,
-            drop_points=ownership.season_drop_points,
-            add_samples=ownership.season_add_sample_size,
-            drop_samples=ownership.season_drop_sample_size,
-            weight=weight,
-            prior_games=policy.specialist_prior_games,
-        )
+    performance = specialist_performance(
+        add_rank=ownership.current_week_add_rank if selected.same_position else None,
+        drop_rank=ownership.current_week_drop_rank if selected.same_position else None,
+        add_points=ownership.season_add_points,
+        drop_points=ownership.season_drop_points,
+        add_samples=ownership.season_add_sample_size,
+        drop_samples=ownership.season_drop_sample_size,
+        weight=policy.kicker_season_points_weight if position == "K" else policy.dst_season_points_weight,
+        prior_games=policy.specialist_prior_games,
+    )
     if not selected.same_position:
         performance = replace(performance, status="NOT_APPLICABLE_NO_SAME_POSITION_DROP")
     timestamps = (ownership.performance_add_as_of, ownership.performance_drop_as_of)
@@ -1629,9 +1598,7 @@ def _assess_special_team_candidate(
               evaluation.add_currently_active, "A currently inactive target cannot receive an affirmative label"),
         _gate("current_week_and_rolling_stream" if position == "DST" else "current_week_stream",
               stream_pass, "==", True, stream_pass,
-              ("Pass a projection improvement with a nonnegative available production balance, or a positive normalized rank/season-production comparison"
-               if policy.specialist_method == "NORMALIZED_SEASON_V1" else
-               "Pass a projection improvement with a nonnegative available production balance, or a positive raw-point rank/season-production comparison")),
+              "Pass a projection improvement with a nonnegative available production balance, or a positive normalized rank/season-production comparison"),
     )
     if cross_position:
         cross_safe = (
@@ -1661,9 +1628,7 @@ def _assess_special_team_candidate(
         if basis == "RANK_PERFORMANCE" and not projection_stream_pass:
             strongest_uncertainty += "; projections do not establish the required streaming improvement"
         if selected.same_position and not performance_complete:
-            missing_detail = ("or missing game counts" if policy.specialist_method == "NORMALIZED_SEASON_V1"
-                              else "or missing rank/point evidence")
-            strongest_uncertainty += f"; season production comparison is unavailable, stale, {missing_detail}"
+            strongest_uncertainty += "; season production comparison is unavailable, stale, or missing game counts"
     else:
         label = "WATCH" if watch_plausible and (evidence_complete or policy.allow_watch_on_missing_news) else "PASS"
         decision_path = "SPECIAL_TEAM_NEAR_THRESHOLD" if label == "WATCH" else "SPECIAL_TEAM_WEEKLY_FAILURE"
@@ -1676,25 +1641,18 @@ def _assess_special_team_candidate(
                 if basis == "PROJECTION" else 0.0)
     reversal = (
         ("Projected streaming improvement no longer clears its current-week/rolling floor",
-         ("Available normalized season-production comparison becomes negative"
-          if policy.specialist_method == "NORMALIZED_SEASON_V1" else
-          "Available raw-point season-production comparison becomes negative"))
+         "Available normalized season-production comparison becomes negative")
         if basis == "PROJECTION" else
-        (("Normalized weekly-rank/season-production advantage is no longer positive"
-          if policy.specialist_method == "NORMALIZED_SEASON_V1" else
-          "Raw-point weekly-rank/season-production advantage is no longer positive"),
-         ("Season totals, played-game counts, or capture times are missing or stale"
-          if policy.specialist_method == "NORMALIZED_SEASON_V1" else
-          "Season totals, rankings, or capture times are missing or stale"))
+        ("Normalized weekly-rank/season-production advantage is no longer positive",
+         "Season totals, played-game counts, or capture times are missing or stale")
     )
     evidence = {
-        "method": policy.specialist_method, "basis": basis,
+        "method": "NORMALIZED_SEASON_V1", "basis": basis,
         "performance": asdict(performance), "performance_complete": performance_complete,
         "performance_fresh": performance_fresh, "projection_complete": projection_complete,
         "projection_stream_pass": projection_stream_pass, "production_guard": production_guard,
         "projection_priority_points": projection_priority,
-        "priority_units": ("RAW_RANK_AND_POINTS" if performance_complete and
-                           policy.specialist_method == "RAW_SEASON_POINTS_V1" else "NORMALIZED_ADVANTAGE"),
+        "priority_units": "NORMALIZED_ADVANTAGE",
         "priority_basis": "RANK_PERFORMANCE" if performance_complete else "NORMALIZED_PROJECTION",
         "season_add_points": ownership.season_add_points, "season_drop_points": ownership.season_drop_points,
         "season_add_games": ownership.season_add_sample_size, "season_drop_games": ownership.season_drop_sample_size,
