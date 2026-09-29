@@ -151,10 +151,35 @@ class ProviderScoringCoverageTests(unittest.TestCase):
         self.assertIn("invalid_statistic=fum_lost", conflicting.coverage_status)
         draft_rules = assess_scoring_rules({"fum_lost": -2},
             scope=ScoringScope("synthetic", 2027, "draft", "SEASON", None),
-            catalogue=WEEKLY_RULES, catalogue_version="draft-unchanged")
+            catalogue=WEEKLY_RULES, catalogue_version="draft-fumbles")
         draft = score_draft_projection_row(
             {"position_id": "RB", "stats": {"fumbles": 2.85}}, draft_rules)
-        self.assertIn("missing_statistic=fum_lost", scoring_coverage(draft))
+        self.assertEqual((draft.diagnostic_points, scoring_coverage(draft)), (-5.7, "complete"))
+
+    def test_preseason_fumbles_change_only_declared_reference_statistic(self):
+        for profile, expected in (("reference_a", -7.7), ("reference_b", -6.7)):
+            with self.subTest(profile=profile):
+                source_rules = rules(profile)["scoring_settings"]
+                scoring = {key: source_rules[key] for key in ("pass_int", "fum_lost")}
+                scope = ScoringScope(profile, 2027, "draft", "SEASON", None)
+                assessment = assess_scoring_rules(scoring, scope=scope,
+                    catalogue=WEEKLY_RULES, catalogue_version="draft-fumbles")
+                row = {"position_id": "QB", "stats": {"pass_ints": 1, "fumbles": 2.85}}
+                scored = score_draft_projection_row(row, assessment)
+                self.assertEqual((scored.diagnostic_points, scoring_coverage(scored)),
+                                 (expected, "complete"))
+                missing = score_draft_projection_row(
+                    {"position_id": "QB", "stats": {"pass_ints": 1}}, assessment)
+                self.assertIn("missing_statistic=fum_lost", scoring_coverage(missing))
+                invalid = score_draft_projection_row(
+                    {"position_id": "QB", "stats": {"pass_ints": 1,
+                     "fumbles": 2.85, "fumbles_lost": 3}}, assessment)
+                self.assertIn("invalid_statistic=fum_lost", scoring_coverage(invalid))
+                full = assess_scoring_rules(source_rules, scope=scope,
+                    catalogue=WEEKLY_RULES, catalogue_version="draft-fumbles")
+                full_result = score_draft_projection_row(row, full)
+                self.assertFalse(full_result.complete)
+                self.assertNotIn("missing_statistic=fum_lost", scoring_coverage(full_result))
 
     def test_ambiguous_defense_aliases_do_not_prove_exact_events(self):
         for position, stats, setting in (

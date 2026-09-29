@@ -80,6 +80,15 @@ def draft_board(client, scoring):
 
 
 class DraftApiScoringTests(unittest.TestCase):
+    def test_preseason_fumbles_flow_into_league_scored_points(self):
+        ranked = {"RB": [{"player_id": "one", "player_name": "Synthetic Runner",
+                          "player_position_id": "RB", "rank_ecr": 1}]}
+        projected = {"RB": [{"fpid": "one", "stats": {"fumbles": 2.85}}]}
+        board = draft_board(SyntheticDraftClient(ranked, projected), {"fum_lost": -2})
+        self.assertEqual(board.players[0]["projected_points"], -5.7)
+        self.assertEqual(board.metadata["players_with_projections"], 1)
+        self.assertFalse(board.metadata["draft_ready"])
+
     def test_explicit_zero_is_usable_but_missing_and_invalid_are_not(self):
         ranked = {"QB": [
             {"player_id": str(index), "player_name": f"Passer {index}",
@@ -99,7 +108,7 @@ class DraftApiScoringTests(unittest.TestCase):
         self.assertIsNone(players["3"]["projected_points"])
         self.assertTrue(all(row["rank_score"] is not None for row in players.values()))
         self.assertEqual(board.metadata["players_with_projections"], 1)
-        self.assertEqual(board.metadata["projection_scoring_contract"], "fantasypros-draft-season-v1")
+        self.assertEqual(board.metadata["projection_scoring_contract"], "fantasypros-draft-season-v2")
         reasons = {issue["fpid"]: issue["reason"] for issue in board.metadata["projection_issues"]}
         self.assertIn("missing_statistic=pass_td", reasons["2"])
         self.assertIn("invalid_statistic=pass_td", reasons["3"])
