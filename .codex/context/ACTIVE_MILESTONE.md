@@ -1,6 +1,21 @@
 # Active milestone
 
-## MA-002q - Verify #31 Sleeper Draft position-limit source semantics
+## MA-002r - Map documented preseason FantasyPros lost fumbles (#30)
+
+Authorized by the user's September 28 request after PR #62 merged. Take one
+bounded #30 scoring-source slice: verify whether FantasyPros preseason
+`fumbles` means lost fumbles, then map only that documented field in the Draft
+API projection scorer. Keep missing/invalid/conflicting evidence incomplete.
+Use the MA-002 row of `docs/MODULAR_MIGRATION_PLAN.md`, MR-02, MR-04, MR-06,
+MR-09, MR-10 and MR-14, and architecture sections 3.1 and 5. Record an
+independent synthetic before/after score and admission example for each
+reference map without treating other missing fields as zero. No paid provider
+calls, private history, ranking or decision-policy changes, league calibration
+transfer, Sleeper write or support promotion. Run focused/full tests, Ruff,
+package/import smoke, context/privacy gates and CI. Open one PR without merging;
+leave #30 open unless every acceptance criterion is met.
+
+## Previous MA-002q - Verify #31 Sleeper Draft position-limit source semantics (merged PR #62)
 
 Authorized by the user's September 28 request after PR #61 merged. Inspect the
 two redacted reference profiles and current public Sleeper source documentation
