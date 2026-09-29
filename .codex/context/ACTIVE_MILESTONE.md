@@ -3,7 +3,25 @@
 Earlier sections preserve the status at the time of those slices. Issue #31
 closed after PR #65; their open-issue instructions are historical.
 
-## MA-004g - Move Draft preference ownership into the Draft package
+## MA-005c - Check full Waiver search on exact reference profiles
+
+Authorized by the user's September 29 request after PR #67 merged, with
+tonight's Waiver use in view. Exercise the full candidate search for both
+exact synthetic reference profiles, each with a full roster and one open
+active slot. Use each profile's own existing controlled-fixture policy,
+complete invented three-week inputs, and no provider calls. Check search
+completeness, exact evaluation of all eligible adds, legal drop/no-drop
+behavior, league and source binding, read-only output, and visible failure
+when an add projection is missing. Record the evidence and limits.
+
+Preserve all decision behavior and MA-001 semantic goldens. Do not transfer
+policy to another league, certify live provider coverage, promote wider
+formats, or run a live Waiver operation. Actual league readiness is a
+separate data and policy check. Run focused/full tests, Ruff, context/privacy
+gates, then open one PR against main and leave it unmerged. Explain any
+necessary behavior correction before implementing it.
+
+## Previous MA-004g - Move Draft preference ownership into the Draft package (merged PR #67)
 
 Authorized by the user's September 29 request after merged PRs #65 and #66.
 Move Draft preference records and overlay decisions from the top-level module
