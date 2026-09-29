@@ -15,6 +15,7 @@ from roster_theory.core.models import Player, Projection
 from roster_theory.core.projections import projection_is_complete, projection_is_usable
 from roster_theory.core.provenance import canonical_json
 from roster_theory.core.run_contract import restore_record
+from roster_theory.core.scoring import score_stats
 from roster_theory.core.scoring_contract import ScoringScope, assess_scoring_rules
 from roster_theory.inseason.evaluation import (
     InSeasonContext, InSeasonWeek, build_weekly_projection_matrix,
@@ -53,6 +54,41 @@ def projection(stats, scoring, position="QB"):
 
 
 class ProviderScoringCoverageTests(unittest.TestCase):
+    def test_legacy_core_and_weekly_adapter_agree_on_incomplete_inputs(self):
+        scoring = {"pass_yd": .04, "pass_td": 6}
+        for stats, expected_category in (
+            ({"pass_yds": 250}, "missing"),
+            ({"pass_yds": 250, "pass_tds": "nan"}, "invalid"),
+        ):
+            with self.subTest(category=expected_category):
+                core = score_stats(stats, scoring, position="QB")
+                adapter = projection(stats, scoring)
+                self.assertEqual(core.points, 10)
+                self.assertFalse(core.complete)
+                self.assertIn("pass_td", getattr(core, expected_category + "_settings"))
+                self.assertIn(expected_category + "_statistic=pass_td", adapter.coverage_status)
+        zero = {"pass_yds": 250, "pass_tds": 0}
+        self.assertTrue(score_stats(zero, scoring, position="QB").complete)
+        self.assertEqual(projection(zero, scoring).coverage_status, "complete")
+        unsupported = {**scoring, "bonus_pass_300": 3}
+        self.assertFalse(score_stats(zero, unsupported, position="QB").complete)
+        self.assertIn("unsupported_rule=bonus_pass_300",
+                      projection(zero, unsupported).coverage_status)
+        irrelevant = {**scoring, "bonus_rec_rb": 1}
+        self.assertTrue(score_stats(zero, irrelevant, position="QB").complete)
+        self.assertEqual(projection(zero, irrelevant).coverage_status, "complete")
+        overflow = score_stats({"pass_yds": 1e308}, {"pass_yd": 1e308}, position="QB")
+        self.assertFalse(overflow.complete)
+        self.assertEqual(overflow.invalid_settings, ("arithmetic_overflow",))
+        conflicting = score_stats({"pass_td": 1, "pass_tds": 2}, {"pass_td": 6},
+                                  position="QB")
+        self.assertFalse(conflicting.complete)
+        self.assertEqual(conflicting.invalid_settings, ("pass_td",))
+        bad_multiplier = score_stats({"pass_tds": 1}, {"pass_td": float("nan")},
+                                     position="QB")
+        self.assertFalse(bad_multiplier.complete)
+        self.assertEqual(bad_multiplier.invalid_settings, ("pass_td",))
+
     def test_core_skill_forecast_becomes_labeled_estimate_only_for_missing_optional_stats(self):
         scoring = {"pass_yd": .04, "pass_td": 6, "pass_int": -2,
                    "rush_yd": .1, "rush_td": 6, "fum_lost": -2}

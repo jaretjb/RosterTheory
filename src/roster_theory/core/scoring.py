@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Any, Mapping
 
 
@@ -56,12 +57,13 @@ POSITION_RECEPTION_BONUSES = {"bonus_rec_rb": "RB", "bonus_rec_wr": "WR", "bonus
 
 
 def _number(value: Any) -> float | None:
-    if value in (None, "", "-"):
+    if isinstance(value, bool) or value in (None, "", "-"):
         return None
     try:
-        return float(value)
-    except (TypeError, ValueError):
+        parsed = float(value)
+    except (TypeError, ValueError, OverflowError):
         return None
+    return parsed if isfinite(parsed) else None
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,18 +72,22 @@ class ScoringResult:
     raw_stats: tuple[tuple[str, Any], ...]
     used_settings: tuple[str, ...]
     unsupported_settings: tuple[str, ...]
+    missing_settings: tuple[str, ...] = ()
+    invalid_settings: tuple[str, ...] = ()
 
     @property
     def complete(self) -> bool:
-        return not self.unsupported_settings
+        return not (self.unsupported_settings or self.missing_settings or self.invalid_settings)
 
 
 def score_stats(
     stats: Mapping[str, Any], scoring: Mapping[str, Any], *, position: str | None = None
 ) -> ScoringResult:
-    """Score supplied stats and report every non-zero unsupported setting."""
+    """Return a diagnostic subtotal; completeness requires every active input."""
     total = 0.0
     used: list[str] = []
+    missing: set[str] = set()
+    invalid: set[str] = set()
     supported = set(STAT_ALIASES)
     if position and position.upper() in {"QB", "RB", "WR", "TE", "K", "DST", "DEF"}:
         supported.update(POSITION_RECEPTION_BONUSES)
@@ -117,9 +123,36 @@ def score_stats(
             if str(setting) not in supported and (_number(multiplier) or 0.0) != 0.0
         )
     )
+    for setting, multiplier_raw in scoring.items():
+        name = str(setting)
+        multiplier = _number(multiplier_raw)
+        if multiplier is None:
+            invalid.add(name)
+            continue
+        if multiplier == 0.0:
+            continue
+        if name in POSITION_RECEPTION_BONUSES:
+            if position and position.upper() == POSITION_RECEPTION_BONUSES[name]:
+                aliases = STAT_ALIASES["rec"]
+            else:
+                continue
+        elif name in STAT_ALIASES:
+            aliases = STAT_ALIASES[name]
+        else:
+            continue
+        present = [_number(stats[alias]) for alias in aliases if alias in stats]
+        if not present:
+            missing.add(name)
+        elif any(value is None for value in present) or len(set(present)) != 1:
+            invalid.add(name)
+    if not isfinite(total):
+        invalid.add("arithmetic_overflow")
+        total = 0.0
     return ScoringResult(
         points=round(total, 3),
         raw_stats=tuple(sorted((str(key), value) for key, value in stats.items())),
         used_settings=tuple(sorted(used)),
         unsupported_settings=unsupported,
+        missing_settings=tuple(sorted(missing)),
+        invalid_settings=tuple(sorted(invalid)),
     )
