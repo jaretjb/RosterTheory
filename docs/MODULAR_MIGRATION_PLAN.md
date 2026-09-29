@@ -1,6 +1,6 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: #30 closed in PR #64; #31 closed after PR #65; MA-004g merged in PR #67; MA-005c exact-reference Waiver search active; provider and wider support validation separate
+Status: #30 closed in PR #64; #31 closed after PR #65; MA-004g/MA-005c merged in PRs #67-#68; no active Modular slice; WA-027b Waiver repair active; provider and wider support validation separate
 
 Updated: September 29, 2026 (America/Los_Angeles)
 
@@ -16,7 +16,7 @@ authorization. The current Draft closure and feature promotion gates remain.
 This document is the canonical requirement-to-work mapping. GitHub issues track
 delivery discussion and PR links; maintain IDs/status consistently here when
 issues are opened or closed. Do not create a second competing full backlog.
-The active MA-005c slice has a detailed contract below; MA-001's baseline
+The completed MA-005c slice has a detailed contract below; MA-001's baseline
 contract remains as a completed reference.
 
 MA-000 delivers the three planning documents, reconciliation links and issue
@@ -36,8 +36,8 @@ MA-005a inventoried the half-PPR roster family in merged PR #60. MA-005b
 exercised synthetic Trade/Waiver evaluations in merged PR #61 without support
 promotion. MA-002q checked Draft position-limit source semantics for the two
 redacted reference profiles. PR #66 clarified trust in user-confirmed state.
-MA-004g moved Draft preference ownership in merged PR #67. Active MA-005c
-checks full Waiver search on the exact synthetic references.
+MA-004g moved Draft preference ownership in merged PR #67. MA-005c checked
+full Waiver search on the exact synthetic references in merged PR #68.
 
 MA-001 evidence: [reference and migration baseline](MODULAR_BASELINE.md).
 Tracking: [#29](https://github.com/jaretjb/RosterTheory/issues/29). #30, #31,

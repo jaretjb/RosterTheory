@@ -1033,9 +1033,9 @@ Acceptance:
 
 Completion proof: exact specialist evidence now carries add/drop season points
 and recent points per game. A rank-supported fallback must clear one combined
-score; configured season-point evidence cannot be missing. The current league
-uses a `2.0` K season-point weight and a smaller `0.5` DST weight. Other league
-policies retain neutral defaults unless separately calibrated.
+score; configured season-point evidence cannot be missing. The tested league
+uses private, separately tuned K and DST weights. Other league policies retain
+their own settings unless separately calibrated.
 
 The fresh read-only search changed both disputed results. Tyler Loop (17 season
 points) and Eddy Pineiro (15) are WATCH alternatives behind Evan McPherson

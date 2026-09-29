@@ -1,34 +1,19 @@
 # Waiver Assistant current status
 
-Updated: September 25, 2026 (America/Los_Angeles)
+Updated: September 29, 2026 (America/Los_Angeles)
 
-AC-001/#7 through AC-005/#11 merged in PRs #15–#19.
-PR #20 reconciled #11's completion records; issue #11 is closed.
-AC-006/#12 merged in PR #21 with all 20 checks passing; issue #12 is closed.
-AC-007/#13 merged in PR #22 with all 20 checks passing; issue #13 is closed.
-Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_007.md`.
+WA-027b active. Saved private specialist weights use their original raw
+season-point formula; explicitly labeled normalized policies remain separate.
+The read-only Waiver refresh now derives the championship week from Sleeper's
+winners bracket. Both private league policies load without transferring weights.
+For the requested private league, the in-season expert pool and live input
+bundle were refreshed.
+The bundle reports no complete league-scored historical performance because
+Sleeper stat rows omit required scoring categories; five Waiver Wire players
+are unmatched and remain visible. No live Waiver recommendation was published.
+No Sleeper write occurred. Provider support validation is separate.
 
-Source observations retain their original times, including cache hits. News uses
-a one-hour refresh interval and remains a finite global feed, never complete
-per-player coverage. Publication rechecks ownership, lineup/settings, player status,
-transactions and matchup starters, and checks source expiry and kickoff boundaries.
-Immutable as-of evaluation and wall-clock publication checks are separate.
-Input gaps, bounded search, candidate confidence and informational warnings are
-separate; empty exhaustive searches can be ready. Hashed sidecar manifests record
-build, policy, scoring, sources and replay inputs. Offline replay reproduces hashes
-without provider calls and is never current/actionable.
-
-AC-005 weekly caps (RB/WR50, QB/TE24, K/DST16), sampled specialist production,
-truthful decision paths and tie preservation remain. AC-002 candidate/retention
-safety and AC-003 cross-position, exhaustive search, budget disclosure and
-conditional-claim safeguards remain unchanged.
-
-Specialist calibration and league-exact expert ranks remain unproven.
-No live report, paid refresh or Sleeper mutation ran.
-AC-008/#14 merged in PR #23 with all 20 checks passing; issue #14 is closed.
-Stage timing, exact coverage, and cache sizes are exposed outside hashed Waiver
-evidence. Independent alpha/beta policy fixtures and offline replay remain
-decision-stable. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
-Verification: 797 tests, Ruff and diff checks passed for AC-008.
-
-Audit open; no next milestone authorized. Read-only.
+AC-001–AC-008/#7–#14 merged in PRs #15–#23; issues closed. See the completed
+AC-007 and AC-008 records. Weekly position caps, roster safety, bounded search,
+freshness checks, visible input gaps, and read-only Sleeper behavior remain.
+Offline replay is never actionable.

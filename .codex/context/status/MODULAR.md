@@ -28,10 +28,12 @@ reference Draft scopes stay LIMITED. Evidence:
 #31 closed after PR #65. PR #66 clarified that user-confirmed merges and closures
 do not need rechecking. Closure does not promote provider or league support.
 
-MA-004g moved Draft preferences in PR #67. Active MA-005c checks full
-Waiver search on both exact synthetic references with each league's own
-fixture policy. Six full/open/missing-add cases passed locally; live data and
-provider support remain separate. Evidence: `docs/MODULAR_WAIVER_SEARCH_MATRIX.md`.
+MA-004g moved Draft preferences in PR #67. MA-005c checked full Waiver
+search on both exact synthetic references in merged PR #68. Six
+full/open/missing-add cases passed; no support promotion. Live provider
+coverage and wider MA-005/MA-006 validation remain separate. Evidence:
+`docs/MODULAR_WAIVER_SEARCH_MATRIX.md`. No Modular milestone is active;
+WA-027b is separate Waiver work.
 
 Trade/Waiver share neutral preparation and a provider budget ledger while
 keeping decisions separate. Evidence: `docs/MODULAR_SHARED_PREPARATION.md`.

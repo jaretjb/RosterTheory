@@ -45,3 +45,45 @@ def specialist_performance(
     score = (1 - weight) * weekly + weight * confidence * production
     return SpecialistPerformance(round(score, 6), weekly, production, confidence,
                                  weight, prior_games, "COMPLETE")
+
+
+def raw_specialist_performance(
+    *, position: str, add_rank: int | None, drop_rank: int | None,
+    season_add_rank: int | None, season_drop_rank: int | None,
+    recent_add_rank: int | None, recent_drop_rank: int | None,
+    ros_add_rank: int | None, ros_drop_rank: int | None,
+    add_points: float | None, drop_points: float | None,
+    current_week_delta: float, weight: float,
+) -> SpecialistPerformance:
+    """WA-027's original score, with the saved weight in raw point units.
+
+    This is only for policies saved before NORMALIZED_SEASON_V1. The caller
+    independently checks freshness, league scope, and the current safety gates.
+    """
+    if position not in {"K", "DST"} or not isfinite(weight) or weight < 0:
+        raise ValueError("Raw specialist method requires K/DST and a nonnegative finite weight")
+    weekly_valid = (add_rank is not None and isinstance(add_rank, int)
+                    and not isinstance(add_rank, bool) and 1 <= add_rank <= 16)
+    rank_context = any(rank is not None for rank in (season_add_rank, recent_add_rank, ros_add_rank))
+    points_valid = (weight == 0 or (add_points is not None and drop_points is not None
+                                   and isfinite(add_points) and isfinite(drop_points)))
+    if not weekly_valid or not rank_context or not points_valid:
+        return SpecialistPerformance(None, None, None, 1.0, weight, 0.0,
+                                     "INCOMPLETE_RANK_OR_SEASON_TOTAL")
+
+    def advantage(add: int | None, drop: int | None) -> float:
+        return float(drop - add) if add is not None and drop is not None else 0.0
+
+    weekly = advantage(add_rank, drop_rank)
+    season = advantage(season_add_rank, season_drop_rank)
+    recent = advantage(recent_add_rank, recent_drop_rank)
+    ros = advantage(ros_add_rank, ros_drop_rank)
+    production = float(add_points - drop_points) if add_points is not None and drop_points is not None else 0.0
+    if position == "K":
+        score = (5.0 * weekly + season + 0.5 * recent + 0.25 * ros
+                 + weight * production + (15.0 if season_add_rank == 1 else 0.0))
+    else:
+        score = (3.0 * weekly + season + 0.5 * recent + 0.5 * ros
+                 + weight * production + 2.0 * current_week_delta)
+    return SpecialistPerformance(round(score, 3), weekly, production, 1.0,
+                                 weight, 0.0, "COMPLETE")

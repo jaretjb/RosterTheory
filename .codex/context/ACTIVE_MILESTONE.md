@@ -1,9 +1,29 @@
 # Active milestone
 
+## Active WA-027b - Preserve each league's saved specialist weights
+
+Authorized by the user's September 29 correction during a private-league Waiver
+readiness check. Restore the original raw season-point scoring method for
+private Waiver policies saved before the normalized method was introduced.
+Keep the saved league-specific numeric weights in ignored private files and
+preserve the current normalized method for explicitly labeled policies.
+Show the method used in decision evidence. Add synthetic regression tests for
+both methods. Repair the read-only Waiver refresh's missing Sleeper winners
+bracket fetch so its championship horizon can be derived from current league
+evidence, with a focused regression test. Validate the two private policies
+offline, and then retry the authorized read-only private-league readiness/run
+only if completeness permits.
+Do not transfer calibration between leagues, submit a Sleeper action, or
+promote provider support. Run focused/full tests, Ruff, context/privacy gates;
+open one PR against main and leave it unmerged for review.
+
+MA-005c merged in PR #68. Wider MA-005 and MA-006 support validation remains
+separate from this Waiver repair.
+
 Earlier sections preserve the status at the time of those slices. Issue #31
 closed after PR #65; their open-issue instructions are historical.
 
-## MA-005c - Check full Waiver search on exact reference profiles
+## Previous MA-005c - Check full Waiver search on exact reference profiles (merged PR #68)
 
 Authorized by the user's September 29 request after PR #67 merged, with
 tonight's Waiver use in view. Exercise the full candidate search for both

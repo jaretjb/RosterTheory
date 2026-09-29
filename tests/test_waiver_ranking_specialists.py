@@ -174,8 +174,55 @@ class RankingSpecialistTests(unittest.TestCase):
             self.assertEqual((policy.kicker_season_points_weight, policy.dst_season_points_weight, policy.specialist_prior_games), (.8, .3, 3))
             del special["method"]
             path.write_text(json.dumps({**base, "special_teams": special}))
-            with self.assertRaisesRegex(ValueError, "migration"):
-                load_waiver_policy(path)
+            raw = load_waiver_policy(path)
+            self.assertEqual(raw.specialist_method, "RAW_SEASON_POINTS_V1")
+            self.assertEqual((raw.kicker_season_points_weight, raw.dst_season_points_weight), (.8, .3))
+
+    def test_saved_raw_weights_keep_the_original_scoring_units(self):
+        base = json.loads(policy_fixtures.POLICY_PATH.read_text())
+        special = {**base["special_teams"], "kicker_season_points_weight": 3.0,
+                   "dst_season_points_weight": 0.25}
+        del special["method"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "private-like-policy.json"
+            path.write_text(json.dumps({**base, "special_teams": special}))
+            policy = load_waiver_policy(path)
+            self.assertEqual(policy.specialist_method, "RAW_SEASON_POINTS_V1")
+            kicker = self.specialist("K", current_delta=0, policy_path=path)
+            dst = self.specialist("DST", current_delta=0, policy_path=path)
+            self.assertEqual(kicker.decision.specialist_evidence["performance"]["score"], 33.0)
+            self.assertEqual(dst.decision.specialist_evidence["performance"]["score"], 17.5)
+            for result in (kicker, dst):
+                self.assertEqual(result.decision.specialist_evidence["method"], "RAW_SEASON_POINTS_V1")
+                self.assertEqual(result.decision.specialist_evidence["priority_units"], "RAW_RANK_AND_POINTS")
+            productive_drop = self.specialist(
+                "K", current_delta=2, target_season_points=17,
+                incumbent_season_points=31, policy_path=path,
+            )
+            self.assertEqual(productive_drop.decision.specialist_evidence["performance"]["score"], -15.0)
+            self.assertFalse(productive_drop.decision.specialist_evidence["production_guard"])
+            self.assertNotEqual(productive_drop.decision_label, "ADD NOW")
+            retuned = {**special, "kicker_season_points_weight": 1.0}
+            path.write_text(json.dumps({**base, "special_teams": retuned}))
+            lighter = self.specialist(
+                "K", current_delta=2, target_season_points=17,
+                incumbent_season_points=31, policy_path=path,
+            )
+            self.assertEqual(lighter.decision.specialist_evidence["performance"]["score"], 13.0)
+            self.assertTrue(lighter.decision.specialist_evidence["production_guard"])
+
+    def test_raw_policy_does_not_change_another_leagues_normalized_method(self):
+        raw_base = json.loads(policy_fixtures.POLICY_PATH.read_text())
+        raw_special = {**raw_base["special_teams"], "kicker_season_points_weight": 3.0}
+        del raw_special["method"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "raw-policy.json"
+            path.write_text(json.dumps({**raw_base, "special_teams": raw_special}))
+            raw = load_waiver_policy(path)
+            normalized = load_waiver_policy(policy_fixtures.LEAGUE_BETA_POLICY_PATH)
+            self.assertEqual(raw.specialist_method, "RAW_SEASON_POINTS_V1")
+            self.assertEqual(normalized.specialist_method, "NORMALIZED_SEASON_V1")
+            self.assertEqual(normalized.kicker_season_points_weight, 0.75)
 
     def test_independent_league_defaults_and_overrides(self):
         alpha = load_waiver_policy(policy_fixtures.POLICY_PATH)

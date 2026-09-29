@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -231,6 +231,19 @@ def normalize_transactions(
     return tuple(sorted(result, key=lambda item: item.transaction_id))
 
 
+def _winner_bracket_rounds(winners: object) -> tuple[int, ...]:
+    return tuple(
+        int(row["r"]) for row in winners
+        if isinstance(row, Mapping) and row.get("r") is not None
+    )
+
+
+def _championship_week(league: LeagueRules, rounds: tuple[int, ...]) -> int | None:
+    if league.playoff_start_week is None or not rounds:
+        return None
+    return league.playoff_start_week + max(rounds) - 1
+
+
 class SleeperAdapter:
     def __init__(
         self,
@@ -282,29 +295,8 @@ class SleeperAdapter:
             for week in sorted(set(weeks))
         }
         league = normalize_league(raw_league)
-        rounds = [
-            int(row["r"])
-            for row in winners
-            if isinstance(row, Mapping) and row.get("r") is not None
-        ]
-        championship = (
-            league.playoff_start_week + max(rounds) - 1
-            if league.playoff_start_week is not None and rounds
-            else None
-        )
-        league = LeagueRules(
-            league_id=league.league_id,
-            season=league.season,
-            team_count=league.team_count,
-            roster_positions=league.roster_positions,
-            scoring=league.scoring,
-            playoff_start_week=league.playoff_start_week,
-            championship_week=championship,
-            reserve_slots=league.reserve_slots,
-            trade_deadline_raw=league.trade_deadline_raw,
-            platform_settings=league.platform_settings,
-            taxi_slots=league.taxi_slots,
-        )
+        rounds = _winner_bracket_rounds(winners)
+        league = replace(league, championship_week=_championship_week(league, rounds))
         stamps = tuple(
             DataStamp(
                 source="Sleeper",
@@ -366,11 +358,14 @@ class SleeperAdapter:
         raw_league = self._observe(f'/league/{league_id}', lambda: self.client.league(league_id))
         users = self._observe(f'/league/{league_id}/users', lambda: self.client.league_users(league_id))
         rosters = self._observe(f'/league/{league_id}/rosters', lambda: self.client.league_rosters(league_id))
+        winners = self._observe(f'/league/{league_id}/winners_bracket', lambda: self.client.league_winners_bracket(league_id))
         player_rows, player_cache_status = self._player_directory(
             captured_at, maximum_age=timedelta(seconds=-1) if force_players else timedelta(minutes=5)
         )
         transaction_rows = self._observe(f'/league/{league_id}/transactions/{current_week}', lambda: self.client.league_transactions(league_id, current_week))
         league = normalize_league(raw_league)
+        rounds = _winner_bracket_rounds(winners)
+        league = replace(league, championship_week=_championship_week(league, rounds))
         stamps = tuple(
             DataStamp(
                 source="Sleeper",
@@ -388,6 +383,7 @@ class SleeperAdapter:
                 (f"/league/{league_id}", None, "miss"),
                 (f"/league/{league_id}/users", None, "miss"),
                 (f"/league/{league_id}/rosters", None, "miss"),
+                (f"/league/{league_id}/winners_bracket", None, "miss"),
                 ("/players/nfl", None, player_cache_status),
                 (
                     f"/league/{league_id}/transactions/{current_week}",
@@ -404,7 +400,7 @@ class SleeperAdapter:
             players=normalize_players(player_rows),
             matchups=(),
             transactions=normalize_transactions(current_week, transaction_rows),
-            winner_bracket_rounds=None,
+            winner_bracket_rounds=max(rounds) if rounds else None,
             loser_bracket_rows=0,
             stamps=stamps,
             player_directory_cache_status=player_cache_status,
