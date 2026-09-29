@@ -19,11 +19,14 @@ omits enforcement; B declares `1`. Neither source inventory nor API docs maps
 positional maxima. Both scopes remain LIMITED. Evidence and recovery:
 `docs/MODULAR_POSITION_LIMIT_SOURCE.md`. #31 remains open.
 
-MA-002r mapped documented preseason lost fumbles in PR #63. Active MA-002s
-completes #30's scoring-evidence acceptance: the legacy core helper no longer
-calls a subtotal complete when a required statistic is missing. Draft,
-Trade and Waiver retain separate incomplete-evidence rules. Evidence:
-`docs/MODULAR_SCORING_ISSUE_30.md`. Source coverage remains unverified.
+PRs #63-#64 closed #30's scoring-evidence acceptance. The legacy core helper
+now reports missing statistics; feature-specific rules remain. Provider coverage
+is unverified. Evidence: `docs/MODULAR_SCORING_ISSUE_30.md`.
+
+Active MA-002t checks saved Draft membership before board preparation. Missing
+roles or taxi capacity require refresh. Positional maxima remain unmapped; both
+reference Draft scopes stay LIMITED. Evidence:
+`docs/MODULAR_MEMBERSHIP_ISSUE_31.md`.
 
 Trade/Waiver share neutral preparation and a process-safe FantasyPros budget
 ledger while keeping decisions separate. Evidence:
@@ -33,5 +36,5 @@ MA-002p restored conditional Trade/Waiver forecasts; Waiver cannot affirmatively
 add/claim from estimates. Evidence: `docs/MODULAR_WORKFLOW_RECONCILIATION.md`.
 
 Baseline: `docs/MODULAR_BASELINE.md`. Implementation loads the active milestone
-and `IMPLEMENTATION_POLICY.md`. Open: #30 pending closure and #31 position caps.
+and `IMPLEMENTATION_POLICY.md`. Open: #31 position caps and source evidence.
 Actual provider coverage and wider format support remain unverified.

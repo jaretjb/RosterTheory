@@ -1,5 +1,7 @@
 """Sleeper roster field and IR rule translation, without source-default guesses."""
-from roster_theory.core.roster import assess_reserve_eligibility, require_no_taxi_settings
+from collections.abc import Mapping
+
+from roster_theory.core.roster import assess_reserve_eligibility, require_membership, require_no_taxi_settings
 from roster_theory.core.errors import RosterIllegal
 
 
@@ -16,11 +18,36 @@ def require_draft_membership_settings(settings):
 
 
 def require_draft_snapshot_membership(snapshot):
-    current = snapshot.get("current", {})
-    require_draft_membership_settings(current.get("league", {}).get("settings") or {})
-    for roster in current.get("rosters") or ():
-        if roster.get("taxi"):
-            raise RosterIllegal("Draft roster membership unsupported: TAXI_UNSUPPORTED")
+    """Admit a saved Draft source only when current roster roles are established."""
+    from roster_theory.providers.sleeper import normalize_league, normalize_teams
+
+    if isinstance(snapshot, Mapping) and "schema_version" in snapshot:
+        version = snapshot["schema_version"]
+        if type(version) is not int or version != 1:
+            raise RosterIllegal("Unsupported Draft snapshot schema; refresh from Sleeper")
+    current = snapshot.get("current") if isinstance(snapshot, Mapping) else None
+    if not isinstance(current, Mapping):
+        raise RosterIllegal("Draft snapshot lacks current membership; refresh from Sleeper")
+    raw_league, raw_rosters = current.get("league"), current.get("rosters")
+    if not isinstance(raw_league, Mapping) or not isinstance(raw_rosters, list):
+        raise RosterIllegal("Draft snapshot lacks league or roster evidence; refresh from Sleeper")
+    settings = raw_league.get("settings")
+    if not isinstance(settings, Mapping):
+        raise RosterIllegal("Draft snapshot lacks league settings; refresh from Sleeper")
+    require_draft_membership_settings(settings)
+    try:
+        league = normalize_league(raw_league)
+        teams = normalize_teams([], raw_rosters)
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise RosterIllegal("Draft snapshot has invalid membership; refresh from Sleeper") from exc
+    if league.taxi_slots is None:
+        raise RosterIllegal("Draft taxi capacity is unavailable; refresh from Sleeper")
+    if len(teams) != league.team_count:
+        raise RosterIllegal("Draft snapshot roster count does not match league rules; refresh from Sleeper")
+    assessment = require_membership(league, teams, allow_capacity_overage=True)
+    if any(row.code == "RESERVE_CAPACITY_UNKNOWN" for row in assessment.issues):
+        raise RosterIllegal("Draft reserve capacity is unavailable; refresh from Sleeper")
+    return assessment
 
 
 def roster_ids(roster, field, *, optional=False):

@@ -1,8 +1,8 @@
 # Modular RosterTheory: migration and validation plan
 
-Status: MA-002r merged in PR #63; MA-002s #30 acceptance closure active; #31 and wider support evidence remain open
+Status: #30 closed in PR #64; MA-002t #31 membership admission active; position-limit source and wider support evidence remain open
 
-Updated: September 27, 2026 (America/Los_Angeles)
+Updated: September 28, 2026 (America/Los_Angeles)
 
 References: [requirements](MODULAR_REQUIREMENTS.md), [architecture](MODULAR_ARCHITECTURE.md)
 
@@ -86,6 +86,12 @@ original legacy-core false-complete case and reconciles the issue's scorer,
 provider, three-feature, reference, compatibility and safety evidence. An
 unknown provider field remains missing; #30 closure does not certify actual
 source delivery or wider format support.
+
+MA-002t's [#31 membership review](MODULAR_MEMBERSHIP_ISSUE_31.md) rejects
+Draft saved snapshots with missing or invalid current roster roles, duplicate
+ownership or unavailable taxi capacity before building boards. Permitted
+temporary roster overages remain visible. Positional maxima still require
+verified Sleeper source evidence before #31 can close.
 
 MA-002g's [historical scoring evidence](MODULAR_HISTORICAL_SCORING.md) keeps
 partial Sleeper season/recent-week point totals out of Waiver rankings while
