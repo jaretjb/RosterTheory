@@ -18,6 +18,7 @@ testing, and handoff rules and is not general startup context.
 
 ## Always-on boundaries
 
+- Trust user-confirmed merges and closures; recheck only details necessary for the task.
 - Never commit or push directly to `main`. Create a separate branch for every
   change and merge it into `main` only through a GitHub pull request. Do not
   bypass branch protection, even for documentation-only or urgent changes.
