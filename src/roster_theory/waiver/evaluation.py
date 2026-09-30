@@ -1970,7 +1970,7 @@ def evaluate_waiver(
         warnings.append(
             "Forecast estimate: ownership values or weekly points use available "
             "league-scored statistics; missing scoring fields are unverified, "
-            "so any favorable decision remains conditional"
+            "and are disclosed without automatically vetoing a recommendation"
         )
     for player_id in sorted(described_ids):
         warnings.extend(value_map[player_id].warnings)

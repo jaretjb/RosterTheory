@@ -1733,18 +1733,17 @@ def apply_waiver_policy(
             decision = replace(decision, gates=(*decision.gates,
                 _gate("forecast_estimate_not_used", True, "==", True, True,
                       "This specialist fallback uses verified league-scored season points and weekly ranks, not estimated forecasts")))
-        elif estimated_forecast and decision.label in {"ADD NOW", "CLAIM", "ACQUIRE"}:
+        elif estimated_forecast:
             decision = replace(
-                decision, label="WATCH", decision_path="CONDITIONAL_FORECAST_ESTIMATE",
+                decision,
                 gates=(*decision.gates, _gate(
-                    "forecast_scoring_verified", False, "==", True, False,
-                    "Missing forecast scoring fields may change the result",
+                    "available_stat_forecast_disclosed", True, "==", True, True,
+                    "Admitted available-stat forecasts remain estimates; omitted ancillary "
+                    "fields do not override the normal value and roster gates",
                 )),
             )
-            uncertainty = (
-                "The available-statistics forecast is an estimate; verify missing scoring "
-                "fields before making a claim or add"
-            )
+            uncertainty = (f"{uncertainty}; forecast totals omit unprojected scoring "
+                           "categories and remain estimates")
         return candidate, decision, uncertainty
 
     assessments = tuple(assess(candidate) for candidate in policy_candidates)

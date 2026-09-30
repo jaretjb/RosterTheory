@@ -1,6 +1,18 @@
 # Active milestone
 
-## Active WA-027e - Expected absences and available expert fallback
+## Active WA-027f - Usable forecasts without a blanket estimate veto
+
+Authorized by the user's correction that omitted two-point conversion forecasts
+must not block otherwise useful Waiver analysis. Retain the provider's existing
+core-stat, valid-rule, and missing-only checks for admitting skill forecasts.
+Remove Waiver's later unconditional WATCH downgrade for those admitted estimates;
+preserve omitted-field disclosures, incomplete-source blockers, ordinary decision
+gates, and private league calibration. Verify named evaluations, search, and claim
+plan behavior with controlled fixtures and audit the previously named private
+comparisons. Do not change Trade or Draft decision policy or provider support.
+Run focused/full tests, Ruff, and privacy gates. Update PR #69; leave it unmerged.
+
+## Previous WA-027e - Expected absences and available expert fallback
 
 Authorized by the user's correction about byes, injuries, and unpublished
 expert rankings. Normalize verified bye weeks even when the player is absent

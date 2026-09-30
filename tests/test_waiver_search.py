@@ -218,10 +218,10 @@ def input_payload(*, league_key="league_alpha"):
 
 
 class WaiverSearchTests(unittest.TestCase):
-    def test_estimated_candidate_is_visible_as_conditional_search_result(self):
+    def test_available_stat_candidate_can_enter_search_claim_plan(self):
         projected = tuple(
             replace(row, raw_stats=(("pass_yd", 300.0),),
-                    coverage_status="estimated_missing_stats_v1:missing_statistic=fum_lost")
+                    coverage_status="estimated_missing_stats_v1:missing_statistic=pass_2pt")
             if row.player_id == "add" else row
             for row in complete_projections()
         )
@@ -232,8 +232,10 @@ class WaiverSearchTests(unittest.TestCase):
         result = search(projection_rows=projected, value_rows=valued)
         self.assertIn("add", result.eligible_candidate_ids)
         add = next(row for row in result.exact_evaluations if row.add_player_id == "add")
-        self.assertEqual(add.decision_label, "WATCH")
+        self.assertEqual(add.decision_label, "ADD NOW")
         self.assertTrue(any(warning.startswith("Forecast estimate:") for warning in add.warnings))
+        self.assertIn("add", {row.add_player_id for row in result.claim_plan})
+        self.assertTrue(any(row.accepted for row in result.claim_branch_checks))
 
     def test_independent_league_coverage_and_metrics_do_not_change_decisions(self):
         results = {}
