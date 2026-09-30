@@ -416,6 +416,7 @@ class DropCandidateEvaluation:
     waiver_value: WaiverValueComparison
     projection_inputs_complete: bool = True
     fixed_specialist_gap_independent: bool = False
+    current_week_projection_complete: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1835,6 +1836,15 @@ def evaluate_waiver(
                     else None
                 ),
                 dst_streaming=dst_streaming,
+                current_week_projection_complete=(
+                    add_position == "DST" and drop_id is not None
+                    and _waiver_position(player_by_id[drop_id]) == "DST"
+                    and all(
+                        (forecast := projection_by_key.get((pid, snapshot.manifest.current_week))) is not None
+                        and projection_is_complete(forecast, current_week=snapshot.manifest.current_week)
+                        for pid in (add_player.player_id, drop_id)
+                    )
+                ),
                 waiver_value=compare_waiver_values(
                     priority_by_id,
                     add_player_id=add_player.player_id,

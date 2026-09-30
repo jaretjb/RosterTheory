@@ -127,6 +127,24 @@ class JointWaiverTests(unittest.TestCase):
         self.assertEqual([row.accepted for row in checks], [True, True])
         self.assertTrue(all(row.cumulative_lineup_delta is None for row in checks))
 
+    def test_current_week_defense_claim_does_not_require_future_point_totals(self):
+        snapshot, _, _ = fixed_specialist_gap_fixture()
+        template = search().exact_evaluations[0]
+        candidate = replace(template.candidates[0], drop_player_id="dst",
+                            drop_position="DST", same_position=True,
+                            current_week_projection_complete=True, projection_inputs_complete=False)
+        evaluation = replace(template, add_player_id="fa_dst", add_position="DST",
+            selected_drop_player_id="dst", decision_label="ACQUIRE", candidates=(candidate,),
+            decision=replace(template.decision, label="ACQUIRE", specialist_evidence={
+                "method": "DST_CURRENT_WEEK_V1", "basis": "PROJECTION", "projection_complete": True,
+            }))
+        checks = validate_claim_branch(
+            snapshot, (evaluation,), evaluate_pair=lambda *_: evaluation,
+            context=None, matrix=None, roster_player_ids=set(snapshot.teams[0].player_ids),
+            options=WaiverEvaluationOptions(), policy=load_waiver_policy(POLICY_PATH))
+        self.assertTrue(checks[0].accepted)
+        self.assertIsNone(checks[0].cumulative_lineup_delta)
+
     def test_bounded_search_reserves_kicker_and_defense_evaluations(self):
         snapshot, projection_rows, value_rows = fixed_specialist_gap_fixture()
         projection_rows = tuple(

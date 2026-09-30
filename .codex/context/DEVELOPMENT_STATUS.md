@@ -13,7 +13,7 @@ to one source, then load only the named row or status:
 - Waiver: `.codex/context/status/WAIVER.md`.
 
 OS-001–OS-018 are complete; details remain in the release backlog.
-MA-005c merged in PR #68. WA-027f is active in open PR #69: normalized private
+MA-005c merged in PR #68. WA-027g is active in open PR #69: normalized private
 specialist policies now yield affirmative read-only K/DST upgrades in both
 leagues; named skill swaps remain conditional on missing forecast scoring.
 Bounded searches cover specialist options and leave other adds unevaluated.

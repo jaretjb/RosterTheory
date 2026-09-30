@@ -104,8 +104,8 @@ def validate_claim_branch(
     before = set(roster_player_ids)
     after = set(before)
     added: set[str] = set()
-    rank_only_positions: set[str] = set()
-    accepted_non_rank_claim = False
+    independent_specialist_positions: set[str] = set()
+    accepted_other_claim = False
     prefix: tuple[int, ...] = ()
     checks: list[ClaimBranchCheck] = []
     skills = {
@@ -136,32 +136,37 @@ def validate_claim_branch(
             selected = next(
                 (row for row in evaluation.candidates if row.drop_player_id == drop), None
             )
-            rank_only = bool(
+            independent_specialist = bool(
                 specialist
-                and specialist.get("basis") == "RANK_PERFORMANCE"
-                and specialist.get("performance_complete")
+                and (
+                    (specialist.get("basis") == "RANK_PERFORMANCE"
+                     and specialist.get("performance_complete"))
+                    or (specialist.get("method") == "DST_CURRENT_WEEK_V1"
+                        and specialist.get("basis") == "PROJECTION"
+                        and specialist.get("projection_complete"))
+                )
                 and evaluation.add_position in {"K", "DST"}
                 and selected is not None
                 and selected.same_position
             )
-            if rank_only and not accepted_non_rank_claim and evaluation.add_position not in rank_only_positions:
+            if independent_specialist and not accepted_other_claim and evaluation.add_position not in independent_specialist_positions:
                 # K and DST occupy disjoint fixed slots. Each same-position
                 # swap has been re-evaluated on the changed roster; their
-                # missing forecast points cannot establish a cumulative
-                # point delta and must not be manufactured for this check.
+                # Missing or decision-irrelevant future forecasts cannot
+                # establish a cumulative season-point delta for these swaps.
                 checks.append(ClaimBranchCheck(
                     sequence, True,
-                    "Independent rank/season specialist swap re-evaluated after this successful prefix; cumulative point deltas unavailable",
+                    "Independent specialist swap re-evaluated after this successful prefix; cumulative season-point deltas not established",
                 ))
                 current, after = proposed, proposed_roster
                 added.add(add)
-                rank_only_positions.add(evaluation.add_position)
+                independent_specialist_positions.add(evaluation.add_position)
                 prefix = sequence
                 continue
-            if rank_only_positions:
+            if independent_specialist_positions:
                 checks.append(ClaimBranchCheck(
                     sequence, False,
-                    "Cumulative point safety cannot be verified after a rank-only specialist swap",
+                    "Cumulative point safety cannot be verified after an independent specialist swap",
                 ))
                 continue
             impact = team_impact(
@@ -215,7 +220,7 @@ def validate_claim_branch(
                 current, after = proposed, proposed_roster
                 added.add(add)
                 prefix = sequence
-                accepted_non_rank_claim = True
+                accepted_other_claim = True
         except (CoverageIncomplete, RosterIllegal) as exc:
             checks.append(ClaimBranchCheck(sequence, False, str(exc)))
     return tuple(checks)

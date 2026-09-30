@@ -1,6 +1,21 @@
 # Active milestone
 
-## Active WA-027f - Usable forecasts without a blanket estimate veto
+## Active WA-027g - Current-week defense decisions
+
+Authorized by the user's request to heavily favor this week's defense outlook.
+For same-position DST swaps, prioritize complete current-week league-scored
+projections, with current-week expert ranks as a disclosed fallback. Preserve
+the incumbent's actual rank through the full NFL defense population instead
+of flattening everything beyond the target-admission cap. Retain that cap for
+new targets. Keep season production secondary, future weeks informational, and
+avoid using old production or fallback ranks to override a known inferior
+current-week projection. Test missing data, ordinary safety gates, scale
+invariance, and unchanged K/skill behavior. Check private policies separately
+with league-scored evidence before applying numeric settings locally. Do not
+claim outcome-based calibration. Run focused/full tests, Ruff, privacy gates,
+and fresh read-only named DST comparisons. Update PR #69; leave it unmerged.
+
+## Previous WA-027f - Usable forecasts without a blanket estimate veto
 
 Authorized by the user's correction that omitted two-point conversion forecasts
 must not block otherwise useful Waiver analysis. Retain the provider's existing

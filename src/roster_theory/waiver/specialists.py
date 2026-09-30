@@ -18,7 +18,8 @@ def specialist_performance(
     *, add_rank: int | None, drop_rank: int | None,
     add_points: float | None, drop_points: float | None,
     add_samples: int | None, drop_samples: int | None,
-    weight: float, prior_games: float,
+    weight: float, prior_games: float, rank_population: int = 16,
+    weekly_advantage_override: float | None = None,
 ) -> SpecialistPerformance:
     """Bounded weekly-rank/season-total comparison, invariant to scoring scale.
 
@@ -28,12 +29,21 @@ def specialist_performance(
     """
     if not isfinite(weight) or not 0 < weight < 1 or not isfinite(prior_games) or prior_games <= 0:
         raise ValueError("Specialist weight must be in (0,1) and prior games finite/positive")
-    # An incumbent below the top 16 is at least as weak as rank 16 here.
-    # Clamping its rank avoids exaggerating an advantage below the cap.
-    weekly = ((min(drop_rank, 16) - add_rank) / 15
+    if rank_population not in (16, 32):
+        raise ValueError("Specialist rank population must be 16 or 32")
+    if weekly_advantage_override is not None and (
+        not isfinite(weekly_advantage_override) or not -1 <= weekly_advantage_override <= 1
+    ):
+        raise ValueError("Weekly advantage must be finite and in [-1,1]")
+    # K retains its bounded top-16 comparison. DST uses the full 32-team
+    # population, separately from the top-16 admission cap for targets.
+    weekly = ((min(drop_rank, rank_population) - add_rank) / (rank_population - 1)
               if add_rank is not None and isfinite(add_rank) and 1 <= add_rank <= 16
               and drop_rank is not None and isfinite(drop_rank) and drop_rank >= 1
+              and (rank_population == 16 or drop_rank <= rank_population)
               else None)
+    if weekly_advantage_override is not None:
+        weekly = weekly_advantage_override
     points_valid = all(p is not None and isfinite(p) for p in (add_points, drop_points))
     samples_valid = all(isinstance(n, int) and not isinstance(n, bool) and n > 0
                         for n in (add_samples, drop_samples))

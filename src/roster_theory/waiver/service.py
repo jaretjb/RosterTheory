@@ -492,6 +492,9 @@ def _best_waiver_reason(evaluation: Any, selected: Any) -> str:
         return "The sample-adjusted weekly-rank and league-scored season-total comparison favors the add; projections do not establish the required streaming improvement."
     if path == "FRESH_RANK_DOMINANCE":
         return "The add ranks higher this week and for the rest of the season without losing projected value."
+    if path == "DST_CURRENT_WEEK_STREAM":
+        gain = selected.current_week_add_points - (selected.current_week_drop_points or 0.0)
+        return f"Current-week league-scored DST forecast improves by {gain:+.2f} points"
     if path == "DST_ROLLING_STREAM":
         return "This defense clears both the current-week and four-week attainable-streamer baselines."
     if path == "DST_STREAM":
