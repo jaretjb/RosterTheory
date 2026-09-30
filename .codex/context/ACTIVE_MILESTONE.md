@@ -1,6 +1,20 @@
 # Active milestone
 
-## Active WA-027b - Validate the normalized specialist method for existing leagues
+## Active WA-027c - Restore observed historical Waiver scoring
+
+Authorized by the user's September 29 request to run both existing leagues
+as soon as possible. Sleeper's played-game historical stat rows omit
+zero-valued fields. Compare league-scored results against the same leagues'
+official weekly matchup points before interpreting omitted applicable
+supported fields as explicit zero. Keep absent rows, absent/invalid game
+counts, invalid statistics, and unsupported settings incomplete. Preserve
+per-league scoring and source provenance. Rebuild private Waiver inputs,
+attempt read-only searches, and report any stale or incomplete inputs and
+runtime limit honestly. Keep private values and outputs ignored, provider
+support validation separate, and PR #69 open for review. Run focused/full
+tests, Ruff, and context/privacy gates.
+
+## Previous WA-027b - Validate the normalized specialist method for existing leagues
 
 Authorized by the user's September 29 correction. Use the normalized K/DST
 method for both existing private league policies instead of restoring raw-point

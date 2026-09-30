@@ -13,10 +13,10 @@ to one source, then load only the named row or status:
 - Waiver: `.codex/context/status/WAIVER.md`.
 
 OS-001–OS-018 are complete; details remain in the release backlog.
-MA-005c merged in PR #68. WA-027b is the active Waiver review of normalized
-specialist weighting and the read-only Sleeper championship horizon. Both
-private policies use the normalized method. Refreshed inputs lack complete
-historical scoring, so no live recommendation was published. See Waiver status.
+MA-005c merged in PR #68. WA-027c is active: both private policies use
+normalized specialist weighting; verified sparse historical scoring now
+loads. Limited read-only runs remain WATCH because rostered projections are
+incomplete; exhaustive search expires. See Waiver status.
 MA-005/MA-006 provider and wider support validation remains separate and
 requires its own slice. Research requires activation before policy promotion.
 
