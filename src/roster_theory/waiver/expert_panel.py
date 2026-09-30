@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Protocol, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete
+from roster_theory.providers.inseason_experts import published_contributor_positions
 
 
 class CurrentExpertLike(Protocol):
@@ -76,16 +77,10 @@ def _accuracy_score(
 
 
 def _contributor_positions(inputs: ValueInputsLike) -> dict[str, set[str]]:
-    positions: dict[str, set[str]] = {}
-    for dataset in inputs.ros_rankings:
-        dataset_positions = {
-            row.position
-            for row in dataset.observations
-            if row.position in SKILL_POSITIONS
-        }
-        for contributor_id in dataset.contributor_ids:
-            positions.setdefault(str(contributor_id), set()).update(dataset_positions)
-    return positions
+    return {
+        expert_id: positions.intersection(SKILL_POSITIONS)
+        for expert_id, positions in published_contributor_positions(inputs.ros_rankings).items()
+    }
 
 
 def select_waiver_ros_panel(
@@ -99,8 +94,8 @@ def select_waiver_ros_panel(
 ) -> ExpertPoolResolution:
     """Select the best accurate, current contributors in the usable ROS feed.
 
-    This is Waiver-owned evidence selection. Trade continues to use its saved
-    five-expert pool. Ranking availability comes from the actual ROS payload,
+    This is Waiver-owned evidence selection. Ranking availability comes from
+    actual published ROS ballots,
     while accuracy and update timestamps come from the current expert directory.
     """
 

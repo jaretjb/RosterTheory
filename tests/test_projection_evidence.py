@@ -218,6 +218,42 @@ class ProjectionEvidenceTests(unittest.TestCase):
         self.assertEqual(next(row for row in rows if row.week == 4).coverage_status,
                          "source_omission_zero")
 
+    def test_fully_absent_active_player_has_complete_verified_bye(self):
+        player = context().players[0]
+        dataset = ProjectionDataset(
+            horizon="WEEKLY", scoring="HALF", week=4, contributor_ids=(),
+            identities=(), projections=(), stamp=snapshot_fixture().stamps[0],
+        )
+        rows, _, warnings = _canonical_projections(
+            (dataset,), {}, {"p": "RB"}, {"AAA": 4}, {"p": player}, current_week=4,
+        )
+        self.assertEqual(rows[0].coverage_status, "verified_bye_zero")
+        self.assertEqual(rows[0].league_points, 0)
+        self.assertNotIn("p", warnings)
+
+    def test_empty_provider_row_on_bye_or_current_injury_is_expected_absence(self):
+        player = context().players[0]
+        datasets = tuple(ProjectionDataset(
+            horizon="WEEKLY", scoring="HALF", week=week, contributor_ids=(),
+            identities=(FantasyProsIdentity("p", "Player", "RB", "AAA", ()),),
+            projections=(projection(week, "scoring_incomplete_v1:missing_statistic=rush_yd", 0),)
+            if week == 4 else (projection(week),), stamp=snapshot_fixture().stamps[0],
+        ) for week in (4, 5))
+        for bye_map, supplied_player, expected in (
+            ({"AAA": 4}, player, "verified_bye_zero"),
+            ({}, replace(player, injury_status="OUT"), "known_inactive_zero"),
+        ):
+            with self.subTest(expected=expected):
+                rows, _, warnings = _canonical_projections(
+                    datasets, {"p": "p"}, {"p": "RB"}, bye_map,
+                    {"p": supplied_player}, current_week=4,
+                )
+                by_week = {row.week: row for row in rows}
+                self.assertEqual(by_week[4].coverage_status, expected)
+                self.assertEqual(by_week[5], projection(5))
+                self.assertFalse(any("Incomplete projection" in warning
+                                     for warning in warnings.get("p", ())))
+
     def test_trade_omission_marks_relevant_evaluation_partial_not_acceptable(self):
         snapshot = snapshot_fixture()
         rows = tuple(replace(p, coverage_status="source_omission_zero", league_points=0)

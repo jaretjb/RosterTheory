@@ -1,6 +1,20 @@
 # Active milestone
 
-## Active WA-027d - Audit named adds and independent roster gaps
+## Active WA-027e - Expected absences and available expert fallback
+
+Authorized by the user's correction about byes, injuries, and unpublished
+expert rankings. Normalize verified bye weeks even when the player is absent
+from the entire source feed. Preserve confirmed current-week inactivity and
+available future forecasts without inventing an injury return date. Choose
+each feature's next qualified experts from actual published ballots rather
+than advertised contributor names; retain each feature's existing accuracy,
+freshness and weighting rules. Verify shared factual behavior for Trade and
+Waiver, keep source omissions visible, and explain the saved live warnings.
+Do not change league weights, invent source statistics, promote provider
+support, or submit a Sleeper transaction. Update PR #69 and leave it open.
+Run focused/full tests, Ruff, and context/privacy gates.
+
+## Previous WA-027d - Audit named adds and independent roster gaps
 
 Authorized by the user's September 29 correction naming Oronde Gadsden,
 Kenyon Sadiq, and Braelon Allen. Trace both add/drop pairs and K/DST upgrades
