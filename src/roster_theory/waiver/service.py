@@ -85,7 +85,16 @@ def _news_freshness(inputs, now):
 
 
 def _publication_check(inputs, snapshot, *, client, clock):
-    proof = revalidate_snapshot(snapshot, client=client, clock=clock)
+    team = next(row for row in snapshot.teams if row.roster_id == snapshot.user_roster_id)
+    relevant_ids = (
+        {row.player_id for row in getattr(inputs, "values", ())}
+        | {row.player_id for row in getattr(inputs, "projections", ())}
+        | set(team.player_ids)
+        | set(getattr(inputs, "availability_by_player", ()))
+    )
+    proof = revalidate_snapshot(
+        snapshot, client=client, clock=clock, relevant_player_ids=relevant_ids,
+    )
     if inputs.drop_legality_context is not None:
         matchups = (client or SleeperClient()).league_matchups(snapshot.league.league_id, snapshot.manifest.current_week)
         starters = next((sorted(str(pid) for pid in row['starters']) for row in matchups

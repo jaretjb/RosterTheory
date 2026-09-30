@@ -28,8 +28,11 @@ def specialist_performance(
     """
     if not isfinite(weight) or not 0 < weight < 1 or not isfinite(prior_games) or prior_games <= 0:
         raise ValueError("Specialist weight must be in (0,1) and prior games finite/positive")
-    weekly = ((drop_rank - add_rank) / 15
-              if all(r is not None and isfinite(r) and 1 <= r <= 16 for r in (add_rank, drop_rank))
+    # An incumbent below the top 16 is at least as weak as rank 16 here.
+    # Clamping its rank avoids exaggerating an advantage below the cap.
+    weekly = ((min(drop_rank, 16) - add_rank) / 15
+              if add_rank is not None and isfinite(add_rank) and 1 <= add_rank <= 16
+              and drop_rank is not None and isfinite(drop_rank) and drop_rank >= 1
               else None)
     points_valid = all(p is not None and isfinite(p) for p in (add_points, drop_points))
     samples_valid = all(isinstance(n, int) and not isinstance(n, bool) and n > 0

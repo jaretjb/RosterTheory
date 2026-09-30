@@ -73,6 +73,19 @@ class RunContractTests(unittest.TestCase):
             injured = replace(bundle, players=(replace(bundle.players[0], injury_status='Out'), *bundle.players[1:]))
             with self.assertRaisesRegex(StaleData, 'availability'):
                 revalidate_snapshot(snapshot, bundle=injured)
+            unrelated_id = bundle.players[0].player_id
+            relevant_id = bundle.players[1].player_id
+            self.assertNotEqual(unrelated_id, relevant_id)
+            self.assertEqual(
+                revalidate_snapshot(
+                    snapshot, bundle=injured, relevant_player_ids={relevant_id}
+                )['status'],
+                'UNCHANGED',
+            )
+            with self.assertRaisesRegex(StaleData, 'availability'):
+                revalidate_snapshot(
+                    snapshot, bundle=injured, relevant_player_ids={unrelated_id}
+                )
             with self.assertRaisesRegex(StaleData, 'expired'):
                 revalidate_snapshot(snapshot, bundle=bundle,
                     clock=lambda: bundle.captured_at + timedelta(minutes=6))

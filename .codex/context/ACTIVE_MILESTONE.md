@@ -1,6 +1,20 @@
 # Active milestone
 
-## Active WA-027c - Restore observed historical Waiver scoring
+## Active WA-027d - Audit named adds and independent roster gaps
+
+Authorized by the user's September 29 correction naming Oronde Gadsden,
+Kenyon Sadiq, and Braelon Allen. Trace both add/drop pairs and K/DST upgrades
+through current private read-only evidence. A missing unchanged specialist
+projection must not veto an unrelated skill-player swap when the league's
+actual lineup slots prove separation; missing projections remain visible and
+still block moves touching their lineup dependency group. Preserve roster
+capacity, drop legality, retention, risk and source gates. Add controlled
+fixed-slot and shared-slot tests, hand-audit the named pairs, then retry the
+private read-only run. Do not infer any provider projection or make a Sleeper
+transaction. Keep provider support validation separate and PR #69 open for
+review. Run focused/full tests, Ruff, and context/privacy gates.
+
+## Previous WA-027c - Restore observed historical Waiver scoring
 
 Authorized by the user's September 29 request to run both existing leagues
 as soon as possible. Sleeper's played-game historical stat rows omit

@@ -333,8 +333,8 @@
         "roster_exclusions": []
       },
       "waiver_search": {
-        "semantic_hash": "3b72fbcc917a980ff233a7b1a058f4626ee9f277a00a27efe56c5e3e364dc266",
-        "bytes": 1578670,
+        "semantic_hash": "ce932f696541d9552e5fe11444d59c7e392a2a1ce0b936037bf783ff144d42a7",
+        "bytes": 1582360,
         "schema_fields": [
           "schema_version",
           "evaluation_schema_version",
@@ -1317,8 +1317,8 @@
         "roster_exclusions": []
       },
       "waiver_search": {
-        "semantic_hash": "6761eb3bf6bb754df98f5102c097c3d36aaf813bf6020010d93ecc69ded419a3",
-        "bytes": 1593095,
+        "semantic_hash": "58c5a6cc0b877d270cd2720d4ca4cfa59d06070dfcb6fb93274942b1bcbee679",
+        "bytes": 1596785,
         "schema_fields": [
           "schema_version",
           "evaluation_schema_version",

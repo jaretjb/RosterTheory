@@ -7,13 +7,18 @@ from roster_theory.inseason.evaluation import (
     build_weekly_projection_matrix,
     team_impact,
 )
-from roster_theory.waiver.evaluation import evaluate_waiver, WaiverEvaluationOptions
+from roster_theory.core.models import Projection
+from roster_theory.providers.sleeper import SleeperBundle
+from roster_theory.waiver.evaluation import (
+    PlayerValueInput, evaluate_waiver, WaiverEvaluationOptions,
+)
 from roster_theory.waiver.plans import hypothetical_claim, validate_claim_branch
 from roster_theory.waiver.priority import build_waiver_priority_scores
 
 from roster_theory.waiver.policy import apply_waiver_policy, load_waiver_policy
 from roster_theory.waiver.search import _claim_plan, search_waiver_candidates
 from roster_theory.waiver.service import _special_team_lines
+from roster_theory.waiver.snapshot import build_waiver_snapshot
 from tests import test_candidate_safety as safety_fixtures
 from tests.test_waiver_policy import POLICY_PATH
 from tests.test_waiver_search import search
@@ -23,10 +28,209 @@ from tests.test_waiver_search import (
     complete_values,
     news,
 )
-from tests.test_waiver_evaluation import weeks, legality, NOW
+from tests.test_waiver_evaluation import CAPTURED, NOW, player, weeks, legality
+
+
+def fixed_specialist_gap_fixture():
+    base = complete_search_snapshot()
+    team = replace(
+        base.teams[0],
+        player_ids=(*base.teams[0].player_ids, "k", "dst"),
+        starter_ids=(*base.teams[0].starter_ids, "k", "dst"),
+    )
+    bundle = SleeperBundle(
+        captured_at=CAPTURED,
+        state=base.nfl_state,
+        league=replace(base.league, roster_positions=("QB", "RB", "WR", "K", "DEF", "BN")),
+        teams=(team, base.teams[1]),
+        players=(
+            *base.players,
+            player("k", "Roster Kicker", "K", "KKK"),
+            player("dst", "Roster Defense", "DST", "LLL"),
+            player("fa_k", "Free Kicker", "K", "MMM"),
+            player("fa_dst", "Free Defense", "DST", "NNN"),
+        ),
+        matchups=(),
+        transactions=base.transactions,
+        winner_bracket_rounds=None,
+        loser_bracket_rows=0,
+        stamps=base.stamps,
+        player_directory_cache_status="fixture",
+    )
+    snapshot = build_waiver_snapshot(
+        league_key="league_alpha",
+        user_id="u1",
+        sleeper=bundle,
+        expected_user_roster_id="1",
+        availability_by_player={
+            "add": "FREE_AGENT", "fa_rb": "FREE_AGENT",
+            "fa_wr": "FREE_AGENT", "fa_te": "WAIVERS", "fa_k": "FREE_AGENT",
+            "fa_dst": "FREE_AGENT",
+        },
+        now=NOW,
+    )
+    projections = (*complete_projections(), *(
+        Projection(
+            player_id=pid, horizon="WEEKLY", week=week, raw_stats=(),
+            league_points=0, source="incomplete fixture",
+            coverage_status="scoring_incomplete_v1:missing_statistic=fgm",
+        )
+        for pid in ("k", "dst") for week in (1, 2, 3)
+    ), *(
+        Projection(
+            player_id=pid, horizon="WEEKLY", week=week, raw_stats=(),
+            league_points=8, source="complete fixture",
+        )
+        for pid in ("fa_k", "fa_dst") for week in (1, 2, 3)
+    ))
+    values = (
+        *complete_values(),
+        PlayerValueInput("k", 0, 0, 0, current_week_position_rank=9),
+        PlayerValueInput("dst", 0, 0, 0, current_week_position_rank=9),
+        PlayerValueInput("fa_k", 0, 0, 24, current_week_position_rank=3),
+        PlayerValueInput("fa_dst", 0, 0, 24, current_week_position_rank=3),
+    )
+    return snapshot, projections, values
 
 
 class JointWaiverTests(unittest.TestCase):
+    def test_independent_rank_only_kicker_and_defense_branch(self):
+        snapshot, _, _ = fixed_specialist_gap_fixture()
+        template = search().exact_evaluations[0]
+        base_candidate = template.candidates[0]
+        rows = tuple(
+            replace(
+                template, add_player_id=add, add_position=position,
+                selected_drop_player_id=drop, decision_label="ACQUIRE",
+                decision=replace(
+                    template.decision, label="ACQUIRE",
+                    specialist_evidence={
+                        "basis": "RANK_PERFORMANCE", "performance_complete": True,
+                    },
+                ),
+                candidates=(replace(
+                    base_candidate, drop_player_id=drop,
+                    drop_position=position, same_position=True,
+                ),),
+            )
+            for add, drop, position in (
+                ("fa_k", "k", "K"), ("fa_dst", "dst", "DST")
+            )
+        )
+        checks = validate_claim_branch(
+            snapshot, rows, evaluate_pair=lambda _snapshot, add, _drop: rows[1],
+            context=None, matrix=None,
+            roster_player_ids=set(snapshot.teams[0].player_ids),
+            options=WaiverEvaluationOptions(),
+            policy=replace(load_waiver_policy(POLICY_PATH), priority_enabled=False),
+        )
+        self.assertEqual([row.accepted for row in checks], [True, True])
+        self.assertTrue(all(row.cumulative_lineup_delta is None for row in checks))
+
+    def test_bounded_search_reserves_kicker_and_defense_evaluations(self):
+        snapshot, projection_rows, value_rows = fixed_specialist_gap_fixture()
+        projection_rows = tuple(
+            replace(row, coverage_status="scoring_incomplete_v1:missing_statistic=fgm")
+            if row.player_id in {"fa_k", "fa_dst"} else row
+            for row in projection_rows
+        )
+        value_rows = tuple(
+            replace(row, season_points=30, season_sample_size=3, performance_as_of=NOW)
+            if row.player_id in {"fa_k", "fa_dst"} else row
+            for row in value_rows
+        )
+        result = search_waiver_candidates(
+            snapshot, weeks=weeks(), projections=projection_rows,
+            values=value_rows,
+            drop_legality={**legality(), "k": True, "dst": True},
+            news_fresh={**news(), "fa_k": True, "fa_dst": True},
+            input_bundle_hash="controlled-bundle-hash",
+            availability_source="controlled fixture",
+            policy=replace(load_waiver_policy(POLICY_PATH), priority_enabled=False),
+            exact_candidate_budget=3, now=NOW,
+        )
+        self.assertEqual(len(result.exact_evaluations), 3)
+        self.assertTrue({"fa_k", "fa_dst"} <= {
+            row.add_player_id for row in result.exact_evaluations
+        })
+        self.assertTrue(all(
+            row.maximum_after_weighted_points is None
+            for row in result.candidate_bounds
+            if row.player_id in {"fa_k", "fa_dst"}
+        ))
+
+    def test_unchanged_fixed_specialist_gaps_do_not_veto_skill_swap(self):
+        snapshot, projection_rows, value_rows = fixed_specialist_gap_fixture()
+        evaluation = apply_waiver_policy(
+            evaluate_waiver(
+                snapshot, add_player_id="fa_te", drop_player_id="bench",
+                weeks=weeks(), projections=projection_rows, values=value_rows,
+                drop_legality={**legality(), "k": True, "dst": True},
+                news_fresh=news(), now=NOW,
+            ),
+            replace(load_waiver_policy(POLICY_PATH), priority_enabled=False),
+        )
+        self.assertTrue(evaluation.projection_inputs_complete)
+        self.assertTrue(evaluation.candidates[0].projection_inputs_complete)
+        self.assertTrue(evaluation.candidates[0].fixed_specialist_gap_independent)
+        self.assertNotEqual(evaluation.decision.decision_path, "CONDITIONAL_ROSTER_EVIDENCE")
+        self.assertIn(
+            "unchanged_fixed_specialist_slots",
+            {gate.name for gate in evaluation.decision.gates},
+        )
+        self.assertEqual(
+            {row.player_id for row in evaluation.exclusions if row.reason == "INCOMPLETE_PROJECTION_EVIDENCE"},
+            {"k", "dst"},
+        )
+
+    def test_missing_kicker_still_blocks_a_kicker_swap(self):
+        snapshot, projection_rows, value_rows = fixed_specialist_gap_fixture()
+        evaluation = apply_waiver_policy(
+            evaluate_waiver(
+                snapshot, add_player_id="fa_k", drop_player_id="k", weeks=weeks(),
+                projections=projection_rows, values=value_rows,
+                drop_legality={**legality(), "k": True, "dst": True},
+                news_fresh={**news(), "fa_k": True}, now=NOW,
+            ),
+            replace(load_waiver_policy(POLICY_PATH), priority_enabled=False),
+        )
+        self.assertFalse(evaluation.candidates[0].projection_inputs_complete)
+        self.assertFalse(evaluation.candidates[0].fixed_specialist_gap_independent)
+        self.assertEqual(evaluation.decision_label, "WATCH")
+
+    def test_complete_rank_and_season_points_admit_projection_missing_kicker_swap(self):
+        snapshot, projection_rows, value_rows = fixed_specialist_gap_fixture()
+        projection_rows = tuple(
+            replace(row, coverage_status="scoring_incomplete_v1:missing_statistic=fgm")
+            if row.player_id == "fa_k" else row
+            for row in projection_rows
+        )
+        value_rows = tuple(
+            replace(row, season_points=30, season_sample_size=3, performance_as_of=NOW)
+            if row.player_id == "fa_k" else
+            replace(row, season_points=15, season_sample_size=3, performance_as_of=NOW)
+            if row.player_id == "k" else row
+            for row in value_rows
+        )
+        policy = replace(load_waiver_policy(POLICY_PATH), priority_enabled=False)
+        raw = evaluate_waiver(
+            snapshot, add_player_id="fa_k", drop_player_id="k",
+            weeks=weeks(), projections=projection_rows, values=value_rows,
+            drop_legality={**legality(), "k": True, "dst": True},
+            news_fresh={**news(), "fa_k": True}, now=NOW,
+        )
+        evaluation = apply_waiver_policy(
+            replace(raw, warnings=(*raw.warnings, "Forecast estimate: fixture")), policy
+        )
+        self.assertEqual(evaluation.selected_drop_player_id, "k")
+        self.assertEqual(evaluation.decision.decision_path, "K_RANK_PERFORMANCE")
+        self.assertEqual(evaluation.decision_label, "ADD NOW")
+        self.assertFalse(evaluation.projection_inputs_complete)
+        self.assertIn(
+            "forecast_estimate_not_used",
+            {gate.name for gate in evaluation.decision.gates},
+        )
+
     def test_named_and_search_quarantine_the_same_missing_roster_projection(self):
         projection_rows = tuple(row for row in complete_projections() if row.player_id != "wr")
         policy = replace(load_waiver_policy(POLICY_PATH), priority_enabled=False)

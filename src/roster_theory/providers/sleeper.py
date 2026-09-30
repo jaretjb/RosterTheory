@@ -149,10 +149,13 @@ def normalize_players(value: Mapping[str, Mapping[str, Any]]) -> tuple[Player, .
                 }
             )
         )
+        first_name = str(row.get("first_name") or "").strip()
+        last_name = str(row.get("last_name") or "").strip()
         name = str(
             row.get("full_name")
-            or row.get("first_name")
-            or row.get("last_name")
+            or (f"{first_name} {last_name}" if "DST" in positions and first_name and last_name else "")
+            or first_name
+            or last_name
             or sleeper_id
         )
         external_ids = tuple(

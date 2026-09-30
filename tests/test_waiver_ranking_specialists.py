@@ -69,6 +69,13 @@ class RankingSpecialistTests(unittest.TestCase):
             players = {pid: Player(pid, pid, ("K",)) for pid in ids}
             self.assertEqual(set(_rank_by_position(dict.fromkeys(ids, 20), players).values()), {1})
 
+    def test_out_of_cap_incumbent_rank_uses_conservative_boundary(self):
+        boundary = self.evidence(add=30, drop=15, add_rank=3, drop_rank=16)
+        below_cap = self.evidence(add=30, drop=15, add_rank=3, drop_rank=23)
+        self.assertEqual(boundary.weekly_advantage, below_cap.weekly_advantage)
+        self.assertEqual(boundary.score, below_cap.score)
+        self.assertIsNone(self.evidence(add_rank=17, drop_rank=23).score)
+
     def test_equal_panel_ranks_keep_ties_independent_of_ids(self):
         original = waiver_evidence()
         for ids in (("a", "z"), ("z", "a")):

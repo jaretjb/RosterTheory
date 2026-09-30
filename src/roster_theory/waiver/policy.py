@@ -1687,7 +1687,15 @@ def apply_waiver_policy(
         scoped = candidate
         gaps = any(row.reason in {"INCOMPLETE_PROJECTION_EVIDENCE", "IDENTITY_UNAVAILABLE"}
                    for row in evaluation.exclusions)
-        if gaps and candidate.projection_inputs_complete:
+        fixed_specialist_independent = (
+            gaps and candidate.projection_inputs_complete
+            and candidate.fixed_specialist_gap_independent
+        )
+        if fixed_specialist_independent:
+            # The omitted K/DST slots are identical on both sides of this
+            # skill move and cannot enter an offense downside scenario.
+            independent = True
+        elif gaps and candidate.projection_inputs_complete:
             before = {s.nfl_team: -s.delta_from_central for s in candidate.risk.before.scenarios
                       if s.kind == "OFFENSE_DOWNSIDE"}
             after = {s.nfl_team: -s.delta_from_central for s in candidate.risk.after.scenarios
@@ -1707,10 +1715,25 @@ def apply_waiver_policy(
                     "Protected missing players may affect lineup, depth, holding or risk; comparison is conditional")))
             uncertainty = "Conditional comparison assumes protected missing players do not change the result; resolve their evidence before acting"
         elif gaps and independent:
+            if fixed_specialist_independent:
+                decision = replace(decision, gates=(*decision.gates,
+                    _gate("unchanged_fixed_specialist_slots", True, "==", True, True,
+                          "Missing K/DST projections cancel for this independent skill move")))
+            else:
+                decision = replace(decision, gates=(*decision.gates,
+                    _gate("independent_roster_risk_bound", bound, "<=", policy.maximum_downside_increase, True,
+                          "Unchanged independent lineup components cancel; risk uses a conservative upper bound")))
+        rank_performance_only = bool(
+            decision.specialist_evidence
+            and decision.specialist_evidence.get("basis") == "RANK_PERFORMANCE"
+            and decision.specialist_evidence.get("performance_complete")
+            and not decision.specialist_evidence.get("projection_stream_pass")
+        )
+        if estimated_forecast and rank_performance_only:
             decision = replace(decision, gates=(*decision.gates,
-                _gate("independent_roster_risk_bound", bound, "<=", policy.maximum_downside_increase, True,
-                      "Unchanged independent lineup components cancel; risk uses a conservative upper bound")))
-        if estimated_forecast and decision.label in {"ADD NOW", "CLAIM", "ACQUIRE"}:
+                _gate("forecast_estimate_not_used", True, "==", True, True,
+                      "This specialist fallback uses verified league-scored season points and weekly ranks, not estimated forecasts")))
+        elif estimated_forecast and decision.label in {"ADD NOW", "CLAIM", "ACQUIRE"}:
             decision = replace(
                 decision, label="WATCH", decision_path="CONDITIONAL_FORECAST_ESTIMATE",
                 gates=(*decision.gates, _gate(

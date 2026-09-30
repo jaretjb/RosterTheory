@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from roster_theory.cli import build_parser, command_waiver_refresh
 from roster_theory.core.errors import IdentityIncomplete, RosterIllegal, StaleData
-from roster_theory.providers.sleeper import SleeperAdapter, SleeperTransaction
+from roster_theory.providers.sleeper import SleeperAdapter, SleeperTransaction, normalize_players
 from roster_theory.waiver.service import (
     refresh_waiver_snapshot,
     waiver_refresh_report,
@@ -167,6 +167,15 @@ class FakeSleeperClient:
 
 
 class WaiverSnapshotTests(unittest.TestCase):
+    def test_defense_city_and_mascot_form_display_name(self):
+        players = normalize_players({
+            "PIT": {
+                "player_id": "PIT", "fantasy_positions": ["DEF"],
+                "first_name": "Pittsburgh", "last_name": "Steelers",
+            }
+        })
+        self.assertEqual(players[0].name, "Pittsburgh Steelers")
+
     def _bundle(self, client=None):
         client = client or FakeSleeperClient()
         directory = tempfile.TemporaryDirectory()
