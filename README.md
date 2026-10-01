@@ -62,6 +62,21 @@ RosterTheory does not guess when important information is missing. If your
 rankings are stale, a player cannot be matched, or your league needs its own
 decision rules, the command will explain what is missing and how to fix it.
 
+## How the algorithms work
+
+Read the **[public algorithms guide](docs/ALGORITHMS.md)** for the equations,
+worked examples, decision gates, limitations, and links to the implementation.
+
+| Assistant | What drives the recommendation |
+| --- | --- |
+| [Draft](docs/ALGORITHMS.md#draft) | Expert-ordered value, legal roster construction, and the expected cost of waiting until your next pick |
+| [Trade](docs/ALGORITHMS.md#trade) | Intrinsic value versus market price, followed by evaluation of actual players sent and received |
+| [Waiver](docs/ALGORITHMS.md#waiver) | Weekly, Waiver Wire, and ROS evidence, compared against the player you would drop and the resulting lineup |
+
+The guide distinguishes fantasy points, ranking scores, and trade-chart units;
+explains buy-low/sell-high discovery; and identifies which weights and thresholds
+depend on the league's configured policy.
+
 ## What you need
 
 - Python 3.11 or newer
@@ -222,8 +237,10 @@ roster-theory trade evaluate home_league --send "Player A" --receive "Player B"
 ```
 
 Repeat `--send` or `--receive` for multi-player trades.
-When FantasyPros omits scoring statistics but supplies the core forecast,
-Trade shows an estimate and marks any affected verdict `CONDITIONAL`.
+Forecast completeness follows the shared
+[position-aware requirements](docs/POSITION_FORECAST_COVERAGE.md): omitted
+off-role or rare statistics do not make a forecast incomplete. Remaining
+estimate limitations are disclosed and can make an affected verdict `CONDITIONAL`.
 `trade gaps` and `trade compare` use the same automatic preparation. The
 `targets` command shows `WATCH` cards without implying an offer exists;
 `search` adds exact, grouped offers with separate intrinsic and market verdicts.
@@ -253,8 +270,9 @@ To evaluate one move:
 roster-theory waiver evaluate home_league --add "Player A" --drop "Player B" --inputs PATH_TO_INPUTS
 ```
 
-Waiver can compare similarly labeled estimates, but it shows `WATCH` instead
-of an add or claim instruction when missing scoring fields could change the result.
+Waiver uses the same position-aware forecast requirements. It can compare
+similarly labeled estimates, but it shows `WATCH` instead of an add or claim
+instruction when remaining missing scoring fields could change the result.
 
 ## Finding commands
 
