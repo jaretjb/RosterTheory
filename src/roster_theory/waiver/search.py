@@ -58,7 +58,7 @@ LABEL_TIER = {"ADD NOW": 0, "CLAIM": 0, "ACQUIRE": 0, "WATCH": 1, "PASS": 2}
 class WaiverSearchCandidateBound:
     player_id: str
     acquisition_state: str
-    maximum_after_weighted_points: float
+    maximum_after_weighted_points: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -445,13 +445,24 @@ def _validate_search_inputs(
                 )
             )
             continue
-        if any(
+        incomplete_forecast = any(
             not projection_is_usable(
                 projection_map[key], current_week=snapshot.manifest.current_week,
                 allow_estimate=True,
             )
             for key in expected
-        ):
+        )
+        specialist_fallback_available = (
+            len(special_positions) == 1
+            and weekly_rank_eligible(
+                value.current_week_position_rank, next(iter(special_positions))
+            )
+            and value.season_points is not None
+            and value.season_sample_size is not None
+            and value.season_sample_size > 0
+            and value.performance_as_of is not None
+        )
+        if incomplete_forecast and not specialist_fallback_available:
             omissions.append(
                 WaiverSearchOmission(
                     player_id, acquisition.state, "INCOMPLETE_PROJECTION_COVERAGE"
@@ -509,7 +520,7 @@ def _candidate_upper_bounds(
     weeks: Sequence[InSeasonWeek],
     projections: Sequence[Projection],
     options: WaiverEvaluationOptions,
-) -> dict[str, float]:
+) -> dict[str, float | None]:
     player_by_id = {player.player_id: player for player in snapshot.players}
     relevant_ids = roster_player_ids | set(candidate_ids)
     context = InSeasonContext(
@@ -523,15 +534,20 @@ def _candidate_upper_bounds(
         allow_estimated_projections=True,
     )
     matrix = build_weekly_projection_matrix(context, projections)
-    return {
-        player_id: weighted_lineup_score(
-            context,
-            matrix,
-            roster_player_ids | {player_id},
-            options,
-        )
-        for player_id in candidate_ids
-    }
+    bounds: dict[str, float | None] = {}
+    for player_id in candidate_ids:
+        if any(
+            (cell := matrix.cell(player_id, week.week)) is None or cell.points is None
+            for week in weeks
+        ):
+            # Ranking-only specialist evidence has no honest point bound.
+            # This field does not prune any candidate.
+            bounds[player_id] = None
+        else:
+            bounds[player_id] = weighted_lineup_score(
+                context, matrix, roster_player_ids | {player_id}, options,
+            )
+    return bounds
 
 
 def _notable_candidates(
@@ -860,15 +876,43 @@ def search_waiver_candidates(
         key=lambda player_id: (
             -float(priority_by_id[player_id].composite_score or 0.0)
             if player_id in priority_by_id else 1.0,
-            -raw_bounds[player_id], player_id,
+            -(raw_bounds[player_id] or 0.0), player_id,
         ),
     ))
-    budget_excluded = search_order[exact_candidate_budget:] if exact_candidate_budget is not None else ()
+    player_by_id = {player.player_id: player for player in snapshot.players}
+    if exact_candidate_budget is None:
+        budget_excluded = ()
+    else:
+        # A value-first bounded search can spend every exact slot on skill
+        # players while leaving independent K/DST upgrades unevaluated.
+        # Reserve one slot per available specialist position when the budget
+        # can cover both and still leave room for ordinary candidates.
+        reserved: set[str] = set()
+        if exact_candidate_budget >= 3:
+            for position in ("K", "DST"):
+                specialist = next((
+                    player_id for player_id in search_order
+                    if position in {
+                        "DST" if value.upper() == "DEF" else value.upper()
+                        for value in player_by_id[player_id].positions
+                    }
+                ), None)
+                if specialist is not None:
+                    reserved.add(specialist)
+        selected = set(reserved)
+        selected.update(
+            player_id for player_id in search_order
+            if player_id not in reserved and len(selected) < exact_candidate_budget
+        )
+        budget_excluded = tuple(player_id for player_id in search_order if player_id not in selected)
     bounds = tuple(
         WaiverSearchCandidateBound(
             player_id=player_id,
             acquisition_state=acquisition_by_id[player_id].state,
-            maximum_after_weighted_points=round(raw_bounds[player_id], 3),
+            maximum_after_weighted_points=(
+                round(raw_bounds[player_id], 3)
+                if raw_bounds[player_id] is not None else None
+            ),
         )
         for player_id in search_order
     )

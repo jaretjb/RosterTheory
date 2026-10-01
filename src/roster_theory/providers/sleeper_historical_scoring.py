@@ -1,7 +1,9 @@
-"""Conservative Sleeper historical-stat translation for Waiver evidence.
+"""Sleeper historical-stat translation for Waiver evidence.
 
-Exact scoring-category keys and explicit finite values are accepted. Sleeper's
-sparse-field zero convention has not been verified, so absence remains missing.
+For a player row with a valid played-game count, interpret omitted applicable
+counting fields as explicit zeros. This sparse-field rule was checked against
+league-scored Sleeper matchup points; an absent row or game count remains
+incomplete.
 """
 from __future__ import annotations
 
@@ -15,7 +17,7 @@ from roster_theory.core.scoring_contract import (
 from roster_theory.providers.sleeper_scoring_rules import SLEEPER_LINEAR_RULES
 
 
-HISTORICAL_RULES_VERSION = "sleeper-historical-v1"
+HISTORICAL_RULES_VERSION = "sleeper-historical-sparse-zero-v2"
 
 
 def assess_historical_rules(scoring: Mapping[str, object], *, league_id: str,
@@ -44,8 +46,19 @@ def score_historical_stats(stats: Mapping[str, object], assessment: RuleAssessme
     if canonical_position not in POSITIONS:
         canonical_position = None
     observations = []
+    games = _number(stats.get("gp"))
+    played = games is not None and games > 0 and games == int(games)
+    applicable = {
+        rule.statistic for rule, _ in assessment.active_rules
+        if rule.positions is not None and canonical_position in rule.positions
+    }
     for statistic in sorted({rule.statistic for rule, _ in assessment.active_rules}):
         if statistic not in stats:
+            if played and statistic in applicable:
+                observations.append(StatObservation(
+                    statistic, 0.0, "STRUCTURAL_ZERO",
+                    "Sleeper omitted this counting field from a played-game stat row",
+                ))
             continue
         raw = stats[statistic]
         number = _number(raw)

@@ -23,12 +23,19 @@ def expert(expert_id, latest, prior):
     )
 
 
-def inputs(experts, *, contributor_ids=None):
+def inputs(experts, *, contributor_ids=None, published_ids=None):
     resolved_ids = contributor_ids or tuple(row.expert_id for row in experts)
+    published_ids = resolved_ids if published_ids is None else published_ids
     rankings = tuple(
         SimpleNamespace(
             contributor_ids=resolved_ids,
             observations=(SimpleNamespace(position=position),),
+            horizon="ROS", complete_horizon=True,
+            contributor_observations=tuple(
+                SimpleNamespace(expert_id=expert_id, position=position,
+                                horizon="ROS", position_rank=1, overall_rank=None)
+                for expert_id in published_ids
+            ),
         )
         for position in ("QB", "RB", "WR", "TE")
     )
@@ -36,6 +43,16 @@ def inputs(experts, *, contributor_ids=None):
 
 
 class TradeRosPanelTests(unittest.TestCase):
+    def test_unpublished_preferred_expert_is_replaced_by_next_qualified(self):
+        result = select_trade_ros_panel(
+            inputs(tuple(expert(str(i), i, i) for i in range(1, 5)),
+                   published_ids=("2", "3", "4")),
+            NOW, league_key="league_alpha",
+        )
+        self.assertEqual(tuple(row.expert_id for row in result.members), ("2", "3", "4"))
+        excluded = next(row for row in result.evidence["candidates"] if row["expert_id"] == "1")
+        self.assertEqual(excluded["reason"], "missing_ros_position_contribution")
+
     def test_selects_actual_contributors_and_excludes_poor_experts(self):
         result = select_trade_ros_panel(
             inputs(

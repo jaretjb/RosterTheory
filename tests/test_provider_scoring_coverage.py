@@ -115,6 +115,19 @@ class ProviderScoringCoverageTests(unittest.TestCase):
         invalid = projection({**core, "fum_lost": "bad"}, scoring)
         self.assertFalse(projection_is_usable(invalid, current_week=4, allow_estimate=True))
 
+    def test_omitted_two_point_forecasts_are_usable_without_invented_statistics(self):
+        scoring = {"rec": .5, "rec_yd": .1, "rec_td": 6, "rec_2pt": 2}
+        stats = {"rec": 5, "rec_yd": 60, "rec_td": 1}
+        row = projection(stats, scoring, "TE")
+        self.assertEqual(row.league_points, 14.5)
+        self.assertTrue(projection_is_usable(row, current_week=4, allow_estimate=True))
+        self.assertIn("missing_statistic=rec_2pt", row.coverage_status)
+        self.assertNotIn("rec_2pt", dict(row.raw_stats))
+        missing_core = projection({"rec": 5, "rec_yd": 60}, scoring, "TE")
+        self.assertFalse(projection_is_usable(missing_core, current_week=4, allow_estimate=True))
+        invalid = projection({**stats, "rec_2pt": "bad"}, scoring, "TE")
+        self.assertFalse(projection_is_usable(invalid, current_week=4, allow_estimate=True))
+
     def test_missing_touchdowns_are_not_observed_zero(self):
         scoring = {"pass_yd": .04, "pass_td": 6}
         missing = projection({"pass_yds": 250}, scoring)

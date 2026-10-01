@@ -1554,6 +1554,18 @@ def _assess_special_team_candidate(
     stream_floor = (policy.kicker_current_week_gain_floor if position == "K"
                     else policy.dst_current_week_gain_floor)
     dst = selected.dst_streaming
+    defense_stream = position == "DST" and selected.same_position
+    projection_complete = (
+        selected.current_week_projection_complete if defense_stream else
+        evaluation.projection_inputs_complete and selected.projection_inputs_complete
+    )
+    current_projection_delta = selected.current_week_add_points - (selected.current_week_drop_points or 0.0)
+    current_projection_scale = max(abs(selected.current_week_add_points),
+                                   abs(selected.current_week_drop_points or 0.0))
+    current_projection_advantage = (
+        max(-1.0, min(1.0, current_projection_delta / current_projection_scale))
+        if current_projection_scale else 0.0
+    )
     performance = specialist_performance(
         add_rank=ownership.current_week_add_rank if selected.same_position else None,
         drop_rank=ownership.current_week_drop_rank if selected.same_position else None,
@@ -1563,6 +1575,9 @@ def _assess_special_team_candidate(
         drop_samples=ownership.season_drop_sample_size,
         weight=policy.kicker_season_points_weight if position == "K" else policy.dst_season_points_weight,
         prior_games=policy.specialist_prior_games,
+        rank_population=32 if defense_stream else 16,
+        weekly_advantage_override=(current_projection_advantage
+                                   if defense_stream and projection_complete else None),
     )
     if not selected.same_position:
         performance = replace(performance, status="NOT_APPLICABLE_NO_SAME_POSITION_DROP")
@@ -1574,11 +1589,18 @@ def _assess_special_team_candidate(
     )
     performance_complete = selected.same_position and performance.score is not None and performance_fresh
     rank_stream_pass = performance_complete and performance.score > 0
+    if defense_stream:
+        # Actual current-week projections take precedence over a rank fallback.
+        # Past production alone cannot justify a worse weekly rank either.
+        rank_stream_pass = (rank_stream_pass and not projection_complete
+                            and performance.weekly_advantage > 0)
     # A negative production/rank balance cannot be bypassed by the projection
     # OR branch. Missing samples remain unknown and are disclosed, not invented.
     production_guard = not performance_complete or performance.score >= 0
-    projection_complete = evaluation.projection_inputs_complete and selected.projection_inputs_complete
-    if position == "DST" and not cross_position:
+    if defense_stream:
+        projection_stream_pass = projection_complete and current_projection_delta >= stream_floor
+        projection_priority = current_projection_delta
+    elif position == "DST" and not cross_position:
         projection_stream_pass = (projection_complete and dst.applicable
                                   and dst.current_week_advantage >= stream_floor
                                   and dst.weighted_advantage >= 0)
@@ -1596,8 +1618,12 @@ def _assess_special_team_candidate(
               "In-cap weekly rank, value coverage, fresh news, and either complete projections or fresh sampled season production are required"),
         _gate("player_currently_active", evaluation.add_currently_active, "==", True,
               evaluation.add_currently_active, "A currently inactive target cannot receive an affirmative label"),
-        _gate("current_week_and_rolling_stream" if position == "DST" else "current_week_stream",
+        _gate("current_week_defense_upgrade" if defense_stream else
+              "current_week_and_rolling_stream" if position == "DST" else "current_week_stream",
               stream_pass, "==", True, stream_pass,
+              "Current-week projections must clear the gain floor and weighted comparison; "
+              "otherwise an improved current-week expert rank and positive weighted comparison are required"
+              if defense_stream else
               "Pass a projection improvement with a nonnegative available production balance, or a positive normalized rank/season-production comparison"),
     )
     if cross_position:
@@ -1619,10 +1645,14 @@ def _assess_special_team_candidate(
                        or rank_stream_pass or (dst.applicable and dst.best_future_week_advantage > 0))
     basis = ("PROJECTION" if projection_pass or (projection_complete and not performance_complete)
              else "RANK_PERFORMANCE" if performance_complete else "UNAVAILABLE")
+    if defense_stream:
+        basis = ("PROJECTION" if projection_complete else
+                 "RANK_PERFORMANCE" if performance_complete else "UNAVAILABLE")
     if affirmative:
         label = ("ADD NOW" if evaluation.acquisition_state == AcquisitionState.FREE_AGENT.value
                  else "CLAIM" if evaluation.acquisition_state == AcquisitionState.WAIVERS.value else "ACQUIRE")
-        decision_path = (("DST_ROLLING_STREAM" if position == "DST" and not cross_position else f"{position}_STREAM")
+        decision_path = (("DST_CURRENT_WEEK_STREAM" if defense_stream else
+                          "DST_ROLLING_STREAM" if position == "DST" and not cross_position else f"{position}_STREAM")
                          if basis == "PROJECTION" else f"{position}_RANK_PERFORMANCE")
         strongest_uncertainty = "Specialist weights are manual policy choices; historical streaming calibration is unproven"
         if basis == "RANK_PERFORMANCE" and not projection_stream_pass:
@@ -1646,8 +1676,15 @@ def _assess_special_team_candidate(
         ("Normalized weekly-rank/season-production advantage is no longer positive",
          "Season totals, played-game counts, or capture times are missing or stale")
     )
+    if defense_stream:
+        reversal = (
+            "Current-week projected gain no longer clears its floor or the weighted comparison becomes negative"
+            if basis == "PROJECTION" else
+            "Current-week expert-rank advantage or weighted comparison is no longer positive",
+            "Current-week forecasts, expert ranks, or season-production evidence change",
+        )
     evidence = {
-        "method": "NORMALIZED_SEASON_V1", "basis": basis,
+        "method": "DST_CURRENT_WEEK_V1" if defense_stream else "NORMALIZED_SEASON_V1", "basis": basis,
         "performance": asdict(performance), "performance_complete": performance_complete,
         "performance_fresh": performance_fresh, "projection_complete": projection_complete,
         "projection_stream_pass": projection_stream_pass, "production_guard": production_guard,
@@ -1659,6 +1696,16 @@ def _assess_special_team_candidate(
         "add_as_of": ownership.performance_add_as_of, "drop_as_of": ownership.performance_drop_as_of,
         "cross_position": cross_position, "historically_calibrated": False,
     }
+    if defense_stream:
+        evidence.update({
+            "weekly_outlook_basis": "LEAGUE_SCORED_PROJECTION" if projection_complete else "EXPERT_RANK",
+            "priority_basis": ("CURRENT_WEEK_PROJECTION_AND_PRODUCTION" if projection_complete and performance_complete
+                               else "NORMALIZED_PROJECTION" if projection_complete else "RANK_PERFORMANCE"),
+            "current_week_weight": 1 - policy.dst_season_points_weight,
+            "season_weight": policy.dst_season_points_weight,
+            "rank_population": 32, "target_rank_cap": 16,
+            "future_weeks_role": "INFORMATIONAL",
+        })
     return WaiverDecisionAssessment(
         label=label, decision_path=decision_path, policy_version=policy.version,
         policy_hash=policy.policy_hash, calibration_mode=policy.calibration_mode,
@@ -1687,7 +1734,15 @@ def apply_waiver_policy(
         scoped = candidate
         gaps = any(row.reason in {"INCOMPLETE_PROJECTION_EVIDENCE", "IDENTITY_UNAVAILABLE"}
                    for row in evaluation.exclusions)
-        if gaps and candidate.projection_inputs_complete:
+        fixed_specialist_independent = (
+            gaps and candidate.projection_inputs_complete
+            and candidate.fixed_specialist_gap_independent
+        )
+        if fixed_specialist_independent:
+            # The omitted K/DST slots are identical on both sides of this
+            # skill move and cannot enter an offense downside scenario.
+            independent = True
+        elif gaps and candidate.projection_inputs_complete:
             before = {s.nfl_team: -s.delta_from_central for s in candidate.risk.before.scenarios
                       if s.kind == "OFFENSE_DOWNSIDE"}
             after = {s.nfl_team: -s.delta_from_central for s in candidate.risk.after.scenarios
@@ -1707,21 +1762,35 @@ def apply_waiver_policy(
                     "Protected missing players may affect lineup, depth, holding or risk; comparison is conditional")))
             uncertainty = "Conditional comparison assumes protected missing players do not change the result; resolve their evidence before acting"
         elif gaps and independent:
+            if fixed_specialist_independent:
+                decision = replace(decision, gates=(*decision.gates,
+                    _gate("unchanged_fixed_specialist_slots", True, "==", True, True,
+                          "Missing K/DST projections cancel for this independent skill move")))
+            else:
+                decision = replace(decision, gates=(*decision.gates,
+                    _gate("independent_roster_risk_bound", bound, "<=", policy.maximum_downside_increase, True,
+                          "Unchanged independent lineup components cancel; risk uses a conservative upper bound")))
+        rank_performance_only = bool(
+            decision.specialist_evidence
+            and decision.specialist_evidence.get("basis") == "RANK_PERFORMANCE"
+            and decision.specialist_evidence.get("performance_complete")
+            and not decision.specialist_evidence.get("projection_stream_pass")
+        )
+        if estimated_forecast and rank_performance_only:
             decision = replace(decision, gates=(*decision.gates,
-                _gate("independent_roster_risk_bound", bound, "<=", policy.maximum_downside_increase, True,
-                      "Unchanged independent lineup components cancel; risk uses a conservative upper bound")))
-        if estimated_forecast and decision.label in {"ADD NOW", "CLAIM", "ACQUIRE"}:
+                _gate("forecast_estimate_not_used", True, "==", True, True,
+                      "This specialist fallback uses verified league-scored season points and weekly ranks, not estimated forecasts")))
+        elif estimated_forecast:
             decision = replace(
-                decision, label="WATCH", decision_path="CONDITIONAL_FORECAST_ESTIMATE",
+                decision,
                 gates=(*decision.gates, _gate(
-                    "forecast_scoring_verified", False, "==", True, False,
-                    "Missing forecast scoring fields may change the result",
+                    "available_stat_forecast_disclosed", True, "==", True, True,
+                    "Admitted available-stat forecasts remain estimates; omitted ancillary "
+                    "fields do not override the normal value and roster gates",
                 )),
             )
-            uncertainty = (
-                "The available-statistics forecast is an estimate; verify missing scoring "
-                "fields before making a claim or add"
-            )
+            uncertainty = (f"{uncertainty}; forecast totals omit unprojected scoring "
+                           "categories and remain estimates")
         return candidate, decision, uncertainty
 
     assessments = tuple(assess(candidate) for candidate in policy_candidates)

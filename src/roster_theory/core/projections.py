@@ -77,7 +77,7 @@ def projection_is_usable(
 def reconcile_current_inactive_omissions(
     players: Sequence[Player], current_week: int, projections: Sequence[Projection]
 ) -> tuple[Projection, ...]:
-    """Current directory evidence repairs only this week's empty omission row."""
+    """Current directory evidence repairs this week's empty omission/stat row."""
     by_id = {player.player_id: player for player in players}
     result = []
     for row in projections:
@@ -85,7 +85,10 @@ def reconcile_current_inactive_omissions(
         if (
             player is not None and currently_inactive(player)
             and row.horizon == "WEEKLY" and row.week == current_week
-            and row.coverage_status.casefold() == "source_omission_zero"
+            and (
+                row.coverage_status.casefold() == "source_omission_zero"
+                or row.coverage_status.casefold().startswith("scoring_incomplete_v1:")
+            )
             and row.league_points == 0.0 and not row.raw_stats
         ):
             row = replace(

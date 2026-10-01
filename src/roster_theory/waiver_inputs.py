@@ -650,7 +650,10 @@ def build_waiver_inputs(
         snapshot=snapshot,
         projections=projections,
     )
-    revalidate_snapshot(waiver_state, client=sleeper)
+    revalidate_snapshot(
+        waiver_state, client=sleeper,
+        relevant_player_ids=covered_ids | active_supported_ids,
+    )
     matchup_observed_at = datetime.now(timezone.utc)
     matchups = sleeper.league_matchups(
         waiver_state.league.league_id, waiver_state.manifest.current_week

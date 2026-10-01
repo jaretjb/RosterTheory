@@ -1033,9 +1033,9 @@ Acceptance:
 
 Completion proof: exact specialist evidence now carries add/drop season points
 and recent points per game. A rank-supported fallback must clear one combined
-score; configured season-point evidence cannot be missing. The current league
-uses a `2.0` K season-point weight and a smaller `0.5` DST weight. Other league
-policies retain neutral defaults unless separately calibrated.
+score; configured season-point evidence cannot be missing. The tested league
+uses private, separately tuned K and DST weights. Other league policies retain
+their own settings unless separately calibrated.
 
 The fresh read-only search changed both disputed results. Tyler Loop (17 season
 points) and Eddy Pineiro (15) are WATCH alternatives behind Evan McPherson
@@ -1044,3 +1044,22 @@ four-week streaming edge, and is absent from the claim plan. San Francisco and
 New England remain the two affirmative DST alternatives. The operational
 league policy matches the validated override, all 676 tests and Ruff pass, and
 no Sleeper write occurred.
+
+September 29 follow-up WA-027b: both private policies use the normalized
+specialist method after complete controlled hold/upgrade cases. The previous
+raw coefficients were not converted numerically; fixture outcomes do not prove
+real-world accuracy. Private policy values remain ignored.
+
+September 29 follow-up WA-027c: an observed-game Sleeper historical stat row
+can omit zero-valued supported counting fields. Filling only those absent
+fields with explicit zero reproduced all 643 official player-week matchup
+scores checked across the two private leagues, including K and DST; absent
+rows, invalid game counts and unsupported rules remain incomplete. Fresh
+private input builds each recovered 555 league-scored season-performance
+players. The read-only searches evaluated 20 of 86 and 20 of 67 eligible
+adds respectively; each evaluated move was WATCH. An exhaustive attempt
+expired at the ten-minute freshness gate. The reports disclose incomplete
+rostered weekly projections, a missing value-board entry in one league,
+stale Waiver Wire market evidence, and five unmatched provider players.
+No affirmative claim was published or Sleeper action submitted. Full
+search speed and missing future-projection evidence remain separate work.

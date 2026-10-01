@@ -26,6 +26,7 @@ from roster_theory.providers.fantasypros import (
     normalize_rankings,
 )
 from roster_theory.storage.request_gate import pace_request, reserve_requests
+from roster_theory.providers.inseason_experts import published_contributor_positions
 
 
 class AccuracyExpert(Protocol):
@@ -498,6 +499,7 @@ def select_waiver_wire_experts(
     *,
     contributor_ids: Sequence[str],
     current_experts: Sequence[AccuracyExpert],
+    published_expert_ids: set[str] | None = None,
     minimum_experts: int = 3,
     poor_accuracy_rank_cutoff: int = 100,
 ) -> tuple[str, tuple[str, ...], tuple[WaiverWireExpertSelection, ...]]:
@@ -526,7 +528,9 @@ def select_waiver_wire_experts(
             if latest is not None and prior is not None
             else None
         )
-        if expert is None:
+        if published_expert_ids is not None and expert_id not in published_expert_ids:
+            reason = "no_published_waiver_ballots"
+        elif expert is None:
             reason = "missing_expert_directory_identity"
         elif latest is None or prior is None:
             reason = "missing_two_season_accuracy"
@@ -600,10 +604,12 @@ def build_waiver_wire_evidence(
         )
     dynamic_selection = bool(current_experts) and not config.trusted_expert_ids
     if dynamic_selection:
+        published = published_contributor_positions((market,))
         ranking_source, resolved_expert_ids, expert_selection = (
             select_waiver_wire_experts(
-                contributor_ids=market.contributor_ids,
+                contributor_ids=tuple(published),
                 current_experts=current_experts,
+                published_expert_ids={expert_id for expert_id, positions in published.items() if positions},
                 minimum_experts=config.minimum_trustworthy_experts,
                 poor_accuracy_rank_cutoff=config.poor_accuracy_rank_cutoff,
             )
