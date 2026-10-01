@@ -327,6 +327,7 @@ def _context(snapshot: TradeSnapshot) -> InSeasonContext:
         ),
         unowned_player_ids=snapshot.free_agent_ids,
         current_week=snapshot.manifest.current_week,
+        allow_estimated_projections=True,
     )
 
 

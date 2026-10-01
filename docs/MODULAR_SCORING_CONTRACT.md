@@ -1,5 +1,9 @@
 # MA-002a: explicit scoring evidence
 
+Current forecast applicability: [MA-002u position requirements](POSITION_FORECAST_COVERAGE.md)
+supersede the original blanket missing-field rule for projections. The strict
+event scorer below remains the contract for actual historical statistics.
+
 Status: approved in PR #35 with all 20 CI checks passing. This is the first bounded MA-002 slice,
 dependent on [MA-001 PR #34](https://github.com/jaretjb/RosterTheory/pull/34).
 It prepares [issue #30](https://github.com/jaretjb/RosterTheory/issues/30); it

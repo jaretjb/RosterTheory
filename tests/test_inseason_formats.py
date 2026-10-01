@@ -202,7 +202,7 @@ class InseasonFormatTests(unittest.TestCase):
         self.assertEqual(source["parameters"]["scoring"], "HALF")
         self.assertEqual(source["declared_scoring"], "STD")
         self.assertEqual(source["projection_points_method"], "RAW_STATS_LEAGUE_SCORED")
-        self.assertEqual(source["projection_scoring_contract"], "fantasypros-weekly-v2")
+        self.assertEqual(source["projection_scoring_contract"], "fantasypros-weekly-v3")
 
     def test_trade_rejects_unknown_or_wrong_season_projection_scope(self):
         class Provider:

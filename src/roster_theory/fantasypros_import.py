@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 from roster_theory.core.scoring_contract import ScoringScope, assess_scoring_rules
+from roster_theory.core.forecast_scoring import FORECAST_COVERAGE_VERSION
 from roster_theory.fantasypros import FantasyProsClient
 from roster_theory.providers.projection_scoring import (
     DRAFT_SCORING_CONTRACT_VERSION,
@@ -210,6 +211,7 @@ def build_fantasypros_board(
     projections_by_id: dict[str, float] = {}
     projection_issues: list[dict[str, str]] = []
     projection_sources: list[dict[str, Any]] = []
+    projection_optional_omissions: list[dict[str, Any]] = []
     seen_projection_ids: set[str] = set()
     for position in ("QB", "RB", "WR", "TE"):
         projection_response = client.projections(season, position=position, week=0)
@@ -286,6 +288,11 @@ def build_fantasypros_board(
                 projection_issues.append({
                     "position": position, "fpid": player_id,
                     "reason": scoring_coverage(scored),
+                })
+            if scored.optional_missing_settings:
+                projection_optional_omissions.append({
+                    "position": position, "fpid": player_id,
+                    "settings": list(scored.optional_missing_settings),
                 })
     sleeper_by_name = _sleeper_name_index(sleeper_players)
 
@@ -447,6 +454,8 @@ def build_fantasypros_board(
             "checks": checks,
             "top_180_projection_coverage": round(projection_coverage, 4),
             "projection_scoring_contract": DRAFT_SCORING_CONTRACT_VERSION,
+            "forecast_coverage_policy": FORECAST_COVERAGE_VERSION,
+            "projection_optional_omissions": projection_optional_omissions,
             "projection_scoring_hash": assessment.scoring_hash,
             "projection_rules_hash": assessment.rules_hash,
             "projection_rule_support": assessment.support,

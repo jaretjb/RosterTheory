@@ -446,14 +446,15 @@ class TradeBoardTests(unittest.TestCase):
                 "ff",
                 "fgm_50_59",
                 "fgm_60p",
-                "st_ff",
-                "st_fum_rec",
+                "fum_rec",
             },
         )
         self.assertEqual(
             {setting for setting, _ in capability.projection_limited_settings},
-            {"fum_rec", "fum_rec_td"},
+            set(),
         )
+        self.assertEqual(set(capability.optional_forecast_settings),
+                         {"st_ff", "st_fum_rec", "fum_rec_td"})
 
     def test_unknown_skill_scoring_stops_before_paid_retrieval(self) -> None:
         refresh = SimpleNamespace(

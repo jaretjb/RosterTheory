@@ -1,6 +1,27 @@
 # Active milestone
 
-## Active WA-027g - Current-week defense decisions
+## MA-002u - Position-aware projection completeness across assistants
+
+Authorized by the user's September 30 request to fix irrelevant missing
+projection statistics throughout Draft, Trade and Waiver and document the rule.
+Use the MA-002 scoring contract (MR-02, MR-04, MR-06, MR-09, MR-10): distinguish
+position-required forecast fields from optional off-role and rare events;
+score supplied optional fields, preserve invalid/core-missing failures, and
+record omissions without inventing observations. Apply the same forecast
+contract to API/manual Draft, shared weekly inputs and Waiver scenarios.
+Reconcile Trade discovery/search with exact evaluation and add independent
+regressions across all three assistants. Historical actual-stat scoring remains
+separate. Document the permanent rule in steering and the scoring contract.
+Run focused/full tests, Ruff, package/import and context/privacy gates; use
+cached evidence for provider validation and rerun the requested read-only Trade
+search. Deliver a separate branch and PR, leaving merge to the user.
+
+PR #70 conflict-resolution follow-up: incorporate merged PR #69, preserve its
+Waiver forecast, absence, expert-fallback and current-week DST behavior, and
+verify the combined regressions before updating PR #70. No new live run is
+required for this merge-only follow-up; leave the PR unmerged.
+
+## Previous WA-027g - Current-week defense decisions (merged PR #69)
 
 Authorized by the user's request to heavily favor this week's defense outlook.
 For same-position DST swaps, prioritize complete current-week league-scored

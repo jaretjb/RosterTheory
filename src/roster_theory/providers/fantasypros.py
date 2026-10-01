@@ -6,6 +6,7 @@ import re
 from typing import Any, Mapping
 
 from roster_theory.core.models import Projection, RankObservation
+from roster_theory.core.forecast_scoring import FORECAST_COVERAGE_VERSION
 from roster_theory.core.errors import CoverageIncomplete, ProviderCapabilityMissing
 from roster_theory.core.provenance import DataStamp, stable_hash
 from roster_theory.core.scoring_contract import ScoringScope, assess_scoring_rules
@@ -335,9 +336,21 @@ def normalize_scored_projections(
         # Raw NaN/Inf cannot be hashed into a reproducible payload. Keep this a
         # visible failed preparation; never sanitize its provenance into success.
         raise CoverageIncomplete(f"Invalid FantasyPros projection payload: {exc}") from exc
+    optional_by_position: dict[str, set[str]] = {}
+    for result in scored.values():
+        if result.optional_missing_settings:
+            optional_by_position.setdefault(result.source_evidence.position, set()).update(
+                result.optional_missing_settings)
+    coverage_notes = tuple(
+        f"{FORECAST_COVERAGE_VERSION}: {position} optional forecast fields omitted: "
+        + ", ".join(sorted(settings))
+        for position, settings in sorted(optional_by_position.items())
+    )
     return replace(dataset, stamp=replace(dataset.stamp, scoring_hash=assessment.scoring_hash,
+        warnings=(*dataset.stamp.warnings, *coverage_notes),
         parameter_hash=stable_hash({"provider_parameters": parameters or {},
                                    "scoring_contract": SCORING_CONTRACT_VERSION,
+                                   "forecast_coverage_policy": FORECAST_COVERAGE_VERSION,
                                    "estimate_policy": WEEKLY_ESTIMATE_POLICY_VERSION,
                                    "rules_hash": assessment.rules_hash})))
 
