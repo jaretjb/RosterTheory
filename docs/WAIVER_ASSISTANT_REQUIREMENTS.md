@@ -116,6 +116,24 @@ bench stash must not be called worthless merely because it has no immediate
 starter delta, and a highly ranked acquisition must not hide the value of the
 player that must be dropped.
 
+Available-stat forecasts admitted by the provider's core-stat checks may support
+affirmative Waiver decisions. Omitted ancillary categories, such as two-point
+conversions, remain disclosed estimates and do not automatically force WATCH.
+Missing main position statistics, invalid values, unsupported rules, and absent
+forecasts remain subject to the existing completeness checks. All ordinary
+value, roster, and freshness gates still apply; missing fields are not recorded
+as observed zeros. This is Waiver decision policy, not a provider-support claim.
+
+Same-position defense swaps prioritize complete, league-scored current-week
+projections. Current-week expert ranks are the fallback when those projections
+are unavailable. Season totals are a secondary, sample-adjusted signal under
+each league's private weights. Future-week forecasts remain visible but do not
+veto an otherwise approved current-week defense upgrade. Known inferior
+current-week projections cannot be overridden by fallback ranks or old totals.
+The target-admission cap remains separate from the incumbent rank comparison:
+defense ranks through the full 32-team population retain their differences.
+Kicker, skill-player, and cross-position roster policy remain separate.
+
 ## 6. Decision language
 
 The initial decision labels are:

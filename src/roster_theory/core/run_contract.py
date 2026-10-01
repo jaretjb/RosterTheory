@@ -60,7 +60,7 @@ def _volatile(snapshot: Any, *, week: int) -> dict[str, Any]:
 
 
 def revalidate_snapshot(snapshot: Any, *, client=None, bundle=None,
-                        clock=None) -> dict[str, Any]:
+                        clock=None, relevant_player_ids=None) -> dict[str, Any]:
     """Re-read ownership, settings, status and transactions before publication.
 
     A fresh directory is intentional: a cache hit cannot detect an intervening
@@ -87,8 +87,10 @@ def revalidate_snapshot(snapshot: Any, *, client=None, bundle=None,
     current_players = {row.player_id: row for row in bundle.players}
     def status(player):
         return (player.positions, player.nfl_team, player.active, player.injury_status) if player else None
+    relevant = set(relevant_player_ids) if relevant_player_ids is not None else None
     changed = tuple(row.player_id for row in snapshot.players
-                    if status(current_players.get(row.player_id)) != status(row))
+                    if (relevant is None or row.player_id in relevant)
+                    and status(current_players.get(row.player_id)) != status(row))
     if changed:
         raise StaleData('Player availability or eligibility changed during analysis: ' + ', '.join(changed))
     endpoint = f'/league/{snapshot.league.league_id}/transactions/{week}'

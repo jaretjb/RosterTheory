@@ -12,7 +12,9 @@ evidence, pair them only with genuine pregame captures, and expose coverage
 failures. Use read-only Sleeper league results and verified completed schedules;
 preserve partial/inactive exclusions, small-sample requirements, expert order,
 and historical replay. Validate both configured leagues independently. Deliver
-a tested separate PR; do not merge. This branch depends on unmerged PR #70.
+a tested separate PR. PR #70 is now merged. The user's follow-up authorizes
+resolving remaining conflicts and merging all open PRs through GitHub after
+required checks pass; preserve both the Trade capture logic and main's Waiver fixes.
 
 ## Previous MA-002u - Position-aware projection completeness across assistants
 
@@ -29,6 +31,101 @@ separate. Document the permanent rule in steering and the scoring contract.
 Run focused/full tests, Ruff, package/import and context/privacy gates; use
 cached evidence for provider validation and rerun the requested read-only Trade
 search. Deliver a separate branch and PR, leaving merge to the user.
+
+PR #70 conflict-resolution follow-up: incorporate merged PR #69, preserve its
+Waiver forecast, absence, expert-fallback and current-week DST behavior, and
+verify the combined regressions before updating PR #70. No new live run is
+required for this merge-only follow-up; leave the PR unmerged.
+
+## Previous WA-027g - Current-week defense decisions (merged PR #69)
+
+Authorized by the user's request to heavily favor this week's defense outlook.
+For same-position DST swaps, prioritize complete current-week league-scored
+projections, with current-week expert ranks as a disclosed fallback. Preserve
+the incumbent's actual rank through the full NFL defense population instead
+of flattening everything beyond the target-admission cap. Retain that cap for
+new targets. Keep season production secondary, future weeks informational, and
+avoid using old production or fallback ranks to override a known inferior
+current-week projection. Test missing data, ordinary safety gates, scale
+invariance, and unchanged K/skill behavior. Check private policies separately
+with league-scored evidence before applying numeric settings locally. Do not
+claim outcome-based calibration. Run focused/full tests, Ruff, privacy gates,
+and fresh read-only named DST comparisons. Update PR #69; leave it unmerged.
+
+## Previous WA-027f - Usable forecasts without a blanket estimate veto
+
+Authorized by the user's correction that omitted two-point conversion forecasts
+must not block otherwise useful Waiver analysis. Retain the provider's existing
+core-stat, valid-rule, and missing-only checks for admitting skill forecasts.
+Remove Waiver's later unconditional WATCH downgrade for those admitted estimates;
+preserve omitted-field disclosures, incomplete-source blockers, ordinary decision
+gates, and private league calibration. Verify named evaluations, search, and claim
+plan behavior with controlled fixtures and audit the previously named private
+comparisons. Do not change Trade or Draft decision policy or provider support.
+Run focused/full tests, Ruff, and privacy gates. Update PR #69; leave it unmerged.
+
+## Previous WA-027e - Expected absences and available expert fallback
+
+Authorized by the user's correction about byes, injuries, and unpublished
+expert rankings. Normalize verified bye weeks even when the player is absent
+from the entire source feed. Preserve confirmed current-week inactivity and
+available future forecasts without inventing an injury return date. Choose
+each feature's next qualified experts from actual published ballots rather
+than advertised contributor names; retain each feature's existing accuracy,
+freshness and weighting rules. Verify shared factual behavior for Trade and
+Waiver, keep source omissions visible, and explain the saved live warnings.
+Do not change league weights, invent source statistics, promote provider
+support, or submit a Sleeper transaction. Update PR #69 and leave it open.
+Run focused/full tests, Ruff, and context/privacy gates.
+
+## Previous WA-027d - Audit named adds and independent roster gaps
+
+Authorized by the user's September 29 correction naming Oronde Gadsden,
+Kenyon Sadiq, and Braelon Allen. Trace both add/drop pairs and K/DST upgrades
+through current private read-only evidence. A missing unchanged specialist
+projection must not veto an unrelated skill-player swap when the league's
+actual lineup slots prove separation; missing projections remain visible and
+still block moves touching their lineup dependency group. Preserve roster
+capacity, drop legality, retention, risk and source gates. Add controlled
+fixed-slot and shared-slot tests, hand-audit the named pairs, then retry the
+private read-only run. Do not infer any provider projection or make a Sleeper
+transaction. Keep provider support validation separate and PR #69 open for
+review. Run focused/full tests, Ruff, and context/privacy gates.
+
+## Previous WA-027c - Restore observed historical Waiver scoring
+
+Authorized by the user's September 29 request to run both existing leagues
+as soon as possible. Sleeper's played-game historical stat rows omit
+zero-valued fields. Compare league-scored results against the same leagues'
+official weekly matchup points before interpreting omitted applicable
+supported fields as explicit zero. Keep absent rows, absent/invalid game
+counts, invalid statistics, and unsupported settings incomplete. Preserve
+per-league scoring and source provenance. Rebuild private Waiver inputs,
+attempt read-only searches, and report any stale or incomplete inputs and
+runtime limit honestly. Keep private values and outputs ignored, provider
+support validation separate, and PR #69 open for review. Run focused/full
+tests, Ruff, and context/privacy gates.
+
+## Previous WA-027b - Validate the normalized specialist method for existing leagues
+
+Authorized by the user's September 29 correction. Use the normalized K/DST
+method for both existing private league policies instead of restoring raw-point
+scoring. Compare complete controlled cases, including productive incumbents,
+clear upgrades, small samples, and scale changes. Tune each policy separately;
+keep numeric settings and backups in ignored private files. Do not claim
+empirical accuracy from fixtures or convert old coefficients arithmetically.
+Keep PR #69 focused on the read-only Sleeper winners-bracket repair and the
+status handoff; remove the proposed raw-method compatibility code. Retry the
+requested live Waiver run only if required league-scored evidence is complete.
+Do not transfer calibration between leagues, submit a Sleeper action, or
+promote provider support. Run focused/full tests, Ruff, context/privacy gates;
+update PR #69 and leave it unmerged for review.
+
+MA-005c merged in PR #68. Wider MA-005 and MA-006 support validation remains
+separate from this Waiver repair.
+
+Earlier sections preserve the status at the time of those slices. Issue #31
+closed after PR #65; their open-issue instructions are historical.
 
 ## Previous MA-005c - Check full Waiver search on exact reference profiles (merged PR #68)
 

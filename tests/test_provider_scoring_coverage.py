@@ -115,6 +115,24 @@ class ProviderScoringCoverageTests(unittest.TestCase):
         invalid = projection({**core, "fum_lost": "bad"}, scoring)
         self.assertFalse(projection_is_usable(invalid, current_week=4, allow_estimate=True))
 
+    def test_omitted_two_point_forecasts_are_usable_without_invented_statistics(self):
+        scoring = {"rec": .5, "rec_yd": .1, "rec_td": 6, "rec_2pt": 2}
+        stats = {"rec": 5, "rec_yd": 60, "rec_td": 1}
+        provider = Provider([{"fpid": "synthetic", "position_id": "TE", "stats": stats}])
+        dataset = FantasyProsAdapter(provider).weekly_projections(2027, 4, "TE", scoring)
+        row = dataset.projections[0]
+        self.assertEqual(row.league_points, 14.5)
+        self.assertTrue(projection_is_complete(row, current_week=4))
+        self.assertTrue(projection_is_usable(row, current_week=4, allow_estimate=False))
+        self.assertEqual(row.coverage_status, "complete")
+        self.assertTrue(any("TE optional forecast fields omitted: rec_2pt" in warning
+                            for warning in dataset.stamp.warnings))
+        self.assertNotIn("rec_2pt", dict(row.raw_stats))
+        missing_core = projection({"rec": 5, "rec_yd": 60}, scoring, "TE")
+        self.assertFalse(projection_is_usable(missing_core, current_week=4, allow_estimate=True))
+        invalid = projection({**stats, "rec_2pt": "bad"}, scoring, "TE")
+        self.assertFalse(projection_is_usable(invalid, current_week=4, allow_estimate=True))
+
     def test_missing_touchdowns_are_not_observed_zero(self):
         scoring = {"pass_yd": .04, "pass_td": 6}
         missing = projection({"pass_yds": 250}, scoring)

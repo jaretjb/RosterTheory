@@ -942,12 +942,26 @@ def _canonical_projections(
     absent_required = sorted(set(required_positions) - set(complete_positions))
     for player_id in absent_required:
         complete_positions[player_id] = required_positions[player_id]
-        warning_map[player_id] = ("No FantasyPros projection identity; unavailable, not zero",)
+        player = sleeper_players.get(player_id)
+        bye_week = bye_by_team.get(str(player.nfl_team)) if player is not None else None
+        if any(week != bye_week for week in weeks):
+            warning_map[player_id] = ("No FantasyPros projection identity for non-bye weeks; unavailable, not zero",)
         result.extend(Projection(
             player_id=player_id, horizon="WEEKLY", week=week, raw_stats=(),
-            league_points=0.0, source="FantasyPros source omission",
-            coverage_status="source_omission_zero",
+            league_points=0.0,
+            source="Audited NFL bye" if week == bye_week else "FantasyPros source omission",
+            coverage_status="verified_bye_zero" if week == bye_week else "source_omission_zero",
         ) for week in weeks)
+    for index, row in enumerate(result):
+        player = sleeper_players.get(row.player_id)
+        if player is not None and bye_by_team.get(str(player.nfl_team)) == row.week:
+            if row.league_points != 0:
+                warning_map[row.player_id] = (*warning_map.get(row.player_id, ()),
+                    f"Week {row.week}: provider forecast conflicts with audited bye; bye takes precedence")
+            result[index] = replace(
+                row, raw_stats=(), league_points=0.0, source="Audited NFL bye",
+                coverage_status="verified_bye_zero",
+            )
     normalized = reconcile_current_inactive_omissions(
         tuple(sleeper_players.values()), current_week, tuple(result)
     ) if current_week is not None else tuple(result)

@@ -2575,7 +2575,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Evaluate one read-only entered add/drop with the Waiver policy",
     )
     waiver_evaluate.add_argument("league")
-    waiver_evaluate.add_argument("--add", help="Exact QB/RB/WR/TE player name")
+    waiver_evaluate.add_argument("--add", help="Exact QB/RB/WR/TE/K/DST player name")
     waiver_evaluate.add_argument("--drop", help="Optional exact player name to drop")
     waiver_evaluate.add_argument(
         "--inputs",

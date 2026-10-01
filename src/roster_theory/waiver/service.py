@@ -85,7 +85,16 @@ def _news_freshness(inputs, now):
 
 
 def _publication_check(inputs, snapshot, *, client, clock):
-    proof = revalidate_snapshot(snapshot, client=client, clock=clock)
+    team = next(row for row in snapshot.teams if row.roster_id == snapshot.user_roster_id)
+    relevant_ids = (
+        {row.player_id for row in getattr(inputs, "values", ())}
+        | {row.player_id for row in getattr(inputs, "projections", ())}
+        | set(team.player_ids)
+        | set(getattr(inputs, "availability_by_player", ()))
+    )
+    proof = revalidate_snapshot(
+        snapshot, client=client, clock=clock, relevant_player_ids=relevant_ids,
+    )
     if inputs.drop_legality_context is not None:
         matchups = (client or SleeperClient()).league_matchups(snapshot.league.league_id, snapshot.manifest.current_week)
         starters = next((sorted(str(pid) for pid in row['starters']) for row in matchups
@@ -483,6 +492,9 @@ def _best_waiver_reason(evaluation: Any, selected: Any) -> str:
         return "The sample-adjusted weekly-rank and league-scored season-total comparison favors the add; projections do not establish the required streaming improvement."
     if path == "FRESH_RANK_DOMINANCE":
         return "The add ranks higher this week and for the rest of the season without losing projected value."
+    if path == "DST_CURRENT_WEEK_STREAM":
+        gain = selected.current_week_add_points - (selected.current_week_drop_points or 0.0)
+        return f"Current-week league-scored DST forecast improves by {gain:+.2f} points"
     if path == "DST_ROLLING_STREAM":
         return "This defense clears both the current-week and four-week attainable-streamer baselines."
     if path == "DST_STREAM":
