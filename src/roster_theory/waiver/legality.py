@@ -6,8 +6,10 @@ Setting mappings were verified in Sleeper's published web client (September 2026
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
+
+from roster_theory.core.schedule_time import kickoff_time as _kickoff
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,31 +27,6 @@ def sleeper_drop_rules(settings: Mapping[str, Any]) -> dict[str, bool | None]:
 
     return {"league_moves_locked": flag("disable_adds"),
             "prevent_started_bench_drop": flag("bench_lock")}
-
-
-def _kickoff(game: Mapping[str, Any]) -> datetime | None:
-    try:
-        if game.get("kickoff_at"):
-            value = datetime.fromisoformat(str(game["kickoff_at"]).replace("Z", "+00:00"))
-            return value if value.tzinfo is not None else None
-        if game.get("gametime_zone") != "US/Eastern":
-            return None
-        value = datetime.fromisoformat(f"{game['gameday']}T{game['gametime']}")
-        # nflverse declares Eastern wall time. Modern US DST (2007 onward),
-        # implemented explicitly because Windows need not have IANA tzdata.
-        # Ambiguous/nonexistent transition-hour inputs remain unavailable.
-        if value.year < 2007 or value.tzinfo is not None:
-            return None
-        march = datetime(value.year, 3, 1)
-        november = datetime(value.year, 11, 1)
-        start = march + timedelta(days=(6 - march.weekday()) % 7 + 7, hours=2)
-        end = november + timedelta(days=(6 - november.weekday()) % 7, hours=2)
-        if start <= value < start + timedelta(hours=1) or end - timedelta(hours=1) <= value < end:
-            return None
-        offset = -4 if start <= value < end else -5
-        return value.replace(tzinfo=timezone(timedelta(hours=offset)))
-    except (KeyError, TypeError, ValueError):
-        return None
 
 
 def assess_drop_legality(

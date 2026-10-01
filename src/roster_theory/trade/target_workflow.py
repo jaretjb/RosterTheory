@@ -329,6 +329,7 @@ def run_target_workflow(
             refresh,
             policy=policy.performance,
             path=performance_history_path,
+            collect_outcomes=True,
         ) if policy.performance is not None else None
     )
     market = resolve_trade_market_evidence(
@@ -413,6 +414,7 @@ def run_target_workflow(
                 "total_outcomes": performance_history.total_outcomes,
                 "compatible_contexts": performance_history.compatible_contexts,
                 "history_hash": performance_history.history_hash,
+                "outcome_refresh": performance_history.outcome_refresh,
                 "evidence": asdict(performance_history.evidence) if performance_history.evidence else None,
             } if performance_history else None
         ),
@@ -519,6 +521,12 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
             f"players, {history.total_outcomes} outcome rows; captured "
             f"{history.captured_expectations} current-week expectations to {history.path}"
         )
+        if history.outcome_refresh:
+            outcome = history.outcome_refresh
+            lines.append(f"Completed results: {outcome['status']}; "
+                         f"{outcome['added_outcomes']} new observations; "
+                         f"{len(outcome['exclusions'])} player-weeks unavailable")
+            lines.extend(f"- {warning}" for warning in outcome['warnings'])
     else:
         lines.append("Recent performance: UNAVAILABLE; no performance policy configured")
     for lane in TARGET_KINDS:
