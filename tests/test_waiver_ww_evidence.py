@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -105,6 +106,23 @@ def dynamic_market():
 
 
 class WaiverWireEvidenceTests(unittest.TestCase):
+    def test_unpublished_top_expert_is_replaced_by_next_qualified_contributor(self):
+        market = dynamic_market()
+        market = replace(market, contributor_observations=tuple(
+            row for row in market.contributor_observations if row.expert_id != "17"
+        ))
+        evidence = build_waiver_wire_evidence(
+            config=config(experts=()),
+            players=(Player("s1", "Runner", ("RB",), fantasypros_id="10"),),
+            market=market, selected={},
+            current_experts=tuple(current_expert(str(i), i, i) for i in (17, 29, 30, 31)),
+            now=NOW,
+        )
+        self.assertEqual(evidence.trusted_expert_ids, ("29", "30", "31"))
+        self.assertTrue(evidence.selected_experts_complete)
+        missing = next(row for row in evidence.expert_selection if row.expert_id == "17")
+        self.assertEqual(missing.reason, "no_published_waiver_ballots")
+
     def test_dynamic_panel_excludes_consistently_poor_expert(self):
         evidence = build_waiver_wire_evidence(
             config=config(experts=()),

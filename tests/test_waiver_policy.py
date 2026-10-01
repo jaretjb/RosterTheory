@@ -428,10 +428,10 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         )
         self.assertEqual(len(evidence.contingency_scenarios), 2)
 
-    def test_estimated_forecast_preserves_comparison_but_withholds_claim(self):
+    def test_available_stat_forecast_preserves_approval_and_discloses_omissions(self):
         projection_rows = tuple(
             replace(row, raw_stats=(("pass_yd", 300.0),),
-                    coverage_status="estimated_missing_stats_v1:missing_statistic=fum_lost")
+                    coverage_status="estimated_missing_stats_v1:missing_statistic=pass_2pt")
             if row.player_id == "add" else row
             for row in projections()
         )
@@ -441,13 +441,19 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         )
         result = self.evaluate(projection_rows=projection_rows, value_rows=value_rows)
         self.assertTrue(result.candidates)
-        self.assertEqual(result.decision_label, "WATCH")
-        self.assertEqual(result.decision.decision_path, "CONDITIONAL_FORECAST_ESTIMATE")
+        baseline = self.evaluate()
+        self.assertEqual(result.decision_label, "ADD NOW")
+        self.assertEqual(result.decision.decision_path, baseline.decision.decision_path)
+        self.assertEqual(result.candidates[0].lineup, baseline.candidates[0].lineup)
+        self.assertIn("available_stat_forecast_disclosed", {g.name for g in result.decision.gates})
         self.assertTrue(any(warning.startswith("Forecast estimate:")
                             for warning in result.warnings))
         value_only = self.evaluate(value_rows=value_rows)
-        self.assertEqual(value_only.decision_label, "WATCH")
-        self.assertEqual(value_only.decision.decision_path, "CONDITIONAL_FORECAST_ESTIMATE")
+        self.assertEqual(value_only.decision_label, baseline.decision_label)
+        self.assertEqual(value_only.decision.decision_path, baseline.decision.decision_path)
+        blocked = self.evaluate(projection_rows=projection_rows, value_rows=value_rows,
+                                news_fresh=False)
+        self.assertNotIn(blocked.decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
 
     def test_standalone_plus_contingency_rb_is_protected_from_marginal_drop(self):
         result = self.evaluate_contingent_rb()
@@ -918,6 +924,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         incumbent_season_rank=10,
         target_season_rank=8,
         policy_path=POLICY_PATH,
+        future_projection_status="complete",
     ):
         snapshot = waiver_snapshot()
         policy = load_waiver_policy(policy_path)
@@ -987,6 +994,11 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 else ()
             ),
         )
+        projection_rows = tuple(
+            replace(row, coverage_status=future_projection_status)
+            if row.player_id in {incumbent_id, add_id} and row.week > 1 else row
+            for row in projection_rows
+        )
         value_rows = (
             *values(),
             PlayerValueInput(
@@ -1052,23 +1064,23 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 self.assertEqual(result.decision_label, "ADD NOW")
                 self.assertEqual(
                     result.decision.decision_path,
-                    "DST_ROLLING_STREAM" if position == "DST" else "K_STREAM",
+                    "DST_CURRENT_WEEK_STREAM" if position == "DST" else "K_STREAM",
                 )
                 self.assertFalse(result.decision.elite_dst_exception)
 
-    def test_top_ranked_dst_can_clear_negative_projection_with_rank_evidence(self):
+    def test_top_ranked_dst_cannot_override_inferior_current_week_projection(self):
         elite = self.special_team_evaluation(
             "DST", current_delta=-1.0, future_delta=1.0, ros_rank=2
         )
         ordinary = self.special_team_evaluation(
             "DST", current_delta=-1.0, future_delta=1.0, ros_rank=4
         )
-        self.assertEqual(elite.decision_label, "ADD NOW")
-        self.assertEqual(elite.decision.decision_path, "DST_RANK_PERFORMANCE")
+        self.assertNotIn(elite.decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
+        self.assertEqual(elite.decision.specialist_evidence["basis"], "PROJECTION")
         self.assertFalse(elite.decision.elite_dst_exception)
-        self.assertEqual(ordinary.decision_label, "ADD NOW")
+        self.assertNotIn(ordinary.decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
 
-    def test_dst_rank_evidence_can_override_attainable_streaming_baseline(self):
+    def test_dst_future_and_rank_evidence_do_not_override_a_current_week_loss(self):
         result = self.special_team_evaluation(
             "DST",
             current_delta=-0.94,
@@ -1077,7 +1089,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
             ros_rank=3,
         )
         evidence = result.candidates[0].dst_streaming
-        self.assertEqual(result.decision_label, "ADD NOW")
+        self.assertNotIn(result.decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
         self.assertEqual(evidence.horizon_weights, (1.0, 0.5, 0.25))
         self.assertLess(evidence.weighted_advantage, 0.0)
         self.assertEqual(evidence.weeks[1].baseline_player_id, "stream_dst")

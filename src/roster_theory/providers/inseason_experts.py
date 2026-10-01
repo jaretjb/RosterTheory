@@ -3,7 +3,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping
+from math import isfinite
+from typing import Any, Mapping, Sequence
+
+
+def published_contributor_positions(datasets: Sequence[Any]) -> dict[str, set[str]]:
+    """Report observed expert ballots; directory advertising is not publication."""
+    result: dict[str, set[str]] = {}
+    for dataset in datasets:
+        for expert_id in dataset.contributor_ids:
+            result.setdefault(str(expert_id), set())
+        if not dataset.complete_horizon:
+            continue
+        for row in dataset.contributor_observations:
+            rank = row.position_rank if row.position_rank is not None else row.overall_rank
+            if (
+                row.expert_id is not None and row.horizon == dataset.horizon
+                and isinstance(rank, (int, float)) and not isinstance(rank, bool)
+                and isfinite(rank) and rank > 0
+            ):
+                result.setdefault(str(row.expert_id), set()).add(row.position)
+    return result
 
 
 @dataclass(frozen=True, slots=True)

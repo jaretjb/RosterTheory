@@ -69,6 +69,54 @@ class RankingSpecialistTests(unittest.TestCase):
             players = {pid: Player(pid, pid, ("K",)) for pid in ids}
             self.assertEqual(set(_rank_by_position(dict.fromkeys(ids, 20), players).values()), {1})
 
+    def test_out_of_cap_incumbent_rank_uses_conservative_boundary(self):
+        boundary = self.evidence(add=30, drop=15, add_rank=3, drop_rank=16)
+        below_cap = self.evidence(add=30, drop=15, add_rank=3, drop_rank=23)
+        self.assertEqual(boundary.weekly_advantage, below_cap.weekly_advantage)
+        self.assertEqual(boundary.score, below_cap.score)
+        self.assertIsNone(self.evidence(add_rank=17, drop_rank=23).score)
+
+    def test_defense_preserves_full_population_rank_gap_without_admitting_tail_targets(self):
+        result = self.evidence(add=25, drop=32, games=3, weight=.15,
+                               add_rank=16, drop_rank=23, rank_population=32)
+        self.assertAlmostEqual(result.weekly_advantage, 7 / 31)
+        self.assertGreater(result.score, 0)
+        self.assertIsNone(self.evidence(add_rank=17, drop_rank=23, rank_population=32).score)
+        self.assertIsNone(self.evidence(add_rank=16, drop_rank=33, rank_population=32).score)
+        self.assertLess(self.evidence(add=100, drop=100, add_rank=16,
+                                     drop_rank=1, rank_population=32).score, 0)
+
+    def test_weekly_defense_weight_overcomes_past_total_and_future_disadvantages(self):
+        policy = replace(load_waiver_policy(policy_fixtures.POLICY_PATH), dst_season_points_weight=.15)
+        original = self.specialist("DST", current_delta=2, future_delta=-7,
+                                  current_rank=9, incumbent_season_points=60, target_season_points=20)
+        result = apply_waiver_policy(original, policy)
+        self.assertEqual(result.decision_label, "ADD NOW")
+        evidence = result.decision.specialist_evidence
+        self.assertEqual(evidence["basis"], "PROJECTION")
+        self.assertEqual(evidence["current_week_weight"], .85)
+        self.assertLess(result.candidates[0].dst_streaming.weighted_advantage, 0)
+        self.assertIn("+2.00", _best_waiver_reason(result, result.candidates[0]))
+        poor_week = self.specialist("DST", current_delta=-2, future_delta=7,
+                                   current_rank=1, incumbent_season_points=20, target_season_points=60)
+        self.assertNotIn(apply_waiver_policy(poor_week, policy).decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
+
+    def test_current_defense_projection_does_not_require_complete_future_forecasts(self):
+        result = self.specialist("DST", current_delta=2,
+            future_projection_status="scoring_incomplete_v1:missing_statistic=pts_allow")
+        self.assertFalse(result.projection_inputs_complete)
+        self.assertTrue(result.candidates[0].current_week_projection_complete)
+        self.assertEqual(result.decision_label, "ADD NOW")
+        self.assertEqual(result.decision.decision_path, "DST_CURRENT_WEEK_STREAM")
+
+    def test_defense_rank_fallback_does_not_buy_a_worse_week_using_past_points(self):
+        original = self.specialist("DST", current_delta=0, current_rank=12,
+                                  incumbent_season_points=20, target_season_points=80)
+        selected = replace(original.candidates[0], current_week_projection_complete=False)
+        result = apply_waiver_policy(replace(original, candidates=(selected,)),
+                                    load_waiver_policy(policy_fixtures.POLICY_PATH))
+        self.assertNotIn(result.decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
+
     def test_equal_panel_ranks_keep_ties_independent_of_ids(self):
         original = waiver_evidence()
         for ids in (("a", "z"), ("z", "a")):
@@ -121,6 +169,9 @@ class RankingSpecialistTests(unittest.TestCase):
 
     def test_rank_performance_reason_does_not_claim_projection_gain(self):
         result = self.specialist("DST", current_delta=-1, ros_rank=2)
+        selected = replace(result.candidates[0], current_week_projection_complete=False)
+        result = apply_waiver_policy(replace(result, candidates=(selected,)),
+                                     load_waiver_policy(policy_fixtures.POLICY_PATH))
         self.assertEqual(result.decision.decision_path, "DST_RANK_PERFORMANCE")
         reason = _best_waiver_reason(result, result.candidates[0])
         self.assertIn("projections do not establish", reason)

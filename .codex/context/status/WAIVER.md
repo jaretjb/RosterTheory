@@ -1,34 +1,29 @@
 # Waiver Assistant current status
 
-Updated: September 25, 2026 (America/Los_Angeles)
+Updated: September 29, 2026 (America/Los_Angeles)
 
-AC-001/#7 through AC-005/#11 merged in PRs #15–#19.
-PR #20 reconciled #11's completion records; issue #11 is closed.
-AC-006/#12 merged in PR #21 with all 20 checks passing; issue #12 is closed.
-AC-007/#13 merged in PR #22 with all 20 checks passing; issue #13 is closed.
-Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_007.md`.
+WA-027g active in open PR #69. Same-position defense swaps now prioritize
+complete current-week league-scored projections, falling back to weekly expert
+ranks when unavailable. Season performance is secondary and sample-adjusted.
+Future forecasts remain informational. Current-week losses cannot be overridden
+by fallback ranks or old totals. The top-16 target cap remains; incumbent ranks
+retain differences across all 32 defenses. Kicker and skill policy remain separate.
+Private defense weights were checked independently per league and remain ignored.
 
-Source observations retain their original times, including cache hits. News uses
-a one-hour refresh interval and remains a finite global feed, never complete
-per-player coverage. Publication rechecks ownership, lineup/settings, player status,
-transactions and matchup starters, and checks source expiry and kickoff boundaries.
-Immutable as-of evaluation and wall-clock publication checks are separate.
-Input gaps, bounded search, candidate confidence and informational warnings are
-separate; empty exhaustive searches can be ready. Hashed sidecar manifests record
-build, policy, scoring, sources and replay inputs. Offline replay reproduces hashes
-without provider calls and is never current/actionable.
+Prior six-candidate searches surfaced K/DST upgrades in both leagues, with one
+of each accepted on a conditional claim branch. Other candidates remain
+unevaluated; those searches do not prove a global optimum. Named skill swaps
+pass their gates in offline audits after removing the blanket estimate veto.
+Missing core stats and invalid data remain incomplete; ancillary omissions stay
+disclosed rather than recorded as observed zeros.
 
-AC-005 weekly caps (RB/WR50, QB/TE24, K/DST16), sampled specialist production,
-truthful decision paths and tie preservation remain. AC-002 candidate/retention
-safety and AC-003 cross-position, exhaustive search, budget disclosure and
-conditional-claim safeguards remain unchanged.
+Verified byes and confirmed empty current-week inactive forecasts pass shared
+preparation. Dynamic expert panels use published ballots and replace unavailable
+preferred contributors. Trade retains its own panel policy. Incomplete Waiver
+Wire evidence and exact acquisition-mechanism uncertainty remain visible.
 
-Specialist calibration and league-exact expert ranks remain unproven.
-No live report, paid refresh or Sleeper mutation ran.
-AC-008/#14 merged in PR #23 with all 20 checks passing; issue #14 is closed.
-Stage timing, exact coverage, and cache sizes are exposed outside hashed Waiver
-evidence. Independent alpha/beta policy fixtures and offline replay remain
-decision-stable. Evidence: `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_008.md`.
-Verification: 797 tests, Ruff and diff checks passed for AC-008.
-
-Audit open; no next milestone authorized. Read-only.
+Roster safety, freshness, and publication checks remain required. Independent
+specialist claim branches do not invent cumulative season-point deltas. Provider
+support validation remains separate; controlled checks do not establish measured
+accuracy on real outcomes. Offline audits are non-actionable. No Sleeper write
+occurred, and no private numeric calibration is tracked.
