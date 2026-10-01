@@ -147,6 +147,12 @@ scoring makes cached forecasts unusable for Trade/Waiver value preparation.
 The slice corrects proven misclassification and records remaining behavior
 choices without calling incomplete scores complete.
 
+MA-002u applies [position-aware forecast coverage](POSITION_FORECAST_COVERAGE.md)
+across Draft, Trade and Waiver under the user's September 30 clarification.
+It supersedes blanket off-role/rare projection requirements, scores supplied
+fields and preserves core/invalid failures. It also reconciles Trade target and
+package admission with exact evaluation; historical event scoring is separate.
+
 MA-002p restores the prior usable in-season forecast path as an explicitly
 conditional estimate when core position statistics are present. It preserves
 strict exclusion for missing core or invalid evidence, exposes incomplete

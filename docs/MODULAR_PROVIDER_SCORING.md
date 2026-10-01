@@ -1,5 +1,10 @@
 # MA-002b: explicit provider projection coverage
 
+Forecast amendment: [MA-002u position requirements](POSITION_FORECAST_COVERAGE.md)
+replace this slice's blanket off-role/rare-stat completeness requirement.
+Supplied values are still scored; missing core fields and invalid values still
+block. The remaining text records the original MA-002b behavior and evidence.
+
 Status: scoring integration tested (847 tests, all 20 CI checks at `ae07d4e`).
 PR #37 now also implements [decision-scoped readiness](MODULAR_DECISION_COVERAGE.md)
 with 860 passing local tests; final PR checks remain the merge gate.

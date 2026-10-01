@@ -25,7 +25,8 @@ from roster_theory.core.projections import (
     reconcile_current_inactive_omissions,
 )
 from roster_theory.core.replacement import positional_waiver_baselines
-from roster_theory.core.scoring import STAT_ALIASES, POSITION_RECEPTION_BONUSES
+from roster_theory.core.forecast_scoring import OPTIONAL_FORECAST_STATS
+from roster_theory.providers.sleeper_scoring_rules import SLEEPER_LINEAR_RULES
 from roster_theory.providers.projection_scoring import (
     SCORING_CONTRACT_VERSION, WEEKLY_ESTIMATE_POLICY_VERSION,
 )
@@ -122,40 +123,6 @@ _NFL_TEAM_ALIASES: Mapping[str, str] = {
     "STL": "LAR",
     "WSH": "WAS",
 }
-OUT_OF_SCOPE_SCORING_SETTINGS: Mapping[str, str] = {
-    "blk_kick": "DEF blocked-kick scoring",
-    "def_st_ff": "DEF/special-teams forced-fumble scoring",
-    "def_st_fum_rec": "DEF/special-teams fumble-recovery scoring",
-    "def_st_td": "DEF/special-teams touchdown scoring",
-    "def_td": "DEF touchdown scoring",
-    "ff": "DEF/IDP forced-fumble scoring",
-    "fgm_0_19": "K field-goal scoring",
-    "fgm_20_29": "K field-goal scoring",
-    "fgm_30_39": "K field-goal scoring",
-    "fgm_40_49": "K field-goal scoring",
-    "fgm_50_59": "K field-goal scoring",
-    "fgm_50p": "K field-goal scoring",
-    "fgm_60p": "K field-goal scoring",
-    "fgmiss": "K missed-field-goal scoring",
-    "int": "DEF/IDP interception scoring",
-    "pts_allow_0": "DEF points-allowed scoring",
-    "pts_allow_1_6": "DEF points-allowed scoring",
-    "pts_allow_7_13": "DEF points-allowed scoring",
-    "pts_allow_14_20": "DEF points-allowed scoring",
-    "pts_allow_21_27": "DEF points-allowed scoring",
-    "pts_allow_28_34": "DEF points-allowed scoring",
-    "pts_allow_35p": "DEF points-allowed scoring",
-    "sack": "DEF/IDP sack scoring",
-    "safe": "DEF safety scoring",
-    "st_ff": "special-teams forced-fumble scoring",
-    "st_fum_rec": "special-teams fumble-recovery scoring",
-    "xpm": "K extra-point scoring",
-    "xpmiss": "K missed-extra-point scoring",
-}
-PROJECTION_LIMITED_SCORING_SETTINGS: Mapping[str, str] = {
-    "fum_rec": "rare fumble recovery is not supplied in the skill-player forecast schema",
-    "fum_rec_td": "rare fumble-recovery touchdown is not supplied in the skill-player forecast schema",
-}
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,6 +131,7 @@ class SkillProjectionScoringCapability:
     out_of_scope_settings: tuple[tuple[str, str], ...]
     projection_limited_settings: tuple[tuple[str, str], ...]
     unsupported_settings: tuple[str, ...]
+    optional_forecast_settings: tuple[str, ...] = ()
 
 
 def classify_skill_projection_scoring(
@@ -175,27 +143,24 @@ def classify_skill_projection_scoring(
         for setting, multiplier in values.items()
         if float(multiplier or 0.0) != 0.0
     }
-    out_of_scope = tuple(
-        (setting, OUT_OF_SCOPE_SCORING_SETTINGS[setting])
-        for setting in sorted(nonzero.intersection(OUT_OF_SCOPE_SCORING_SETTINGS))
-    )
-    projection_limited = tuple(
-        (setting, PROJECTION_LIMITED_SCORING_SETTINGS[setting])
-        for setting in sorted(
-            nonzero.intersection(PROJECTION_LIMITED_SCORING_SETTINGS)
-        )
-    )
-    classified = {
-        setting for setting, _ in (*out_of_scope, *projection_limited)
-    }
-    supported_keys = set(STAT_ALIASES) | set(POSITION_RECEPTION_BONUSES)
-    supported = tuple(sorted(nonzero.intersection(supported_keys) - classified))
-    unsupported = tuple(sorted(nonzero - supported_keys - classified))
+    catalogue = {rule.setting: rule for rule in SLEEPER_LINEAR_RULES}
+    skill_positions = set(POSITION_MINIMUMS)
+    out_of_scope = tuple((setting, "/".join(catalogue[setting].positions) + " scoring")
+                         for setting in sorted(nonzero.intersection(catalogue))
+                         if not skill_positions.intersection(catalogue[setting].positions))
+    skill_rules = {setting: catalogue[setting] for setting in nonzero.intersection(catalogue)
+                   if skill_positions.intersection(catalogue[setting].positions)}
+    optional = tuple(sorted(setting for setting, rule in skill_rules.items()
+                            if all(rule.statistic in OPTIONAL_FORECAST_STATS[position]
+                                   for position in skill_positions.intersection(rule.positions))))
+    supported = tuple(sorted(skill_rules.keys() - set(optional)))
+    unsupported = tuple(sorted(nonzero - catalogue.keys()))
     return SkillProjectionScoringCapability(
         supported_skill_settings=supported,
         out_of_scope_settings=out_of_scope,
-        projection_limited_settings=projection_limited,
+        projection_limited_settings=(),
         unsupported_settings=unsupported,
+        optional_forecast_settings=optional,
     )
 
 

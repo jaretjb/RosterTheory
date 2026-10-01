@@ -145,16 +145,16 @@ class ManualImportTests(unittest.TestCase):
             )
 
         by_name = {player["player_name"]: player for player in result.players}
-        self.assertIsNone(by_name["Alpha Quarterback"]["projected_points"])
+        self.assertEqual(by_name["Alpha Quarterback"]["projected_points"], 290.0)
         self.assertEqual(by_name["Bravo Running Back"]["adp"], 1.5)
         self.assertTrue(all(row["match_status"] == "matched" for row in result.match_report))
-        self.assertEqual(result.metadata["replacement_baselines"], {})
-        self.assertEqual(result.metadata["projections"]["complete_scoring_player_count"], 0)
-        self.assertEqual(result.metadata["coverage"]["projection"], 0.0)
-        self.assertFalse(result.metadata["checks"]["top_180_projection_coverage_at_least_90_percent"])
+        self.assertEqual(set(result.metadata["replacement_baselines"]), {"QB", "RB", "WR", "TE"})
+        self.assertEqual(result.metadata["projections"]["complete_scoring_player_count"], 4)
+        self.assertEqual(result.metadata["coverage"]["projection"], 1.0)
+        self.assertTrue(result.metadata["checks"]["top_180_projection_coverage_at_least_90_percent"])
         self.assertEqual(
             {issue["reason"] for issue in result.issues if "scoring" in issue["reason"]},
-            {"scoring_incomplete_v1"},
+            set(),
         )
         self.assertFalse(result.metadata["draft_ready"])
         self.assertTrue(result.metadata["sample_only"])
@@ -188,7 +188,7 @@ class ManualImportTests(unittest.TestCase):
         self.assertIn("invalid_statistic=pass_td", details[4])
         self.assertIn("invalid_statistic=pass_td", details[5])
 
-    def test_missing_off_role_stat_and_unknown_rule_do_not_count_as_projections(self) -> None:
+    def test_optional_off_role_stat_does_not_hide_unknown_rule(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "rb_projections.csv"
             path.write_text("PLAYER,YDS,TDS\nRunner DET,100,1\n", encoding="utf-8")
@@ -198,7 +198,8 @@ class ManualImportTests(unittest.TestCase):
                 league_id="synthetic-draft-league", season=2026,
             )
         self.assertIsNone(next(iter(rows.values()))["projected_points"])
-        self.assertIn("missing_statistic=pass_td", issues[0]["detail"])
+        self.assertNotIn("missing_statistic=pass_td", issues[0]["detail"])
+        self.assertIn("pass_td", next(iter(rows.values()))["optional_missing_settings"])
         self.assertIn("unsupported_rule=bonus_unknown", issues[0]["detail"])
 
     def test_reports_unknown_expert_columns_and_unusable_players(self) -> None:

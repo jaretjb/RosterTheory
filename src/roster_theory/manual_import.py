@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from roster_theory.core.forecast_scoring import FORECAST_COVERAGE_VERSION, score_forecast_evidence
 from roster_theory.core.scoring_contract import (
     ScoringScope,
     assess_scoring_rules,
     observed_statistics,
-    score_evidence,
 )
 from roster_theory.providers.sleeper_scoring_rules import SLEEPER_LINEAR_RULES
 from roster_theory.rankings import (
@@ -485,7 +485,7 @@ def load_fantasypros_projections(
     scope = ScoringScope(league_id, season, "DRAFT-MANUAL-IMPORT", "SEASON", None)
     assessment = assess_scoring_rules(
         scoring_settings, scope=scope, catalogue=SLEEPER_LINEAR_RULES,
-        catalogue_version="fantasypros-manual-preseason-v1",
+        catalogue_version="fantasypros-manual-preseason-v2",
     )
     for path in paths:
         table = _read_table(path)
@@ -520,10 +520,10 @@ def load_fantasypros_projections(
                 continue
             evidence = observed_statistics(
                 stats, source="FantasyPros manual export",
-                source_schema="fantasypros-manual-preseason-v1",
+                source_schema="fantasypros-manual-preseason-v2",
                 season=season, horizon="SEASON", week=None, position=position,
             )
-            scored = score_evidence(assessment, evidence)
+            scored = score_forecast_evidence(assessment, evidence)
             if not scored.complete:
                 issues.append({
                     "source": str(path), "row": row_number,
@@ -538,6 +538,7 @@ def load_fantasypros_projections(
                 "position": position,
                 "projected_points": scored.require_points() if scored.complete else None,
                 "stats": stats,
+                "optional_missing_settings": list(scored.optional_missing_settings),
             }
             loaded += 1
         files.append({"path": str(path), "position": position, "players": loaded})
@@ -549,8 +550,9 @@ def load_fantasypros_projections(
         "league_id": league_id,
         "season": season,
         "scoring_hash": assessment.scoring_hash,
+        "forecast_coverage_policy": FORECAST_COVERAGE_VERSION,
         "rules_hash": assessment.rules_hash,
-        "scoring_contract": "fantasypros-manual-preseason-v1",
+        "scoring_contract": "fantasypros-manual-preseason-v2",
     }, issues
 
 

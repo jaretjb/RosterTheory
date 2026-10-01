@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 from typing import Mapping, Sequence
 
+from roster_theory.core.forecast_scoring import score_forecast_evidence
 from roster_theory.core.models import Projection
 from roster_theory.core.provenance import stable_hash
 from roster_theory.core.scoring_contract import (
     ScoringScope,
     assess_scoring_rules,
     observed_statistics,
-    score_evidence,
 )
 from roster_theory.inseason.evaluation import (
     ImpactOptions,
@@ -458,7 +458,7 @@ def _state_projections(
             season=season, horizon="WEEKLY", week=assumption.week,
             position=value.position,
         )
-        scored = score_evidence(assessment, evidence)
+        scored = score_forecast_evidence(assessment, evidence)
         if not scored.complete:
             warnings.append(
                 "Scenario scoring evidence incomplete: "

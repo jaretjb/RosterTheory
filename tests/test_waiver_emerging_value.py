@@ -351,7 +351,7 @@ class EmergingScenarioEvaluationTests(unittest.TestCase):
         self.assertEqual(value.status, "SCORING_OR_ADD_INPUT_INCOMPLETE")
         self.assertIn("bonus_first_down", value.strongest_uncertainty)
 
-    def test_missing_applicable_statistic_blocks_only_scenario_value(self):
+    def test_missing_off_role_passing_does_not_block_running_back_scenario(self):
         snapshot = scored_snapshot()
         missing = replace(
             snapshot,
@@ -363,9 +363,9 @@ class EmergingScenarioEvaluationTests(unittest.TestCase):
         baseline, _ = evaluate_move(emergence_bundle(), snapshot=snapshot)
         result, _ = evaluate_move(emergence_bundle(), snapshot=missing)
         value = result.candidates[0].emerging_upside
-        self.assertEqual(value.status, "SCORING_OR_ADD_INPUT_INCOMPLETE")
-        self.assertIn("missing_statistic=pass_td", value.strongest_uncertainty)
-        self.assertEqual(value.scenario_comparisons, ())
+        self.assertEqual(value.status, "COMPLETE")
+        self.assertEqual(value.scenario_comparisons,
+                         baseline.candidates[0].emerging_upside.scenario_comparisons)
         self.assertEqual(len(result.candidates), 1)
         self.assertEqual(result.decision_label, baseline.decision_label)
 

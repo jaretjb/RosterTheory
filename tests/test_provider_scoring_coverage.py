@@ -235,14 +235,14 @@ class ProviderScoringCoverageTests(unittest.TestCase):
         self.assertEqual((player.league_points, player.coverage_status), (7, "complete"))
         self.assertEqual((defense.league_points, defense.coverage_status), (8, "complete"))
         missing = projection({"st_td": 1, "def_st_ff": 1}, settings, "WR")
-        self.assertIn("missing_statistic=st_ff", missing.coverage_status)
+        self.assertEqual(missing.coverage_status, "complete")
 
     def test_position_and_rule_applicability_do_not_guess_zeros(self):
         row = projection({"rec": 4}, {"rec": .5, "bonus_rec_te": 1, "sack": 1}, "WR")
         self.assertEqual((row.league_points, row.coverage_status), (2, "complete"))
         row = projection({"pass_yds": 10}, {"pass_yd": .04}, "WR")
         self.assertEqual((row.league_points, row.coverage_status), (.4, "complete"))
-        self.assertIn("missing_statistic=pass_yd", projection({}, {"pass_yd": .04}, "WR").coverage_status)
+        self.assertEqual(projection({}, {"pass_yd": .04}, "WR").coverage_status, "complete")
         for position in ("", "IDP"):
             self.assertIn("missing_position", projection({"rec": 4}, {"rec": .5}, position).coverage_status)
         self.assertEqual(projection({}, {"fum_rec": 2}, "WR").coverage_status, "complete")
@@ -332,7 +332,8 @@ class ProviderScoringCoverageTests(unittest.TestCase):
                 if rule.setting != "fum_rec_td"
             }
             qb = score_projection_row({"position_id": "QB", "stats": observed}, assessment)
-            self.assertIn("missing_statistic=fum_rec_td", scoring_coverage(qb))
+            self.assertEqual(scoring_coverage(qb), "complete")
+            self.assertIn("fum_rec_td", qb.optional_missing_settings)
             self.assertNotIn("fum_rec=", scoring_coverage(qb))
             observed["fum_rec_td"] = 0
             self.assertEqual(scoring_coverage(score_projection_row(

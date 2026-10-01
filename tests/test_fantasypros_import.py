@@ -108,7 +108,7 @@ class DraftApiScoringTests(unittest.TestCase):
         self.assertIsNone(players["3"]["projected_points"])
         self.assertTrue(all(row["rank_score"] is not None for row in players.values()))
         self.assertEqual(board.metadata["players_with_projections"], 1)
-        self.assertEqual(board.metadata["projection_scoring_contract"], "fantasypros-draft-season-v2")
+        self.assertEqual(board.metadata["projection_scoring_contract"], "fantasypros-draft-season-v3")
         reasons = {issue["fpid"]: issue["reason"] for issue in board.metadata["projection_issues"]}
         self.assertIn("missing_statistic=pass_td", reasons["2"])
         self.assertIn("invalid_statistic=pass_td", reasons["3"])
@@ -217,9 +217,10 @@ class DraftApiScoringTests(unittest.TestCase):
         self.assertFalse(sparse.metadata["checks"]["at_least_five_current_experts"])
         self.assertFalse(sparse.metadata["draft_ready"])
         for position in positions:
-            for row in projected[position]:
-                if int(row["fpid"]) <= 20:
-                    row["stats"] = {}
+            # Entirely absent forecasts still block, including QBs in a
+            # reception-only league where an omitted receiving field is optional.
+            projected[position][:] = [row for row in projected[position]
+                                      if int(row["fpid"]) > 20]
         missing_top = draft_board(client, {"rec": 0.5})
         self.assertLess(missing_top.metadata["top_180_projection_coverage"], 0.90)
         self.assertFalse(missing_top.metadata["draft_ready"])

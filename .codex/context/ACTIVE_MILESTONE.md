@@ -3,7 +3,23 @@
 Earlier sections preserve the status at the time of those slices. Issue #31
 closed after PR #65; their open-issue instructions are historical.
 
-## MA-005c - Check full Waiver search on exact reference profiles
+## MA-002u - Position-aware projection completeness across assistants
+
+Authorized by the user's September 30 request to fix irrelevant missing
+projection statistics throughout Draft, Trade and Waiver and document the rule.
+Use the MA-002 scoring contract (MR-02, MR-04, MR-06, MR-09, MR-10): distinguish
+position-required forecast fields from optional off-role and rare events;
+score supplied optional fields, preserve invalid/core-missing failures, and
+record omissions without inventing observations. Apply the same forecast
+contract to API/manual Draft, shared weekly inputs and Waiver scenarios.
+Reconcile Trade discovery/search with exact evaluation and add independent
+regressions across all three assistants. Historical actual-stat scoring remains
+separate. Document the permanent rule in steering and the scoring contract.
+Run focused/full tests, Ruff, package/import and context/privacy gates; use
+cached evidence for provider validation and rerun the requested read-only Trade
+search. Deliver a separate branch and PR, leaving merge to the user.
+
+## Previous MA-005c - Check full Waiver search on exact reference profiles (merged PR #68)
 
 Authorized by the user's September 29 request after PR #67 merged, with
 tonight's Waiver use in view. Exercise the full candidate search for both

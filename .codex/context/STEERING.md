@@ -1,8 +1,8 @@
 # RosterTheory context router
 
-Updated: September 25, 2026 (America/Los_Angeles)
+Updated: September 30, 2026 (America/Los_Angeles)
 
-Read this file first. Select one route; load its named sections/task IDs.
+Select one route; load only its named sections.
 
 Implementation/provider routes also load
 `.codex/context/IMPLEMENTATION_POLICY.md`.
@@ -29,16 +29,19 @@ Implementation/provider routes also load
 | Project-wide status, priorities, or “what's next?” | `.codex/context/DEVELOPMENT_STATUS.md`, then only the backlog row or track status it names |
 | Historical audit | Only the named public record; use private local evidence solely when the user explicitly requests it and it is available |
 
-Do not preload unrelated context or private history. Only
+Only
 `.codex/context/ACTIVE_MILESTONE.md` authorizes implementation.
 
 ## Git workflow
 
-Never commit/push to `main`; use a separate branch and GitHub pull request.
-Never bypass branch protection.
+Use separate branches and PRs; never commit/push to `main` or bypass protection.
 
-Keep Draft, Trade, Waiver, and future-assistant policy separate. Shared code may
-own only feature-neutral provider, identity, scoring, projection, lineup,
-replacement, risk, provenance, and evidence behavior. All recommendations are
-read-only; never submit a Sleeper action.
-Terminal presentation work must not change decision policy or evidence.
+Keep assistant policies separate. Share only neutral providers, identity,
+scoring, projections, lineups, replacement, risk, provenance and evidence.
+Recommendations are read-only; never submit Sleeper actions. Presentation must
+preserve decision policy and evidence.
+
+Forecast completeness is position-aware across Draft, Trade and Waiver.
+Omitted off-role/rare stats must not block; supplied stats still count.
+Missing core stats and invalid values remain explicit.
+See `docs/POSITION_FORECAST_COVERAGE.md`.

@@ -256,6 +256,8 @@ class ScoredEvidence:
     inapplicable_settings: tuple[str, ...]
     structural_zero_settings: tuple[str, ...]
     issues: tuple[ScoringIssue, ...]
+    optional_missing_settings: tuple[str, ...] = ()
+    coverage_policy: str = ""
 
     def __post_init__(self) -> None:
         if type(self.schema_version) is not int or self.schema_version != 1:
@@ -264,7 +266,8 @@ class ScoredEvidence:
             raise ValueError('Diagnostic points must be finite')
         if not isinstance(self.assessment, RuleAssessment) or not isinstance(self.source_evidence, StatEvidence):
             raise ValueError('Scored evidence requires explicit rule and source records')
-        for name in ('used_settings', 'inapplicable_settings', 'structural_zero_settings', 'issues'):
+        for name in ('used_settings', 'inapplicable_settings', 'structural_zero_settings', 'issues',
+                     'optional_missing_settings'):
             if not isinstance(getattr(self, name), tuple):
                 raise ValueError(f'{name} must be an immutable tuple')
 

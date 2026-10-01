@@ -1,7 +1,7 @@
-"""Conservative FantasyPros projection translation into the scoring contract.
+"""Position-aware FantasyPros projection translation into the scoring contract.
 
-This catalogue declares arithmetic, not provider coverage. Missing fields are
-never zero. See docs/MODULAR_PROVIDER_SCORING.md for sources and limitations.
+Missing required fields block coverage; optional omissions remain recorded.
+See docs/POSITION_FORECAST_COVERAGE.md for the shared forecast contract.
 """
 from __future__ import annotations
 
@@ -9,15 +9,16 @@ from math import isfinite
 from typing import Mapping
 
 from roster_theory.core.projections import ESTIMATED_PROJECTION_PREFIX
+from roster_theory.core.forecast_scoring import score_forecast_evidence
 from roster_theory.core.scoring_contract import (
     RuleAssessment, ScoredEvidence, StatEvidence,
-    StatObservation, score_evidence,
+    StatObservation,
 )
 from roster_theory.providers.sleeper_scoring_rules import INDIVIDUALS, SLEEPER_LINEAR_RULES
 
 
-SCORING_CONTRACT_VERSION = "fantasypros-weekly-v2"
-DRAFT_SCORING_CONTRACT_VERSION = "fantasypros-draft-season-v2"
+SCORING_CONTRACT_VERSION = "fantasypros-weekly-v3"
+DRAFT_SCORING_CONTRACT_VERSION = "fantasypros-draft-season-v3"
 WEEKLY_ESTIMATE_POLICY_VERSION = "core-stats-conditional-v1"
 WEEKLY_RULES = SLEEPER_LINEAR_RULES
 _CORE_SKILL_STATS = {
@@ -95,7 +96,7 @@ def _score_projection_row(
     scope = assessment.scope
     evidence = StatEvidence(1, "FantasyPros", source_schema, scope.season,
                             scope.horizon, scope.week, position, tuple(observations))
-    return score_evidence(assessment, evidence)
+    return score_forecast_evidence(assessment, evidence)
 
 
 def score_projection_row(row: Mapping[str, object], assessment: RuleAssessment) -> ScoredEvidence:
