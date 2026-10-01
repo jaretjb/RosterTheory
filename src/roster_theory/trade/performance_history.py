@@ -1,7 +1,7 @@
 """Ignored, league-scoped prospective captures for Trade performance context.
 
-Completed outcomes are imported into the same local file from an authorized
-source. No current projection is ever substituted for a missing pregame one.
+Live Trade runs collect completed outcomes; verified manual imports remain
+supported. No current projection replaces a missing pregame capture.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from roster_theory.core.provenance import stable_hash
@@ -35,6 +35,7 @@ class PerformanceHistoryResult:
     compatible_contexts: int
     status: str
     history_hash: str
+    outcome_refresh: dict | None = None
 
 
 def default_performance_history_path(
@@ -88,6 +89,10 @@ def update_performance_history(
     *,
     policy: PerformancePolicy,
     path: str | Path | None = None,
+    collect_outcomes: bool = False,
+    outcome_client=None,
+    outcome_cache_root: str | Path | None = None,
+    archive_root: str | Path | None = None,
 ) -> PerformanceHistoryResult:
     """Append current weekly expectations, then build prior-week context only."""
     snapshot = refresh.refresh.snapshot
@@ -101,6 +106,7 @@ def update_performance_history(
     value = _load(target, snapshot.league_key, snapshot.league.season, scoring)
     expectations = [_expectation(row) for row in value["pregame_expectations"]]
     outcomes = [_outcome(row) for row in value["completed_outcomes"]]
+    as_of = snapshot.captured_at
     # Validation happens before any write. An incomplete or foreign row cannot
     # contaminate a prospective capture ledger.
     if week > 1:
@@ -123,6 +129,7 @@ def update_performance_history(
         ):
             consensus_ranks.setdefault(rank.player_id, set()).add(rank.position_rank)
     existing = {(row.player_id, row.week, row.captured_at, row.source) for row in expectations}
+    players = {row.player_id: row for row in snapshot.players}
     added = 0
     if snapshot.current and week > 0:
         for projection in refresh.weekly_projections:
@@ -144,6 +151,7 @@ def update_performance_history(
                 ),
                 scoring_fingerprint=scoring,
                 source=projection.source,
+                nfl_team=players[projection.player_id].nfl_team,
             )
             key = (row.player_id, row.week, row.captured_at, row.source)
             if key not in existing:
@@ -151,15 +159,26 @@ def update_performance_history(
                 existing.add(key)
                 added += 1
     value["pregame_expectations"] = [asdict(row) for row in expectations]
-    # Preserve imported outcomes unchanged. The ledger is local and ignored.
-    atomic_write_json(target, value)
+    outcome_refresh = None
+    if collect_outcomes and snapshot.current:
+        from roster_theory.trade.completed_results import collect_completed_results
+        collected, outcome_refresh = collect_completed_results(
+            snapshot, expectations, outcomes, window_weeks=policy.window_weeks,
+            client=outcome_client, cache_root=outcome_cache_root, archive_root=archive_root,
+        )
+        outcomes.extend(collected)
+        as_of = datetime.now(timezone.utc)
+        value["completed_outcomes"] = [asdict(row) for row in outcomes]
+        value["outcome_refresh"] = outcome_refresh
     evidence = (
         build_performance_evidence(
             snapshot.league_key, snapshot.league.season, week - 1,
-            snapshot.captured_at, expectations=expectations, outcomes=outcomes,
+            as_of, expectations=expectations, outcomes=outcomes,
             policy=policy,
         ) if week > 1 else None
     )
+    # Validate collected rows before publishing; preserve earlier observations.
+    atomic_write_json(target, value)
     compatible = sum(row.compatible for row in evidence.contexts) if evidence else 0
     return PerformanceHistoryResult(
         path=target,
@@ -170,6 +189,7 @@ def update_performance_history(
         compatible_contexts=compatible,
         status="SUPPORTED" if compatible else "INSUFFICIENT_HISTORY",
         history_hash=stable_hash(value),
+        outcome_refresh=outcome_refresh,
     )
 
 

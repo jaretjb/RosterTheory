@@ -25,6 +25,7 @@ class PregameExpectation:
     projected_position_rank: float | None
     scoring_fingerprint: str
     source: str
+    nfl_team: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

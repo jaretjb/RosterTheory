@@ -1,6 +1,22 @@
 # Active milestone
 
-## MA-002u - Position-aware projection completeness across assistants
+Earlier sections preserve the status at the time of those slices. Issue #31
+closed after PR #65; their open-issue instructions are historical.
+
+## TA-1314 - Automatically ingest completed Trade performance outcomes
+
+Authorized by the user's September 30 request to diagnose and fix missing game
+result inputs. Complete the TA-1303/TA-1308 operational path: normal live Trade
+runs fetch prior completed results, retain league-scored points and source
+evidence, pair them only with genuine pregame captures, and expose coverage
+failures. Use read-only Sleeper league results and verified completed schedules;
+preserve partial/inactive exclusions, small-sample requirements, expert order,
+and historical replay. Validate both configured leagues independently. Deliver
+a tested separate PR. PR #70 is now merged. The user's follow-up authorizes
+resolving remaining conflicts and merging all open PRs through GitHub after
+required checks pass; preserve both the Trade capture logic and main's Waiver fixes.
+
+## Previous MA-002u - Position-aware projection completeness across assistants
 
 Authorized by the user's September 30 request to fix irrelevant missing
 projection statistics throughout Draft, Trade and Waiver and document the rule.

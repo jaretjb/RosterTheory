@@ -1,14 +1,17 @@
 # Trade Assistant current status
 
-Updated: September 26, 2026 (America/Los_Angeles)
+Updated: September 30, 2026 (America/Los_Angeles)
 
-Snapshot-clock repair: schedule provenance age now uses the recorded snapshot
-capture time, preserving IDs/seeds across rebuilds. Regression tests cover a
-second boundary, the 24-hour schedule cutoff, and stale ownership rejection.
-All 813 tests, Ruff, and privacy gates pass; the formerly flaky test passed 100
-repeats. PR delivery is pending. No provider calls or decision-policy change.
+TA-1314 connects normal live Trade runs to completed league-scored outcomes.
+The former path captured expectations but required manual outcome import.
+Collection retains source evidence, historical team identity, pregame timing
+and sample requirements. Missing results remain explicit; early-exit detection
+is limited. Detail: `docs/COMPLETED_TRADE_ASSISTANT_TA_1314.md`.
+Depends on unmerged PR #70. Separate live checks loaded 243/289 outcomes,
+with seven compatible contexts each. All 978 full-suite tests and eight final
+outcome tests pass, plus Ruff, context, package and clean-install checks.
 
-TA-1313 implementation is complete; delivery is through PR #25. Trade
+TA-1313 shipped through PR #25. Trade
 weekly projections now retain the provider's declared STD/HALF/PPR label while
 rescoring usable raw stats under the league's Sleeper settings. Rank scope
 remains exact; rows without required raw stats remain unavailable. The affected
@@ -24,6 +27,6 @@ AC-001–AC-008/#7–#14 are merged through PR #23. Their shared exact gates,
 ranking caps, scoring formats, freshness contracts and bounded-search proofs
 remain in force. Completed evidence is in the matching
 `docs/COMPLETED_ASSISTANT_RELIABILITY_AC_*.md` records. The audit remains open;
-No other Trade implementation milestone is active. TA-1310 empirical
+TA-1314 is active. TA-1310 empirical
 calibration remains unpromoted pending sufficient dated evidence. Trade is
 read-only.
