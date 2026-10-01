@@ -1,4 +1,4 @@
-"""Historical Waiver production cannot rank a partial league-points total."""
+"""Historical Waiver production preserves sparse zeros and unknown evidence."""
 from datetime import datetime, timezone
 from types import SimpleNamespace
 import unittest
@@ -19,7 +19,7 @@ def player(player_id, position):
 
 
 class HistoricalWaiverScoringTests(unittest.TestCase):
-    def test_missing_touchdown_cannot_rank_above_observed_zero(self):
+    def test_played_row_sparse_zero_matches_observed_zero_but_absent_row_stays_unknown(self):
         players = {pid: player(pid, "QB") for pid in ("partial", "complete", "absent")}
         client = SimpleNamespace(
             season_stats=lambda season: {
@@ -34,17 +34,40 @@ class HistoricalWaiverScoringTests(unittest.TestCase):
         evidence, _ = _performance_evidence(
             client=client, league_id="fixture", season=2026, current_week=3, players=players,
             scoring={"pass_yd": 0.04, "pass_td": 4}, as_of=NOW)
-        self.assertIsNone(evidence["partial"]["season_points"])
-        self.assertIsNone(evidence["partial"]["season_position_rank"])
-        self.assertIsNone(evidence["partial"]["recent_points_per_game"])
-        self.assertIsNone(evidence["partial"]["recent_position_rank"])
+        self.assertEqual(evidence["partial"]["season_points"], 10)
+        self.assertEqual(evidence["partial"]["season_position_rank"], 1)
+        self.assertEqual(evidence["partial"]["recent_points_per_game"], 5)
+        self.assertEqual(evidence["partial"]["recent_position_rank"], 1)
         self.assertEqual(evidence["complete"]["season_points"], 10)
         self.assertEqual(evidence["complete"]["season_position_rank"], 1)
         self.assertEqual(evidence["complete"]["recent_points_per_game"], 5)
-        self.assertTrue(any("pass_td" in warning for warning in evidence["partial"]["scoring_warnings"]))
+        self.assertFalse(evidence["partial"]["scoring_warnings"])
         self.assertIsNone(evidence["absent"]["season_points"])
         self.assertTrue(any("no Sleeper season stat row" in warning
                             for warning in evidence["absent"]["scoring_warnings"]))
+
+    def test_sparse_zero_requires_observed_game_and_is_recorded_in_provenance(self):
+        rules = assess_historical_rules({"pass_yd": 0.04, "pass_td": 4},
+            league_id="alpha", season=2026, week=2)
+        played = score_historical_stats({"gp": 1, "pass_yd": 250}, rules, position="QB")
+        self.assertEqual(played.require_points(), 10)
+        self.assertEqual(played.structural_zero_settings, ("pass_td",))
+        self.assertFalse(score_historical_stats({"pass_yd": 250}, rules, position="QB").complete)
+        self.assertFalse(score_historical_stats({"gp": 0}, rules, position="QB").complete)
+        self.assertFalse(score_historical_stats({"gp": 1.5}, rules, position="QB").complete)
+        self.assertFalse(score_historical_stats({}, rules, position="QB").complete)
+
+    def test_sparse_specialist_fields_are_explicit_and_league_scored(self):
+        kicker = assess_historical_rules({"fgm": 3, "xpm": 1},
+            league_id="alpha", season=2026, week=2)
+        defense = assess_historical_rules({"sack": 1, "int": 2},
+            league_id="beta", season=2026, week=2)
+        k_result = score_historical_stats({"gp": 1, "fgm": 2}, kicker, position="K")
+        dst_result = score_historical_stats({"gp": 1, "sack": 3}, defense, position="DST")
+        self.assertEqual(k_result.require_points(), 6)
+        self.assertEqual(dst_result.require_points(), 3)
+        self.assertEqual(k_result.structural_zero_settings, ("xpm",))
+        self.assertEqual(dst_result.structural_zero_settings, ("int",))
 
     def test_position_irrelevant_rules_do_not_erase_specialists(self):
         players = {"k": player("k", "K"), "dst": player("dst", "DST")}

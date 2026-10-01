@@ -270,9 +270,11 @@ To evaluate one move:
 roster-theory waiver evaluate home_league --add "Player A" --drop "Player B" --inputs PATH_TO_INPUTS
 ```
 
-Waiver uses the same position-aware forecast requirements. It can compare
-similarly labeled estimates, but it shows `WATCH` instead of an add or claim
-instruction when remaining missing scoring fields could change the result.
+Waiver uses the same position-aware forecast requirements. Admitted forecasts
+with remaining ancillary omissions retain their estimate disclosures and pass
+through the normal value and roster gates; the estimate label alone does not
+force `WATCH`. Missing required evidence and decision-dependent roster gaps
+remain explicit and can prevent an affirmative recommendation.
 
 ## Finding commands
 

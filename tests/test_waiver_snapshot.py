@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from roster_theory.cli import build_parser, command_waiver_refresh
 from roster_theory.core.errors import IdentityIncomplete, RosterIllegal, StaleData
-from roster_theory.providers.sleeper import SleeperAdapter, SleeperTransaction
+from roster_theory.providers.sleeper import SleeperAdapter, SleeperTransaction, normalize_players
 from roster_theory.waiver.service import (
     refresh_waiver_snapshot,
     waiver_refresh_report,
@@ -44,6 +44,7 @@ class FakeSleeperClient:
             "roster_positions": ["QB", "RB", "WR", "BN"],
             "scoring_settings": {"pass_yd": 0.04, "rec": 0.5},
             "settings": {
+                "playoff_week_start": 15,
                 "reserve_slots": 1,
                 "taxi_slots": 0,
                 "waiver_type": 2,
@@ -78,6 +79,10 @@ class FakeSleeperClient:
                 "settings": {"waiver_position": 1, "waiver_budget_used": 0},
             },
         ]
+
+    def league_winners_bracket(self, _league_id):
+        self.calls.append("winners_bracket")
+        return [{"r": 1}, {"r": 2}, {"r": 3}]
 
     def players(self, _sport="nfl"):
         self.calls.append("players")
@@ -162,6 +167,15 @@ class FakeSleeperClient:
 
 
 class WaiverSnapshotTests(unittest.TestCase):
+    def test_defense_city_and_mascot_form_display_name(self):
+        players = normalize_players({
+            "PIT": {
+                "player_id": "PIT", "fantasy_positions": ["DEF"],
+                "first_name": "Pittsburgh", "last_name": "Steelers",
+            }
+        })
+        self.assertEqual(players[0].name, "Pittsburgh Steelers")
+
     def _bundle(self, client=None):
         client = client or FakeSleeperClient()
         directory = tempfile.TemporaryDirectory()
@@ -195,11 +209,22 @@ class WaiverSnapshotTests(unittest.TestCase):
         self.assertEqual(first.player_directory_cache_status, "miss")
         self.assertEqual(second.player_directory_cache_status, "hit")
         self.assertEqual(
-            client.calls[:6],
-            ["state", "league", "users", "rosters", "players", "transactions:1"],
+            client.calls[:7],
+            ["state", "league", "users", "rosters", "winners_bracket", "players", "transactions:1"],
         )
-        self.assertEqual(len(first.stamps), 6)
+        self.assertEqual(len(first.stamps), 7)
+        self.assertEqual(first.league.championship_week, 17)
+        self.assertEqual(first.winner_bracket_rounds, 3)
         self.assertEqual(first.transactions[0].waiver_bid, 7)
+
+    def test_missing_winners_bracket_keeps_championship_unknown(self):
+        class NoBracketClient(FakeSleeperClient):
+            def league_winners_bracket(self, league_id):
+                super().league_winners_bracket(league_id)
+                return []
+
+        bundle = self._bundle(NoBracketClient())
+        self.assertIsNone(bundle.league.championship_week)
 
     def test_waiver_fetch_refreshes_player_status_older_than_five_minutes(self):
         client = FakeSleeperClient()

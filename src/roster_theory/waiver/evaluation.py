@@ -415,6 +415,8 @@ class DropCandidateEvaluation:
     dst_streaming: DstStreamingEvidence
     waiver_value: WaiverValueComparison
     projection_inputs_complete: bool = True
+    fixed_specialist_gap_independent: bool = False
+    current_week_projection_complete: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1405,6 +1407,15 @@ def evaluate_waiver(
         ):
             roster_evidence_exclusion_map[player_id] = "INCOMPLETE_PROJECTION_EVIDENCE"
             roster_evidence_excluded.add(player_id)
+    specialist_fallback_roster = {
+        player_id for player_id in roster_evidence_excluded
+        if add_position in {"K", "DST"}
+        and _waiver_position(player_by_id[player_id]) == add_position
+        and roster_evidence_exclusion_map[player_id] == "INCOMPLETE_PROJECTION_EVIDENCE"
+    }
+    for player_id in specialist_fallback_roster:
+        roster_evidence_exclusion_map.pop(player_id)
+    roster_evidence_excluded -= specialist_fallback_roster
     active_supported_roster -= roster_evidence_excluded
     supported_roster = set(active_supported_roster)
     droppable_roster = set(supported_roster)
@@ -1423,6 +1434,9 @@ def evaluate_waiver(
         for player_id in sorted(roster_evidence_excluded)
     )
     drop_evidence_exclusion_map = dict(drop_evidence_exclusions or {})
+    for player_id in specialist_fallback_roster:
+        if drop_evidence_exclusion_map.get(player_id) == "INCOMPLETE_PROJECTION_EVIDENCE":
+            drop_evidence_exclusion_map.pop(player_id)
     if drop is None and drop_player_id is None:
         supplied_values = {row.player_id: row for row in values}
         for player_id in droppable_roster:
@@ -1497,11 +1511,21 @@ def evaluate_waiver(
         for week in context.weeks
         if (cell := matrix.cell(player_id, week.week)) is None or cell.points is None
     )
-    if missing_projection_weeks and not options.allow_partial_schedule:
+    specialist_missing_ids = {add_player.player_id} | specialist_fallback_roster
+    specialist_rank_fallback = (
+        add_position in {"K", "DST"}
+        and bool(specialist_fallback_roster)
+        and all(player_id in specialist_missing_ids for player_id, _ in missing_projection_weeks)
+    )
+    if missing_projection_weeks and not options.allow_partial_schedule and not specialist_rank_fallback:
         raise CoverageIncomplete(
             "Weekly projections miss evaluated player-weeks: "
             + ", ".join(f"{player_id}/W{week}" for player_id, week in missing_projection_weeks)
         )
+    if specialist_rank_fallback:
+        # Missing forecasts remain missing. Only the same-position specialist
+        # path may rely on fresh rank and sampled season production instead.
+        options = replace(options, allow_partial_schedule=True)
     projection_inputs_complete = not missing_projection_weeks and all(
         projection_is_usable(
             projection_by_key[(player_id, week.week)], current_week=context.current_week,
@@ -1548,11 +1572,27 @@ def evaluate_waiver(
             _normalized_positions(player_by_id[player_id]).intersection(touched)
             for player_id in roster_evidence_excluded
         )
+        if specialist_rank_fallback:
+            pair_projection_complete = False
+        fixed_specialist_gap_independent = bool(roster_evidence_excluded) and (
+            not unknown_identity_ids
+            and all(
+                _normalized_positions(player_by_id[player_id]) <= {"K", "DST"}
+                for player_id in roster_evidence_excluded
+            )
+            and not touched.intersection({"K", "DST"})
+        )
         missing_positions = lineup_dependency_positions(
             snapshot.league.roster_positions, snapshot.players, roster_evidence_excluded)
-        if unknown_identity_ids or any(
-            missing_positions.intersection(_normalized_positions(player_by_id[pid]))
-            for pid in context.unowned_player_ids if pid in player_by_id
+        # A missing specialist cannot change an unrelated skill-player swap:
+        # K and DST have fixed, disjoint lineup slots. Still protect any
+        # missing-position replacement pool inside the touched slot group.
+        if unknown_identity_ids or (
+            touched.intersection(missing_positions)
+            and any(
+                missing_positions.intersection(_normalized_positions(player_by_id[pid]))
+                for pid in context.unowned_player_ids if pid in player_by_id
+            )
         ):
             pair_projection_complete = False
         if "QB" in touched and any(_normalized_positions(player_by_id[pid]) & SKILL_POSITIONS
@@ -1749,6 +1789,7 @@ def evaluate_waiver(
         candidates.append(
             DropCandidateEvaluation(
                 projection_inputs_complete=pair_projection_complete,
+                fixed_specialist_gap_independent=fixed_specialist_gap_independent,
                 drop_player_id=drop_id,
                 drop_position=(
                     _waiver_position(player_by_id[drop_id])
@@ -1786,13 +1827,24 @@ def evaluate_waiver(
                     (add_player.player_id, snapshot.manifest.current_week)
                 ].league_points,
                 current_week_drop_points=(
-                    projection_by_key[
-                        (drop_id, snapshot.manifest.current_week)
-                    ].league_points
-                    if drop_id is not None
+                    row.league_points
+                    if drop_id is not None and (
+                        row := projection_by_key.get(
+                            (drop_id, snapshot.manifest.current_week)
+                        )
+                    ) is not None
                     else None
                 ),
                 dst_streaming=dst_streaming,
+                current_week_projection_complete=(
+                    add_position == "DST" and drop_id is not None
+                    and _waiver_position(player_by_id[drop_id]) == "DST"
+                    and all(
+                        (forecast := projection_by_key.get((pid, snapshot.manifest.current_week))) is not None
+                        and projection_is_complete(forecast, current_week=snapshot.manifest.current_week)
+                        for pid in (add_player.player_id, drop_id)
+                    )
+                ),
                 waiver_value=compare_waiver_values(
                     priority_by_id,
                     add_player_id=add_player.player_id,
@@ -1928,7 +1980,7 @@ def evaluate_waiver(
         warnings.append(
             "Forecast estimate: ownership values or weekly points use available "
             "league-scored statistics; missing scoring fields are unverified, "
-            "so any favorable decision remains conditional"
+            "and are disclosed without automatically vetoing a recommendation"
         )
     for player_id in sorted(described_ids):
         warnings.extend(value_map[player_id].warnings)

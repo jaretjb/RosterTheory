@@ -492,6 +492,20 @@ def lineup_with_replacement_floor(
             row.slot
             for row in full_lineup.assignments
             if row.slot.split(":", 1)[0] in {"DST", "K"}
+            and any(
+                row.slot.split(":", 1)[0] in {
+                    "DST" if position.upper() == "DEF" else position.upper()
+                    for position in player_by_id[player_id].positions
+                }
+                for player_id in candidates
+            )
+            and (
+                not allow_partial
+                or (
+                    (cell := matrix.cell(row.player_id, week)) is not None
+                    and cell.points is not None
+                )
+            )
         ),
     )
     selected = {row.player_id for row in optimized.assignments}

@@ -381,26 +381,52 @@ sufficient incremental upside to justify replacing them. These checks can
 prevent an acquisition despite a positive composite score. Failed affirmative
 gates lead to `WATCH` or `PASS` according to the policy's separate watch criteria.
 
+An admitted available-stat forecast keeps its estimate disclosures without an
+automatic `WATCH` downgrade. Missing required evidence still blocks the relevant
+decision. Missing unchanged K/DST forecasts can cancel out of a skill-player
+comparison only when the lineup rules prove those slots are independent;
+otherwise the roster gap remains material.
+
 ### 4. Handle kickers and defenses separately
 
 K/DST use streaming and sampled-production rules. For a same-position comparison
-with eligible weekly ranks and known season totals/game counts:
+with eligible weekly ranks and known season totals/game counts, let `population`
+be 16 for kickers and 32 for defenses:
 
 ```text
-weekly_advantage = (drop_weekly_rank − add_weekly_rank) / 15
+weekly_advantage = (min(drop_weekly_rank, population) − add_weekly_rank) / (population − 1)
 production_advantage = clamp((add_total − drop_total) / max(abs(add_total), abs(drop_total)), −1, 1)
 confidence = min(add_games, drop_games) / [min(add_games, drop_games) + prior_games]
 specialist_score = (1 − production_weight) × weekly_advantage
                    + production_weight × confidence × production_advantage
 ```
 
-If both totals are zero, production advantage is zero. These are season totals,
-not points per game. Missing game counts remain unknown. A positive fresh
-rank/production comparison can support streaming; the projection path instead
-requires the configured current-week improvement and, for DST, rolling-horizon
-advantage. A negative complete production balance cannot be bypassed by that
-projection path. News, activity, and cross-position roster protections still apply.
-Specialist weights are manual policy choices with unproven historical calibration.
+New targets still need a weekly rank within the top 16; an incumbent defense's
+rank retains its place across all 32 teams. If both totals are zero, production
+advantage is zero. These are season totals, not points per game. Missing game
+counts remain unknown.
+
+For same-position DST swaps, complete **current-week league-scored projections**
+replace the rank-based weekly advantage in that score:
+
+```text
+weekly_advantage = clamp((add_week_points − drop_week_points)
+                        / max(abs(add_week_points), abs(drop_week_points)), −1, 1)
+```
+
+If both forecasts are zero, this advantage is zero. The current-week point gain
+must clear its configured floor. A negative complete specialist score cannot
+be bypassed by the projection path. Future weeks are informational for these
+DST swaps. When current-week projections are unavailable, fallback requires
+both an improved current-week expert rank and a positive fresh rank/production
+score. Season production or fallback ranks cannot override a known inferior
+current-week projection.
+
+Kickers retain the current-week projection improvement or positive fresh
+rank/production path, with the same nonnegative specialist-score guard on
+projection-based decisions. News, activity, and cross-position roster protections
+still apply. Specialist weights are manual policy choices with unproven
+historical calibration.
 
 Implementation: [Waiver Value](../src/roster_theory/waiver/priority.py),
 [move evaluation](../src/roster_theory/waiver/evaluation.py),
