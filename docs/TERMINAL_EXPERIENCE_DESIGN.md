@@ -10,8 +10,8 @@ Implementation tasks are in docs/TERMINAL_EXPERIENCE_TASKS.md.
 ## 1. Outcome and boundaries
 
 The interactive console should feel like a distinctive Roster Theory product:
-a large, legible wordmark spelling both words; bright-yellow pixel linework
-with an original arcade-scoreboard motif; a command title visible immediately; and readable
+a large, legible wordmark spelling both words; gold stadium linework
+with the original Colosseum motif; a command title visible immediately; and readable
 health and decision reports. The wordmark must never be only an RT monogram.
 
 The user should see the identity on every ordinary interactive human command,
@@ -26,66 +26,51 @@ call plans, evidence hashes, exit codes, or Sleeper's read-only boundary.
 Missing, ambiguous, partial, stale, and unavailable data stay conspicuous.
 The expert ranking horizon and actual league scoring labels stay visible.
 
-## 2. Design direction: the arcade scoreboard
+## 2. Design direction: the Colosseum
 
-The visual language is an original terminal-native 1980s arcade scoreboard:
-bright game-cabinet yellow, warm cream text, stepped pixel lettering, double
-rules, small diamond/pip motifs, and deliberate black-space rhythm. It takes
-broad inspiration from the energetic gold-on-dark hierarchy of classic games
-and modern terminal tools without copying another product's mascot, wording,
-glyphs, or screen geometry.
+The user selected the Colosseum and its Mathematical Weave lettering on
+October 6, 2026: an original gold football stadium above horizontal
+`ROSTER THEORY` letterforms built from mathematical symbols. Calculus signs,
+Greek symbols and operators create an airy texture inside angular silhouettes,
+with a gentle gold-to-bronze fade. Both words have equal visual weight and open
+counters. Dense terminal dot linework depicts seating terraces, roof supports,
+floodlights, a projected field and yard lines. Slim corner rules frame the identity.
 
-The full wordmark is built from bespoke fixed-width glyphs for every letter in
-ROSTER THEORY. On wide terminals the two words are stacked and each is drawn
-at the same large pixel scale; neither word is a subtitle. It has a readable
-full-name line beneath the glyphs, so the brand survives ambiguous fonts and
-screen captures. Decorative borders are framing devices, not giant containers
-around every paragraph.
+The hero is real Unicode/ANSI character art, drawn with the standard library.
+It needs no image decoder, downloaded font or optional runtime dependency.
+A readable full-name label precedes the stadium, and
+`FANTASY FOOTBALL ASSISTANT` appears immediately above
+`DRAFT ◆ TRADE ◆ WAIVER` beneath the large title.
 
-The static README marquee gives those glyphs an oversized, hard-edged gold
-extrusion inspired by 1990s video-game title screens. It labels the product as
-`FANTASY FOOTBALL ASSISTANT` directly above `DRAFT ◆ TRADE ◆ WAIVER`; those
-lines remain subordinate to the two-word title.
+The canonical README artwork is
+`docs/assets/roster-theory-colosseum.svg`. Generate it with
+`python scripts/render_terminal_logo.py`; it uses the same geometry and
+character cells as the CLI. Stadium dots and mathematical glyphs are embedded
+SVG outlines, so neither depends on a browser font. Captions include accessible text.
+The retired `roster-theory-terminal-90s.svg` is removed.
 
-Conceptual wide-terminal specimen (synthetic content, not final glyph raster):
-
-    ╔═◆══════════════════════  ROSTER THEORY  ══════════════════════◆═╗
-    ║            ████   ███   ████  █████ █████ ████                 ║
-    ║            █   █ █   █ █        █   █     █   █                ║
-    ║            ████  █   █  ███     █   ████  ████                 ║
-    ║            █  █  █   █     █    █   █     █  █                 ║
-    ║            █   █  ███  ████     █   █████ █   █                ║
-    ║                              •                                 ║
-    ║             █████ █   █ █████  ███  ████  █   █                ║
-    ║               █   █   █ █     █   █ █   █  █ █                 ║
-    ║               █   █████ ████  █   █ ████    █                  ║
-    ║               █   █   █ █     █   █ █  █    █                  ║
-    ║               █   █   █ █████  ███  █   █   █                  ║
-    ╚═◆══════════════════  INSERT COIN / CHOOSE WISELY  ═════════════◆═╝
-
-The implementation must visually review all glyphs, kerning, border joins,
-and Windows terminal rendering; this specimen specifies composition, not an
-unreviewed final logo. Arcade yellow (`#FFD700`, or the nearest safe terminal
-color) is the primary brand accent. Cream/muted bronze support hierarchy;
-green, amber, and red are reserved for semantic status. Status is
-always spelled out as text as well as colored.
+Gold (`#FFD345`) is the primary hero accent, with cream and muted bronze.
+Smaller existing mastheads retain the nearest safe terminal yellow. Green,
+amber and red are reserved for semantic status, which is always spelled out.
 
 ### Width and capability tiers
 
 | Surface | Identity | Layout |
 | --- | --- | --- |
-| Interactive, 100+ columns, Unicode and ANSI | Full bordered glyph wordmark | Two-column panels only where they remain legible |
-| Interactive, 60-99 columns | Full-name bordered text wordmark, no cropped glyphs | Single-column cards |
-| Interactive, 40-59 columns | Full "Roster Theory" name and command title | Minimal rule, wrapped sections |
-| Below 40 columns or uncertain Unicode | Plain "Roster Theory / Command" | No box art; all content wraps |
-| NO_COLOR or unsupported ANSI | Same hierarchy without color | Unicode if safe, otherwise ASCII |
+| Interactive, 123+ columns | Full Colosseum, capped at 132 columns | Stadium above equal-scale horizontal words |
+| Interactive, 100–122 columns | Colosseum with condensed glyphs and scaled linework | Full title remains horizontal without cropping |
+| Interactive, 60–99 columns | Full-name bordered text wordmark | Single-column cards |
+| Interactive, 40–59 columns | Full "Roster Theory" name and command title | Minimal rule, wrapped sections |
+| Below 40 columns | Plain "Roster Theory / Command" | No box art; content wraps |
+| Unsupported Unicode | ASCII stadium and symbol equivalents on wide terminals, ASCII text elsewhere | Same letter silhouettes without unsupported characters |
+| NO_COLOR or unsupported ANSI | Same hierarchy without color | Mathematical symbols remain visible |
 | Redirected/piped human output | Plain full-name title, no art or ANSI | Stable linear sections |
 | --json, CSV, saved evidence, logs | No decoration | Existing machine contract unchanged |
 
 No tier may shorten the only visible brand to RT. Terminal width is measured
 before rendering, including any status badge or command subtitle. Use
-single-cell characters with known behavior; avoid emoji and invisible
-alignment assumptions. ANSI escapes do not count toward layout width.
+single-cell characters; avoid emoji and invisible alignment assumptions.
+ANSI escapes do not count toward layout width.
 
 ### Existing CLI compatibility
 

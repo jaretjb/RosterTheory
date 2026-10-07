@@ -7,7 +7,7 @@ reuse immutable projection/matrix caches; claim-prefix caches reset on roster
 changes. The neutral lineup solver scores only maximal-fill shapes, preserving
 its filled-slot-first objective and deterministic ties. Independent non-current
 replays evaluate all 113 and 79 eligible adds in 211.5 and 170.9 seconds.
-The three-add result and hash match. All 1,009 tests, Ruff and privacy/package
+The three-add result and hash match. All 1,013 tests, Ruff and privacy/package
 gates pass; installed regressions pass. Installed live search completes all 113
 adds in 242.3 seconds with unchanged rosters and visible coverage gaps.
 Freshness, candidate coverage and calibration remain unchanged.
