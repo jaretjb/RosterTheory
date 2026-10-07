@@ -1,8 +1,8 @@
 # Third-party data notices and disposition
 
-Updated: September 14, 2026 (America/Los_Angeles)
+Updated: October 6, 2026 (America/Los_Angeles)
 
-The Unlicense covers RosterTheory's code and project-authored documentation.
+The MIT License covers RosterTheory's code and project-authored documentation.
 It does not grant rights to third-party rankings, projections, API responses,
 league records, schedules, names, logos, or other data.
 
@@ -145,7 +145,7 @@ design, methodology, operational guidance, task/status records, or bounded
 analytical summary. It may name a provider, professional player, expert, or
 team and may summarize a result, but it does not ship the underlying rankings,
 projections, API responses, league records, or schedule tables. Those documents
-are `REDISTRIBUTE` under the repository's Unlicense, with FantasyPros,
+are `REDISTRIBUTE` under the repository's MIT License, with FantasyPros,
 Sleeper, and NFL attribution supplied by this notice where applicable.
 
 Provider names and trademarks are used only to identify interoperability and

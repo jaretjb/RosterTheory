@@ -1,13 +1,15 @@
 # Open-source release task backlog
 
-Updated: September 16, 2026 (America/Los_Angeles)
+Updated: October 6, 2026 (America/Los_Angeles)
 
 Goal: publish RosterTheory as a safe, reusable, fully open-source project
 without exposing personal league data, redistributing third-party data without
 a proved basis, or presenting league-specific calibration as portable.
 
-Current license decision: Unlicense. It replaced MIT after publication so the
-project can be reused without attribution or other license conditions.
+Current license decision: MIT, restored on October 6, 2026, to require
+preservation of copyright and license notices when the project is distributed.
+Earlier revisions released under the Unlicense remain available under those
+terms.
 
 This backlog is planning scope, not permission to publish a repository, create
 a release, rewrite Git history, delete local data, or upload a package. Only one
