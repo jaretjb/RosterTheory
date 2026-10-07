@@ -1082,3 +1082,25 @@ Acceptance:
 - Draft, Trade and combined preparation retain their existing contracts.
 - Real CLI preparation reaches the fallback in regression coverage; genuinely
   insufficient panels still fail. Run focused/full tests and release gates.
+
+## WA-029 — Full Waiver search within the freshness window
+
+Status: implemented and validated October 6, 2026
+
+Goal: complete normal exhaustive Waiver search before its existing ten-minute
+input-completion cutoff instead of losing the result after successful preparation.
+
+Acceptance:
+
+- Profile the failing run's saved inputs as an offline, non-actionable replay;
+  remove repeated work while preserving exact candidate and claim-branch results.
+- Verify any neutral lineup optimization against an independent exhaustive
+  assignment oracle, including partial lineups, ties and negative projections.
+- Keep the full eligible add/drop universe, deterministic ordering, safety and
+  incomplete-data gates. Do not replace normal search with an undisclosed budget.
+- Keep five-minute input admission, ten-minute completion, source freshness and
+  final roster/publication revalidation unchanged.
+- Prove equivalence with independent regression cases and measure both existing
+  leagues separately using their own saved evidence and policy.
+- Run focused/full tests, Ruff, context/privacy and package gates; repair the
+  actual installed copy and deliver a separate PR for review.
