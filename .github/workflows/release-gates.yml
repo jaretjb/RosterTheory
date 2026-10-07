@@ -97,6 +97,32 @@ jobs:
       - name: Smoke-test clean wheel install
         run: python scripts/clean_install_smoke.py dist/*.whl
 
+  pipx-install:
+    name: pipx install / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install pipx verification tool
+        run: python -m pip install pipx==1.17.11
+
+      - name: Build application wheel
+        run: python -m pip wheel --no-deps . --wheel-dir dist
+
+      - name: Verify pipx install, reinstall, and command without activation
+        shell: bash
+        run: python scripts/clean_install_smoke.py dist/*.whl --installer pipx
+
   secret-scan:
     name: full-history secret scan
     runs-on: ubuntu-latest
