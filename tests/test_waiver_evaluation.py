@@ -292,6 +292,74 @@ def legality():
     return {"qb": False, "rb": True, "wr": True, "bench": True}
 
 
+class WaiverEvaluationCacheTests(unittest.TestCase):
+    def arguments(self):
+        return dict(
+            snapshot=waiver_snapshot(), weeks=weeks(), projections=projections(),
+            values=values(), drop_legality=legality(), news_fresh={"add": True}, now=NOW,
+        )
+
+    def test_search_reuses_reconciled_inputs_and_preserves_exact_evaluations(self):
+        from roster_theory.waiver import evaluation as module
+
+        arguments = self.arguments()
+        arguments["snapshot"] = waiver_snapshot(add_injury_status="Out")
+        arguments["projections"] = tuple(
+            replace(row, league_points=0.0, coverage_status="source_omission_zero")
+            if row.player_id == "add" and row.week == 1 else row
+            for row in arguments["projections"]
+        )
+        adds = ("add", "fa_rb", "fa_wr")
+        expected = [evaluate_waiver(add_player_id=add, **arguments) for add in adds]
+        cache = {}
+        with (
+            patch.object(module, "build_weekly_projection_matrix",
+                         wraps=module.build_weekly_projection_matrix) as build,
+            patch.object(module, "reconcile_current_week_inactive_omissions",
+                         wraps=module.reconcile_current_week_inactive_omissions) as reconcile,
+        ):
+            actual = [evaluate_waiver(add_player_id=add, evaluation_cache=cache,
+                                      **arguments) for add in adds]
+        self.assertEqual(actual, expected)
+        self.assertEqual(build.call_count, 1)
+        self.assertEqual(reconcile.call_count, 1)
+
+    def test_changed_inputs_invalidate_shared_calculations(self):
+        from roster_theory.waiver import evaluation as module
+
+        for changed in ("projections", "values", "weeks", "snapshot"):
+            with self.subTest(changed=changed):
+                arguments = self.arguments()
+                # Lists are accepted by the API; changing one in place must be
+                # detected even though its identity has not changed.
+                for name in ("projections", "values", "weeks"):
+                    arguments[name] = list(arguments[name])
+                cache = {}
+                with patch.object(module, "build_weekly_projection_matrix",
+                                  wraps=module.build_weekly_projection_matrix) as build:
+                    evaluate_waiver(add_player_id="add", evaluation_cache=cache, **arguments)
+                    if changed == "projections":
+                        arguments[changed][0] = replace(arguments[changed][0], league_points=40.0)
+                    elif changed == "values":
+                        arguments[changed][0] = replace(arguments[changed][0], selected_value=80.0)
+                    elif changed == "weeks":
+                        arguments[changed][-1] = replace(arguments[changed][-1], bye_teams=("AAA",))
+                    else:
+                        arguments[changed] = waiver_snapshot(add_injury_status="Out")
+                    actual = evaluate_waiver(add_player_id="add", evaluation_cache=cache, **arguments)
+                    self.assertEqual(build.call_count, 2)
+                self.assertEqual(actual, evaluate_waiver(add_player_id="add", **arguments))
+
+    def test_mutated_projection_sequence_still_rejects_duplicate_evidence(self):
+        arguments = self.arguments()
+        arguments["projections"] = list(arguments["projections"])
+        cache = {}
+        evaluate_waiver(add_player_id="add", evaluation_cache=cache, **arguments)
+        arguments["projections"].append(arguments["projections"][0])
+        with self.assertRaises(CoverageIncomplete):
+            evaluate_waiver(add_player_id="add", evaluation_cache=cache, **arguments)
+
+
 class NeutralExtractionTests(unittest.TestCase):
     def test_trade_reexports_the_neutral_projection_matrix(self):
         self.assertIs(TradeProjectionMatrix, NeutralProjectionMatrix)

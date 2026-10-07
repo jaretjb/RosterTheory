@@ -1,6 +1,21 @@
 # Active milestone
 
-## TX-002b - Adopt the user-selected Colosseum identity
+## WA-029 - Complete full Waiver search within the freshness window (implemented and validated; PR #77)
+
+Authorized by the user's October 6 report that normal Waiver search finishes
+preparation but fails the ten-minute completion gate. Use the WA-029 row in
+`docs/WAIVER_ASSISTANT_TASKS.md`. Profile the saved failing-run inputs and
+remove repeated exact-evaluation work without dropping eligible candidates,
+changing league-local decision policy, or extending any freshness gate.
+The neutral lineup solver may discard only allocation shapes proved inferior
+by its existing filled-slot-first objective; verify against exhaustive assignments.
+Preserve deterministic results, input/source binding, claim-branch checks and
+publication revalidation. Saved-input performance replays are offline and
+non-actionable; validate each league independently. Run focused/full tests,
+Ruff and context/privacy/package gates, update the actual installed command,
+and deliver a separate PR without merging or submitting a Sleeper action.
+
+## Previous TX-002b - Adopt the user-selected Colosseum identity
 
 Authorized by the user's October 6, 2026 request to implement concept 02 and
 replace every existing logo image, including the README. Promote the selected

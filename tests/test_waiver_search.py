@@ -218,6 +218,38 @@ def input_payload(*, league_key="league_alpha"):
 
 
 class WaiverSearchTests(unittest.TestCase):
+    def test_shared_caches_preserve_exhaustive_and_claim_branch_results(self):
+        from roster_theory.waiver.evaluation import evaluate_waiver
+
+        def uncached(snapshot, **kwargs):
+            kwargs.pop("evaluation_cache", None)
+            kwargs.pop("contingency_cache", None)
+            return evaluate_waiver(snapshot, **kwargs)
+
+        for league_key in ("league_alpha", "league_beta"):
+            with self.subTest(league_key=league_key):
+                snapshot = complete_search_snapshot(league_key=league_key)
+                policy_path = POLICY_PATH.parent / f"{league_key}.decision-policy.json"
+                arguments = dict(
+                    snapshot=snapshot, policy_path=policy_path,
+                    projection_rows=tuple(
+                        replace(row, league_points=12.0) if row.player_id in {"fa_rb", "fa_wr"} else row
+                        for row in complete_projections()
+                    ),
+                    value_rows=tuple(
+                        replace(row, selected_value=24.0, market_value=18.0, raw_projection=36.0)
+                        if row.player_id in {"fa_rb", "fa_wr"} else row
+                        for row in complete_values()
+                    ),
+                )
+                actual = search(**arguments)
+                with patch("roster_theory.waiver.search.evaluate_waiver", side_effect=uncached):
+                    expected = search(**arguments)
+                self.assertEqual(actual, expected)
+                self.assertEqual(actual.coverage_status, "EXHAUSTIVE_ELIGIBLE")
+                self.assertFalse(actual.budget_excluded_player_ids)
+                self.assertGreater(len(actual.claim_branch_checks), 1)
+
     def test_available_stat_candidate_can_enter_search_claim_plan(self):
         projected = tuple(
             replace(row, raw_stats=(("pass_yd", 300.0),),
@@ -1467,6 +1499,32 @@ class WaiverSearchServiceAndCliTests(unittest.TestCase):
             {"ADD NOW", "CLAIM", "ACQUIRE", "WATCH", "PASS"},
         )
         self.assertFalse(result.search.sleeper_write_performed)
+
+    def test_service_rejects_expired_completion_before_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs_path = root / "inputs.json"
+            output_path = root / "search.json"
+            inputs_path.write_text(json.dumps(input_payload()), encoding="utf-8")
+            refresh = WaiverRefreshResult(
+                snapshot=complete_search_snapshot(),
+                call_plan=waiver_refresh_plan("league-1", 1, player_cache_hit=True),
+                output_path=root / "snapshot.json",
+            )
+            with (
+                patch("roster_theory.waiver.service.refresh_waiver_snapshot", return_value=refresh),
+                patch("roster_theory.waiver.service._publication_check") as publish_check,
+                patch("roster_theory.waiver.service.save_waiver_search") as save,
+                self.assertRaisesRegex(StaleData, "ten-minute completion gate"),
+            ):
+                search_waivers(
+                    "league_alpha", inputs_path=inputs_path, output_path=output_path,
+                    policy_path=POLICY_PATH, now=NOW,
+                    clock=lambda: NOW + timedelta(minutes=10),
+                )
+            publish_check.assert_not_called()
+            save.assert_not_called()
+            self.assertFalse(output_path.exists())
 
     def test_service_saves_search_evidence_and_formats_coverage(self):
         with tempfile.TemporaryDirectory() as directory:

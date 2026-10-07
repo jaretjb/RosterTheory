@@ -958,7 +958,18 @@ def search_waiver_candidates(
     claim_plan = _claim_plan(ranked, open_active_slots=next(
         row.open_active_slots for row in snapshot.roster_capacity
         if row.roster_id == snapshot.user_roster_id))
+    branch_evaluation_cache = {}
+    branch_contingency_cache = {}
+    cached_branch = None
+
     def evaluate_branch_pair(branch: WaiverSnapshot, add: str, drop: str | None) -> WaiverEvaluation:
+        nonlocal cached_branch
+        if branch is not cached_branch:
+            # Rejected claims leave the successful prefix unchanged. Reuse its
+            # baseline work, but never carry it into a different claimed roster.
+            branch_evaluation_cache.clear()
+            branch_contingency_cache.clear()
+            cached_branch = branch
         branch_priorities = build_waiver_priority_scores(
             players=branch.players, values=values, waiver_wire_evidence=waiver_wire_evidence,
             owner_by_player=dict(branch.owner_by_player), current_bye_teams=ordered_weeks[0].bye_teams,
@@ -972,6 +983,8 @@ def search_waiver_candidates(
             waiver_priorities=branch_priorities, ros_panel_evidence=ros_panel_evidence,
             emergence_evidence=emergence_evidence, input_bundle_hash=input_bundle_hash,
             availability_source=availability_source, options=options, now=now,
+            evaluation_cache=branch_evaluation_cache,
+            contingency_cache=branch_contingency_cache,
             drop_evidence_exclusions=drop_evidence_exclusions,
             roster_evidence_exclusions=roster_evidence_exclusions,
         ), policy)

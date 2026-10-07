@@ -1284,7 +1284,22 @@ def evaluate_waiver(
     shared_cache = evaluation_cache if evaluation_cache is not None else {}
     priority_by_id = dict(waiver_priorities or {})
     assert_current(snapshot, now=now)
-    projections = reconcile_current_week_inactive_omissions(snapshot, projections)
+    # Reconciliation returns a new tuple even when no projection changes. Keep
+    # that normalized bundle stable across adds so the matrix and its lineup,
+    # depth and risk caches survive for the whole immutable search input.
+    # Retain the actual inputs rather than their IDs: callers may supply lists,
+    # and a changed sequence or a recycled object ID must invalidate the cache.
+    source_projections = tuple(projections)
+    reconciled = shared_cache.get("reconciled_projections")
+    if (
+        reconciled is not None
+        and reconciled[0] is snapshot
+        and reconciled[1] == source_projections
+    ):
+        projections = reconciled[2]
+    else:
+        projections = reconcile_current_week_inactive_omissions(snapshot, source_projections)
+        shared_cache["reconciled_projections"] = (snapshot, source_projections, projections)
     evaluation_time = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     if (add is None) == (add_player_id is None):
         raise ValueError("Provide exactly one of add or add_player_id")
@@ -1487,7 +1502,7 @@ def evaluate_waiver(
             raise RosterIllegal("No proved-legal replacement is droppable")
         drop_ids = legal
 
-    inputs_marker = (id(snapshot), id(weeks), id(projections), id(values), options)
+    inputs_marker = (snapshot, tuple(weeks), tuple(projections), tuple(values), options)
     input_cache = shared_cache.get("validated_inputs")
     if not input_cache or input_cache[0] != inputs_marker:
         value_map, context = _validate_inputs(

@@ -86,7 +86,15 @@ def _single_position_allocations(
                 continue
             result.append((allocation, tuple(sorted(counts.items()))))
         if result:
-            return tuple(result)
+            # Filled capacity is the primary objective, before projected points.
+            # When a fixed slot is unavailable, the empty-slot fallback contains
+            # many legal but strictly inferior partial shapes. They can never
+            # win, including with negative points, so score only maximal fills.
+            maximum_filled = max(sum(count for _, count in counts) for _, counts in result)
+            return tuple(
+                row for row in result
+                if sum(count for _, count in row[1]) == maximum_filled
+            )
     return ()
 
 
