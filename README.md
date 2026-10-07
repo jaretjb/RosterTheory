@@ -389,5 +389,11 @@ For private security reporting, see [SECURITY.md](SECURITY.md).
 
 ## License
 
-RosterTheory is released under [the Unlicense](LICENSE). You may use, copy,
-change, distribute, or sell it for any purpose. It comes without a warranty.
+RosterTheory is released under [the MIT License](LICENSE). You may use, copy,
+change, distribute, or sell it, provided you include the copyright and license
+notices in copies or substantial portions of the software. It comes without a
+warranty.
+
+MIT is the project's license starting with the October 6, 2026 license change.
+Earlier revisions released under the Unlicense remain available under those
+terms.

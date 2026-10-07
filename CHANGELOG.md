@@ -2,7 +2,10 @@
 
 ## 0.1.0 — Unreleased alpha
 
-- Rewritten plain-language README and a switch from MIT to the Unlicense.
+- Restored the MIT license on October 6, 2026, with Jaret Brown's copyright
+  notice and required preservation of copyright and license notices. Earlier
+  revisions released under the Unlicense remain available under those terms.
+- Rewritten plain-language README.
 - Local read-only Draft, Trade, and Waiver decision-support CLI for Sleeper
   leagues; no automatic picks, offers, claims, or lineup changes.
 - Synthetic league configuration, offline setup diagnostics, guided help, and
