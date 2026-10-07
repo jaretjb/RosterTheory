@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from roster_theory.cli import build_parser, command_waiver_search
-from roster_theory.core.errors import StaleData
+from roster_theory.core.errors import CoverageIncomplete, StaleData
 from roster_theory.core.models import Projection
 from roster_theory.core.provenance import stable_hash
 from roster_theory.inseason.evaluation import InSeasonContext, build_weekly_projection_matrix
@@ -1297,6 +1297,76 @@ class WaiverSearchTests(unittest.TestCase):
 
 
 class WaiverSearchServiceAndCliTests(unittest.TestCase):
+    def test_real_preparation_reaches_the_available_expert_fallback(self):
+        from tests.test_season_prepare import write_config
+        from tests.test_waiver_expert_panel import NOW as PANEL_NOW, expert, inputs
+        from roster_theory.waiver.expert_panel import select_waiver_ros_panel
+
+        selected = []
+
+        def build_available_inputs(league, **kwargs):
+            panel = select_waiver_ros_panel(
+                inputs(tuple(expert(i, i, i) for i in range(1, 5)),
+                       published_ids=("2", "3", "4")),
+                PANEL_NOW, league_key=league,
+            )
+            selected.extend(member.expert_id for member in panel.members)
+            return {"output_path": "fresh-inputs.json"}
+
+        with tempfile.TemporaryDirectory() as directory:
+            config = write_config(Path(directory))
+            args = SimpleNamespace(
+                league="alpha", inputs=None, snapshot=None, config=str(config),
+                policy=None, player_cache="players.json", save_evidence=None, json=True,
+            )
+            with (
+                patch("roster_theory.season_prepare.inspect_expert_inputs",
+                      side_effect=CoverageIncomplete("Only 1 historically eligible expert")) as legacy,
+                patch("roster_theory.cli.build_waiver_inputs",
+                      side_effect=build_available_inputs) as build,
+                patch("roster_theory.cli.search_waivers", return_value=object()) as search,
+                patch("roster_theory.cli.waiver_search_report", return_value={"ok": True}),
+                patch("roster_theory.cli._print_json"),
+            ):
+                command_waiver_search(args)
+
+        legacy.assert_not_called()
+        build.assert_called_once()
+        self.assertEqual(selected, ["2", "3", "4"])
+        self.assertEqual(search.call_args.kwargs["inputs_path"], "fresh-inputs.json")
+
+    def test_real_preparation_still_blocks_an_insufficient_published_panel(self):
+        from tests.test_season_prepare import write_config
+        from tests.test_waiver_expert_panel import NOW as PANEL_NOW, expert, inputs
+        from roster_theory.waiver.expert_panel import select_waiver_ros_panel
+
+        def build_insufficient_inputs(league, **kwargs):
+            select_waiver_ros_panel(
+                inputs((expert(1, 1, 1), expert(2, 2, 2)), published_ids=("2",)),
+                PANEL_NOW, league_key=league,
+            )
+            self.fail("An insufficient panel must not produce inputs")
+
+        with tempfile.TemporaryDirectory() as directory:
+            config = write_config(Path(directory))
+            args = SimpleNamespace(
+                league="alpha", inputs=None, snapshot=None, config=str(config),
+                policy=None, player_cache="players.json", save_evidence=None, json=True,
+            )
+            with (
+                patch("roster_theory.cli.build_waiver_inputs",
+                      side_effect=build_insufficient_inputs),
+                patch("roster_theory.cli.search_waivers") as search,
+                patch("roster_theory.cli._print_product_failure") as failure,
+                self.assertRaises(SystemExit) as stopped,
+            ):
+                command_waiver_search(args)
+
+        self.assertEqual(stopped.exception.code, 2)
+        search.assert_not_called()
+        self.assertIsInstance(failure.call_args.args[2], CoverageIncomplete)
+        self.assertIn("at least 2", str(failure.call_args.args[2]))
+
     def test_search_without_inputs_prepares_builds_and_reports(self):
         args = SimpleNamespace(
             league="league_alpha", inputs=None, snapshot=None, config="config.json",

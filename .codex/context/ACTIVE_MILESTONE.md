@@ -1,5 +1,19 @@
 # Active milestone
 
+## WA-028 - Restore Waiver-owned expert preparation
+
+Authorized by the user's October 6 report that Waiver preparation incorrectly
+claims only one expert is available despite the previously fixed fallback.
+Use the WA-028 row in `docs/WAIVER_ASSISTANT_TASKS.md`. Remove the obsolete
+historical-pool prerequisite from Waiver-only preparation so the existing
+Waiver selectors can choose the next qualified experts from published ballots.
+Preserve their accuracy, freshness, minimum-panel and horizon rules, all
+league-local policy, and Draft/Trade preparation. Verify real CLI preparation,
+unpublished-preferred-expert fallback and genuine insufficient-panel failures.
+Use current cached provider evidence before additional read-only requests.
+Run focused/full tests, Ruff and context/privacy gates, then deliver a separate
+PR without merging or submitting a Sleeper action.
+
 Earlier sections preserve the status at the time of those slices. Issue #31
 closed after PR #65; their open-issue instructions are historical.
 

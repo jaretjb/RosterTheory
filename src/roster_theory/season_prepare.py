@@ -72,8 +72,12 @@ def _selected_leagues(
 def _expert_kind(assistant: str) -> str | None:
     if assistant == "draft":
         return "draft-accuracy"
-    if assistant in {"trade", "waiver"}:
+    if assistant == "trade":
         return "inseason-pool"
+    # Waiver resolves its own panel from published ROS ballots while building
+    # waiver_inputs. The legacy historical pool is not an input to that path.
+    if assistant == "waiver":
+        return None
     if assistant == "all":
         return "all"
     return None
