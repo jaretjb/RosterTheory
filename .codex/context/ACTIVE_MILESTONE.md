@@ -1,5 +1,23 @@
 # Active milestone
 
+## TX-002b - Adopt the user-selected Colosseum identity
+
+Authorized by the user's October 6, 2026 request to implement concept 02 and
+replace every existing logo image, including the README. Promote the selected
+stadium and horizontal full-name wordmark into the shared terminal hero and
+canonical README artwork. Remove the retired arcade asset and update its
+references. Preserve width-safe Unicode/ASCII and no-color fallbacks, banner
+suppression, redirected/machine output, and all recommendation behavior.
+Use no provider calls or league mutations. Validate the actual CLI surfaces,
+README artwork, full unit suite and packaging; deliver a separate reviewed PR
+without merging it.
+
+Implementation is complete and tested: all 1,003 unit tests, Ruff, repository
+and staged privacy gates, wheel/source contents and clean installation pass.
+Full-width, 100-column and monochrome artwork were visually reviewed. The
+canonical SVG shares the CLI geometry, the retired asset is removed, and no
+provider call or league mutation was needed. Handoff is through its separate PR.
+
 Earlier sections preserve the status at the time of those slices. Issue #31
 closed after PR #65; their open-issue instructions are historical.
 

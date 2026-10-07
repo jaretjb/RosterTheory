@@ -1,11 +1,14 @@
 import argparse
 import io
 import unittest
+import xml.etree.ElementTree as ET
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
 from roster_theory import cli
+from roster_theory._colosseum import build_logo
+from scripts.render_terminal_logo import render_svg
 from roster_theory.terminal import (
     TerminalCapabilities,
     render_banner,
@@ -47,13 +50,52 @@ class TerminalIdentityTests(unittest.TestCase):
         self.assertIn("DRAFT  /  TRADE  /  WAIVER", lines[3])
         self.assertNotIn("[RT]", "\n".join(lines))
 
-    def test_arcade_yellow_wide_glyph_wordmark_stacks_both_large_words(self):
+    def test_colosseum_wide_banner_has_stadium_and_horizontal_wordmark(self):
         banner = render_banner(capabilities(width=110, color=True))
-        self.assertIn("\x1b[1;38;5;220m", banner)
+        self.assertIn("\x1b[38;2;255;211;69", banner)
+        self.assertIn("ROSTER THEORY", banner)
         self.assertIn("FANTASY FOOTBALL ASSISTANT", banner)
         self.assertIn("DRAFT  ◆  TRADE  ◆  WAIVER", banner)
-        self.assertGreaterEqual(banner.count("█"), 200)
-        self.assertEqual(len(banner.splitlines()), 17)
+        self.assertGreater(sum(0x2800 <= ord(char) <= 0x28FF for char in banner), 500)
+        self.assertGreater(banner.count("▀"), 250)
+        self.assertEqual(len(banner.splitlines()), 39)
+        self.assertNotIn("IDENTITY STUDY", banner)
+        self.assertNotIn("THE COLOSSEUM", banner)
+
+    def test_colosseum_is_width_safe_in_color_monochrome_and_ascii(self):
+        for width in (100, 110, 122, 123, 132, 160):
+            for color in (False, True):
+                for unicode in (False, True):
+                    with self.subTest(width=width, color=color, unicode=unicode):
+                        banner = render_banner(capabilities(
+                            width=width, color=color, unicode=unicode
+                        ))
+                        self.assertIn("ROSTER THEORY", banner)
+                        self.assertTrue(all(
+                            visible_width(line) <= min(width, 132)
+                            for line in banner.splitlines()
+                        ))
+                        if not color:
+                            self.assertNotIn("\x1b", banner)
+                        if not unicode:
+                            banner.encode("ascii")
+
+    def test_monochrome_colosseum_preserves_both_halves_of_letter_cells(self):
+        banner = render_banner(capabilities(width=132))
+        self.assertIn("█", banner)
+        self.assertIn("▀", banner)
+        self.assertIn("▄", banner)
+        self.assertNotIn("\x1b", banner)
+        headline = banner.splitlines()[26:32]
+        self.assertEqual(len(headline), 6)
+        self.assertTrue(all("█" in line for line in headline))
+
+    def test_wide_colosseum_stays_out_of_suppressed_and_redirected_output(self):
+        for width in (100, 132, 160):
+            self.assertEqual(render_banner(capabilities(width=width), suppressed=True), "")
+            self.assertEqual(
+                render_banner(capabilities(width=width, interactive=False)), ""
+            )
 
     def test_narrow_redirected_and_suppressed_fallbacks(self):
         self.assertEqual(
@@ -163,26 +205,29 @@ class TerminalIdentityTests(unittest.TestCase):
         self.assertEqual(stream.getvalue().count("Roster Theory / Trade Diagnose"), 1)
         self.assertTrue(stream.getvalue().endswith("done\n"))
 
-    def test_readme_logo_is_chunky_arcade_title_with_product_descriptor(self):
+    def test_readme_colosseum_matches_cli_geometry_and_replaces_old_artwork(self):
         root = Path(__file__).resolve().parents[1]
-        logo = (root / "docs/assets/roster-theory-terminal-90s.svg").read_text(
+        logo = (root / "docs/assets/roster-theory-colosseum.svg").read_text(
             encoding="utf-8"
         )
         readme = (root / "README.md").read_text(encoding="utf-8")
-        self.assertIn("#ffd700", logo.lower())
-        self.assertIn('<g id="word-roster">', logo)
-        self.assertIn('<g id="word-theory">', logo)
-        self.assertGreaterEqual(logo.count('<use href="#glyph-'), 12)
-        self.assertIn('translate(128 92) scale(27)', logo)
-        self.assertIn('translate(128 252) scale(27)', logo)
+        self.assertEqual(logo, render_svg(build_logo()))
+        svg = ET.fromstring(logo)
+        ns = {"svg": "http://www.w3.org/2000/svg"}
+        self.assertEqual(svg.attrib["role"], "img")
+        self.assertIn("Colosseum", svg.find("svg:title", ns).text)
+        for name in ("stadium", "wordmark"):
+            group = svg.find(f"svg:g[@id='{name}']", ns)
+            self.assertGreater(len(group.findall("svg:path", ns)), 0)
+            self.assertEqual(len(group.findall("svg:text", ns)), 0)
+        self.assertIn("#ffd345", logo.lower())
         self.assertIn("FANTASY FOOTBALL ASSISTANT", logo)
-        self.assertLess(
-            logo.index("FANTASY FOOTBALL ASSISTANT"),
-            logo.index("DRAFT  ◆  TRADE  ◆  WAIVER"),
-        )
-        self.assertNotIn("████", logo)
+        self.assertIn("DRAFT  ◆  TRADE  ◆  WAIVER", logo)
         self.assertNotIn("READ-ONLY", logo.upper())
-        self.assertIn("docs/assets/roster-theory-terminal-90s.svg", readme)
+        self.assertNotIn("IDENTITY STUDY", logo)
+        self.assertIn("docs/assets/roster-theory-colosseum.svg", readme)
+        self.assertNotIn("roster-theory-terminal-90s.svg", readme)
+        self.assertFalse((root / "docs/assets/roster-theory-terminal-90s.svg").exists())
 
 
 if __name__ == "__main__":

@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Mapping
 
+from ._colosseum import render_logo
+
 
 ANSI_RESET = "\x1b[0m"
 PALETTE: Mapping[str, str] = {
@@ -102,47 +104,10 @@ def _unicode_is_safe(stream: Any, platform_name: str) -> bool:
     if not encoding:
         return platform_name != "nt"
     try:
-        "╔═◆╗".encode(encoding)
+        "╔═◆╗⣿▀▄█".encode(encoding)
     except (LookupError, UnicodeEncodeError):
         return False
     return True
-
-
-_GLYPHS: Mapping[str, tuple[str, ...]] = {
-    "R": ("#### ", "#   #", "#### ", "#  # ", "#   #"),
-    "O": (" ### ", "#   #", "#   #", "#   #", " ### "),
-    "S": (" ####", "#    ", " ### ", "    #", "#### "),
-    "T": ("#####", "  #  ", "  #  ", "  #  ", "  #  "),
-    "E": ("#####", "#    ", "#### ", "#    ", "#####"),
-    "H": ("#   #", "#   #", "#####", "#   #", "#   #"),
-    "Y": ("#   #", " # # ", "  #  ", "  #  ", "  #  "),
-}
-
-
-def _glyph_word(word: str, *, unicode: bool) -> tuple[str, ...]:
-    """Draw one word as horizontally doubled cabinet-pixel lettering."""
-
-    ink = "█" if unicode else "#"
-    rows: list[str] = []
-    for row in range(5):
-        letters = []
-        for letter in word:
-            pixels = "".join(
-                ink * 2 if pixel == "#" else "  "
-                for pixel in _GLYPHS[letter][row]
-            )
-            letters.append(pixels)
-        rows.append("  ".join(letters).rstrip())
-    return tuple(rows)
-
-
-def _glyph_wordmark(*, unicode: bool) -> tuple[str, ...]:
-    separator = "◆" if unicode else "<>"
-    return (
-        *_glyph_word("ROSTER", unicode=unicode),
-        separator,
-        *_glyph_word("THEORY", unicode=unicode),
-    )
 
 
 def _boxed_lines(
@@ -186,14 +151,14 @@ def render_banner(capabilities: TerminalCapabilities, *, suppressed: bool = Fals
         )
     unicode = capabilities.unicode_supported
     if capabilities.width_tier == WidthTier.WIDE:
-        glyphs = _glyph_wordmark(unicode=unicode)
-        width = min(capabilities.width, max(92, max(map(len, glyphs)) + 8))
-        mode_select = "DRAFT  ◆  TRADE  ◆  WAIVER" if unicode else "DRAFT  <>  TRADE  <>  WAIVER"
-        body = (*glyphs, "", _PRODUCT_DESCRIPTOR, mode_select)
-    else:
-        width = min(capabilities.width, 78)
-        title = "▓▒░  R O S T E R   T H E O R Y  ░▒▓" if unicode else ">>>  R O S T E R   T H E O R Y  <<<"
-        body = (title, _PRODUCT_DESCRIPTOR, _MODE_SELECT)
+        return render_logo(
+            width=capabilities.width,
+            color=capabilities.color_enabled,
+            unicode=unicode,
+        )
+    width = min(capabilities.width, 78)
+    title = "▓▒░  R O S T E R   T H E O R Y  ░▒▓" if unicode else ">>>  R O S T E R   T H E O R Y  <<<"
+    body = (title, _PRODUCT_DESCRIPTOR, _MODE_SELECT)
     lines = _boxed_lines(body, width, unicode=unicode)
     return "\n".join(styled(line, "arcade", capabilities) for line in lines) + "\n\n"
 

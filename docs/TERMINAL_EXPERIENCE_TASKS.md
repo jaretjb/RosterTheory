@@ -15,7 +15,7 @@ Trade, and Waiver boundaries.
 | Task | Outcome | Depends on | Status |
 | --- | --- | --- | --- |
 | TX-001 | Terminal visual primitives and output boundaries | OS-009, OS-010 | complete |
-| TX-002 | Full Roster Theory wordmark and command mastheads | TX-001 | complete — arcade amendment |
+| TX-002 | Full Roster Theory wordmark and command mastheads | TX-001 | complete — Colosseum identity |
 | TX-003 | Doctor health-board human view | TX-001, TX-002 | complete |
 | TX-004 | Shared human report and failure grammar | TX-001, TX-002 | planned |
 | TX-005 | Draft report adapter | TX-004 | planned |
@@ -42,7 +42,7 @@ Stop: rendering capabilities are stable and machine output is unchanged.
 
 ## TX-002 — Full Roster Theory wordmark and command mastheads
 
-Design sections: 2, 3.
+Design sections: 1, 2, 3.
 
 - Build and visually review bespoke fixed-width glyphs spelling both words,
   plus the bordered full-name and plain full-name variants. No surface may
@@ -64,6 +64,15 @@ Design sections: 2, 3.
 - Console alignment: carry that product descriptor and mode hierarchy into
   wide, standard, compact, and narrow interactive heroes without changing
   redirected or machine output.
+- October 6, 2026 Colosseum selection supersedes the stacked arcade artwork:
+  use the user-selected detailed stadium above an equal-scale horizontal
+  `ROSTER THEORY` wordmark on 100+ column terminals. Keep smaller full-name
+  fallbacks, ASCII/monochrome variants and existing output boundaries. Generate
+  the canonical README SVG from the CLI geometry and remove the retired image.
+- Colosseum verification: all 1,003 unit tests, Ruff, repository/staged privacy
+  gates, distribution contents and a clean installed CLI smoke pass. Full-width,
+  100-column color and monochrome specimens were visually reviewed. Production
+  rendering and SVG export use the standard library; PNG previews are optional.
 
 Stop: the brand is obvious, original, legible, and present early without
 contaminating automation.
