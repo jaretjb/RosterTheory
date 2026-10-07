@@ -778,7 +778,7 @@ class WaiverSearchTests(unittest.TestCase):
 
     def test_exhaustive_search_covers_every_skill_position_and_legal_drop(self):
         result = search()
-        self.assertEqual(result.schema_version, 11)
+        self.assertEqual(result.schema_version, 12)
         self.assertEqual(result.evaluation_schema_version, 17)
         self.assertEqual(
             set(result.eligible_candidate_ids), {"add", "fa_rb", "fa_wr", "fa_te"}
@@ -915,7 +915,8 @@ class WaiverSearchTests(unittest.TestCase):
         )
         self.assertIn("BEST IDEA", report)
         self.assertIn("HOLD FOR NOW", report)
-        self.assertIn("OTHER PLAYERS TO WATCH", report)
+        self.assertNotIn("OTHER PLAYERS TO WATCH", report)
+        self.assertIn("EVIDENCE NOTES", report)
         self.assertNotIn("policy:", report.lower())
         self.assertNotIn("pruning", report.lower())
 
@@ -947,10 +948,10 @@ class WaiverSearchTests(unittest.TestCase):
                 output_path=Path("controlled-search.json"),
             )
         )
-        self.assertIn("OTHER PLAYERS TO WATCH", report)
+        self.assertNotIn("OTHER PLAYERS TO WATCH", report)
+        self.assertIn("EVIDENCE NOTES", report)
         self.assertIn("Free Receiver", report)
-        self.assertIn("WR III", report)
-        self.assertIn("move quality unknown", report)
+        self.assertIn("move quality is unknown", report)
 
     def test_current_week_ir_roster_omission_is_reconciled_from_fresh_snapshot(self):
         snapshot = complete_search_snapshot()

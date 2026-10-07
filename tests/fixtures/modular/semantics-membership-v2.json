@@ -333,8 +333,8 @@
         "roster_exclusions": []
       },
       "waiver_search": {
-        "semantic_hash": "299bbc56ba4580d276a81984dca1b1a59d221eb70b33f080f7968c35fad4a62d",
-        "bytes": 1586049,
+        "semantic_hash": "6636759c6eb64f3fc3038d84d1a745a2658ad02ace582a56a1bb441ad570f9e8",
+        "bytes": 1586071,
         "schema_fields": [
           "schema_version",
           "evaluation_schema_version",
@@ -374,7 +374,8 @@
           "evidence_hash",
           "coverage_status",
           "budget_excluded_player_ids",
-          "claim_branch_checks"
+          "claim_branch_checks",
+          "weekly_streamers"
         ],
         "coverage_status": "EXHAUSTIVE_ELIGIBLE",
         "warnings": [
@@ -1317,8 +1318,8 @@
         "roster_exclusions": []
       },
       "waiver_search": {
-        "semantic_hash": "a915961ad368df9a34eda427960edb2a7d290ff5828ef146df9bd04251657f2d",
-        "bytes": 1600474,
+        "semantic_hash": "822c02cb2b0b3961d445abf8b74dce32507c4fb03dd4d7434477c06f2c7cf5ca",
+        "bytes": 1601001,
         "schema_fields": [
           "schema_version",
           "evaluation_schema_version",
@@ -1358,7 +1359,8 @@
           "evidence_hash",
           "coverage_status",
           "budget_excluded_player_ids",
-          "claim_branch_checks"
+          "claim_branch_checks",
+          "weekly_streamers"
         ],
         "coverage_status": "EXHAUSTIVE_ELIGIBLE",
         "warnings": [

@@ -124,6 +124,8 @@ class RunContractTests(unittest.TestCase):
         self.assertTrue(waiver_readiness(search)['inputs_complete'])
         self.assertFalse(waiver_readiness(search)['search_complete'])
         search.omissions = (SimpleNamespace(reason='NO_AUTHORITATIVE_VALUE'),)
+        self.assertTrue(waiver_readiness(search)['inputs_complete'])
+        search.omissions = (SimpleNamespace(reason='INCOMPLETE_PROJECTION_COVERAGE'),)
         self.assertFalse(waiver_readiness(search)['inputs_complete'])
 
     def test_finite_news_feed_cannot_claim_complete_player_coverage(self):
