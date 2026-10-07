@@ -1,6 +1,6 @@
 # Active milestone
 
-## WA-028 - Restore Waiver-owned expert preparation
+## WA-028 - Restore Waiver-owned expert preparation (implemented; PR #74)
 
 Authorized by the user's October 6 report that Waiver preparation incorrectly
 claims only one expert is available despite the previously fixed fallback.

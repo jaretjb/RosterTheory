@@ -1066,7 +1066,7 @@ search speed and missing future-projection evidence remain separate work.
 
 ## WA-028 — Restore Waiver-owned expert preparation
 
-Status: active October 6, 2026
+Status: implemented October 6, 2026; PR #74 open for review
 
 Goal: let normal Waiver preparation reach the existing published-ballot expert
 fallback instead of failing on an unused historical top-ten-derived pool.

@@ -7,8 +7,8 @@ preparation, restoring access to the existing published-ballot fallback.
 Current provider evidence independently resolves READY three-expert ROS panels
 for both configured leagues. Feature accuracy, publication, freshness and
 minimum coverage rules remain required. This audit does not establish full
-recommendation readiness or measured outcome accuracy. Validation and PR
-handoff are being completed.
+recommendation readiness or measured outcome accuracy. Installed-package
+input builds and six-candidate searches pass in both leagues. PR #74 is open.
 
 WA-027g defense swaps prioritize complete current-week league-scored
 projections, then weekly expert ranks. Season performance is secondary and
