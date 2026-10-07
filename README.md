@@ -88,27 +88,63 @@ setup-checking commands without a FantasyPros key.
 
 ## Install
 
-RosterTheory is installed directly from GitHub:
+Install RosterTheory with [pipx](https://pipx.pypa.io/stable/). It manages the
+app's private Python environment and makes `roster-theory` available in your
+terminal without activating an environment. Python 3.11+ and Git are required.
+
+On Windows, run these commands in PowerShell once:
 
 ```powershell
+py -m pip install --user pipx
+py -m pipx ensurepath
 git clone https://github.com/jaretjb/RosterTheory.git
 cd RosterTheory
-python -m venv .venv
-./.venv/Scripts/Activate.ps1
-python -m pip install .
+py -m pipx install .
 ```
 
-On macOS or Linux, activate the environment with:
+If you already have the checkout, skip `git clone` and change to that folder
+before `py -m pipx install .`. If Windows does not provide `py`, use your
+Python 3.11+ `python` command in its place.
+
+On macOS, install pipx with `brew install pipx`. On Ubuntu, use
+`sudo apt install pipx`; for other Linux distributions, follow the
+[pipx installation guide](https://pipx.pypa.io/stable/how-to/install-pipx.html).
+Then install RosterTheory:
 
 ```bash
-source .venv/bin/activate
+pipx ensurepath
+git clone https://github.com/jaretjb/RosterTheory.git
+cd RosterTheory
+pipx install . --python python3
 ```
 
+Close and reopen your terminal once so it picks up the command search path.
 Run the built-in guide to see the main commands:
 
 ```text
 roster-theory help
 ```
+
+No activation or `PYTHONPATH` setting is needed in later sessions. If you are
+migrating from the old `.venv` instructions, open a fresh terminal to avoid
+running the old environment's command. Keep the checkout: pipx remembers its
+location for updates. Commands that use a local `.env` or relative input/data
+paths still need to run from the folder containing those files.
+
+### Update or uninstall
+
+From your checkout, update the source and reinstall the pipx-managed app:
+
+```powershell
+git pull --ff-only
+pipx reinstall roster-theory
+roster-theory help
+```
+
+Reinstallation picks up source changes even when the package version has not
+changed. Pulling the repository alone does not update the installed app.
+To remove the application, run `pipx uninstall roster-theory`; your league
+configuration and reports remain outside the managed Python environment.
 
 ## Set up a league
 
@@ -317,9 +353,12 @@ requests. Public availability is for installation and use under the license
 below. Only the repository owner, including tools acting through the owner's
 account, manages changes and merges.
 
-Install the development tools and run the tests:
+For maintenance, create a separate development environment, install the
+development tools, and run the tests. End users use the pipx installation above.
 
 ```powershell
+python -m venv .venv
+./.venv/Scripts/Activate.ps1
 python -m pip install -e ".[dev]"
 $env:PYTHONPATH = "src"
 python -m unittest tests.test_context_routing
