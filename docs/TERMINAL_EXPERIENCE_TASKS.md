@@ -69,10 +69,19 @@ Design sections: 1, 2, 3.
   `ROSTER THEORY` wordmark on 100+ column terminals. Keep smaller full-name
   fallbacks, ASCII/monochrome variants and existing output boundaries. Generate
   the canonical README SVG from the CLI geometry and remove the retired image.
-- Colosseum verification: all 1,003 unit tests, Ruff, repository/staged privacy
-  gates, distribution contents and a clean installed CLI smoke pass. Full-width,
-  100-column color and monochrome specimens were visually reviewed. Production
-  rendering and SVG export use the standard library; PNG previews are optional.
+- The user selected Mathematical Weave lettering for the Colosseum: replace
+  solid title blocks with calculus signs, Greek symbols and operators inside
+  the same full-name silhouettes. Match the selected full-width preview,
+  condense the weave at 100–122 columns, preserve ASCII symbol equivalents
+  and monochrome rendering, and embed mathematical outlines in the README SVG.
+  Continue on PR #75 with the latest main merged before committing.
+- Colosseum / Mathematical Weave verification: all 1,007 unit tests on the
+  branch containing latest main, Ruff, repository/staged privacy gates,
+  distribution contents and isolated pipx install/reinstall smoke pass.
+  The full-width preview matches the user's selection pixel for pixel; the
+  README SVG embeds mathematical outlines. Full-width, 100-column color and
+  monochrome specimens were visually reviewed. Production rendering and SVG
+  export use the standard library; PNG previews are optional.
 
 Stop: the brand is obvious, original, legible, and present early without
 contaminating automation.

@@ -1063,3 +1063,22 @@ rostered weekly projections, a missing value-board entry in one league,
 stale Waiver Wire market evidence, and five unmatched provider players.
 No affirmative claim was published or Sleeper action submitted. Full
 search speed and missing future-projection evidence remain separate work.
+
+## WA-028 — Restore Waiver-owned expert preparation
+
+Status: implemented October 6, 2026; PR #74 open for review
+
+Goal: let normal Waiver preparation reach the existing published-ballot expert
+fallback instead of failing on an unused historical top-ten-derived pool.
+
+Acceptance:
+
+- Waiver-only `inputs prepare/status` and automatic `waiver search` do not
+  require or refresh the legacy in-season expert CSV or its audit.
+- A missing or stale Waiver bundle still requires rebuilding; readiness is
+  not granted by skipping the unrelated historical pool.
+- Actual ROS and Waiver Wire panels retain their existing publication,
+  accuracy, freshness, minimum coverage and next-qualified-expert rules.
+- Draft, Trade and combined preparation retain their existing contracts.
+- Real CLI preparation reaches the fallback in regression coverage; genuinely
+  insufficient panels still fail. Run focused/full tests and release gates.

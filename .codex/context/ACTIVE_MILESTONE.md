@@ -9,14 +9,37 @@ canonical README artwork. Remove the retired arcade asset and update its
 references. Preserve width-safe Unicode/ASCII and no-color fallbacks, banner
 suppression, redirected/machine output, and all recommendation behavior.
 Use no provider calls or league mutations. Validate the actual CLI surfaces,
-README artwork, full unit suite and packaging; deliver a separate reviewed PR
-without merging it.
+README artwork, full unit suite and packaging; deliver through PR #75 without
+merging it.
 
-Implementation is complete and tested: all 1,003 unit tests, Ruff, repository
-and staged privacy gates, wheel/source contents and clean installation pass.
-Full-width, 100-column and monochrome artwork were visually reviewed. The
-canonical SVG shares the CLI geometry, the retired asset is removed, and no
-provider call or league mutation was needed. Handoff is through its separate PR.
+The user also selected Mathematical Weave lettering on October 6, 2026.
+Replace the solid title with the approved mathematical-symbol texture in
+the shared CLI renderer and canonical README SVG, retaining condensed,
+monochrome and ASCII variants. Continue in PR #75, merging the latest main
+before committing.
+
+Mathematical Weave is complete and tested. The final branch, including the
+latest main changes from PR #74, passed all 1,007 unit tests, Ruff, repository
+and staged privacy gates, distribution contents and isolated pipx installation
+and reinstallation. The full-width PNG matches the user-selected preview pixel
+for pixel; the canonical SVG embeds mathematical outlines and shares the CLI
+character layout. Full-width, 100-column and monochrome artwork were visually
+reviewed. The retired asset is removed, and no provider call or league mutation
+was needed. Handoff remains in PR #75.
+
+## WA-028 - Restore Waiver-owned expert preparation (implemented; PR #74)
+
+Authorized by the user's October 6 report that Waiver preparation incorrectly
+claims only one expert is available despite the previously fixed fallback.
+Use the WA-028 row in `docs/WAIVER_ASSISTANT_TASKS.md`. Remove the obsolete
+historical-pool prerequisite from Waiver-only preparation so the existing
+Waiver selectors can choose the next qualified experts from published ballots.
+Preserve their accuracy, freshness, minimum-panel and horizon rules, all
+league-local policy, and Draft/Trade preparation. Verify real CLI preparation,
+unpublished-preferred-expert fallback and genuine insufficient-panel failures.
+Use current cached provider evidence before additional read-only requests.
+Run focused/full tests, Ruff and context/privacy gates, then deliver a separate
+PR without merging or submitting a Sleeper action.
 
 Earlier sections preserve the status at the time of those slices. Issue #31
 closed after PR #65; their open-issue instructions are historical.

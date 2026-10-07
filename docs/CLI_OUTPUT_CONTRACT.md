@@ -69,7 +69,8 @@ cards and mastheads never change the underlying value, exit code, provider call
 plan, or write count.
 
 Interactive bare launch, guided help, and Doctor use the adaptive full
-gold Colosseum `ROSTER THEORY` hero on 100+ column terminals, with full-name
+gold Colosseum `ROSTER THEORY` hero with Mathematical Weave lettering on
+100+ column terminals, with full-name
 text fallbacks on smaller windows, followed by `FANTASY FOOTBALL
 ASSISTANT` and the Draft/Trade/Waiver mode line. Routine human commands and
 command-specific help use a smaller full-name gold masthead once per

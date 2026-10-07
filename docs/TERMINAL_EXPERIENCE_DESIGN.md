@@ -28,12 +28,13 @@ The expert ranking horizon and actual league scoring labels stay visible.
 
 ## 2. Design direction: the Colosseum
 
-The user selected concept 02 on October 6, 2026: an original gold football
-stadium above a horizontal, angular `ROSTER THEORY` wordmark. Dense terminal
-dot linework depicts seating terraces, roof supports, floodlights, a projected
-field and yard lines. Both words have equal visual weight and open counters.
-Warm cream highlights the top edge of the gold letters; muted bronze supports
-architectural detail. Slim corner rules frame the identity.
+The user selected the Colosseum and its Mathematical Weave lettering on
+October 6, 2026: an original gold football stadium above horizontal
+`ROSTER THEORY` letterforms built from mathematical symbols. Calculus signs,
+Greek symbols and operators create an airy texture inside angular silhouettes,
+with a gentle gold-to-bronze fade. Both words have equal visual weight and open
+counters. Dense terminal dot linework depicts seating terraces, roof supports,
+floodlights, a projected field and yard lines. Slim corner rules frame the identity.
 
 The hero is real Unicode/ANSI character art, drawn with the standard library.
 It needs no image decoder, downloaded font or optional runtime dependency.
@@ -44,8 +45,8 @@ A readable full-name label precedes the stadium, and
 The canonical README artwork is
 `docs/assets/roster-theory-colosseum.svg`. Generate it with
 `python scripts/render_terminal_logo.py`; it uses the same geometry and
-character cells as the CLI. Stadium dots and large lettering are SVG paths,
-so neither depends on a terminal font. Captions include accessible text.
+character cells as the CLI. Stadium dots and mathematical glyphs are embedded
+SVG outlines, so neither depends on a browser font. Captions include accessible text.
 The retired `roster-theory-terminal-90s.svg` is removed.
 
 Gold (`#FFD345`) is the primary hero accent, with cream and muted bronze.
@@ -61,8 +62,8 @@ amber and red are reserved for semantic status, which is always spelled out.
 | Interactive, 60–99 columns | Full-name bordered text wordmark | Single-column cards |
 | Interactive, 40–59 columns | Full "Roster Theory" name and command title | Minimal rule, wrapped sections |
 | Below 40 columns | Plain "Roster Theory / Command" | No box art; content wraps |
-| Unsupported Unicode | ASCII stadium/glyphs on wide terminals, ASCII text elsewhere | No unsupported characters |
-| NO_COLOR or unsupported ANSI | Same hierarchy without color | Both halves of headline cells remain visible |
+| Unsupported Unicode | ASCII stadium and symbol equivalents on wide terminals, ASCII text elsewhere | Same letter silhouettes without unsupported characters |
+| NO_COLOR or unsupported ANSI | Same hierarchy without color | Mathematical symbols remain visible |
 | Redirected/piped human output | Plain full-name title, no art or ANSI | Stable linear sections |
 | --json, CSV, saved evidence, logs | No decoration | Existing machine contract unchanged |
 

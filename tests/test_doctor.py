@@ -266,7 +266,7 @@ class DoctorTests(unittest.TestCase):
         output = stream.getvalue()
         self.assertIn("FANTASY FOOTBALL ASSISTANT", output)
         self.assertIn("DRAFT  ◆  TRADE  ◆  WAIVER", output)
-        self.assertGreaterEqual(output.count("█"), 200)
+        self.assertGreaterEqual(sum(char in "∑≈∞π√×−=∫∂λδ" for char in output), 200)
         self.assertIn("ROSTER THEORY / DOCTOR", output)
         self.assertEqual(output.count("ROSTER THEORY / DOCTOR"), 1)
         self.assertIn("DOCTOR / OFFLINE / READ-ONLY", output)

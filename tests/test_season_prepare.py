@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from roster_theory.cli import build_parser
+from roster_theory.core.errors import CoverageIncomplete
 from roster_theory.season_prepare import inspect_season_inputs, prepare_season_inputs
 
 
@@ -142,6 +143,34 @@ class SeasonPreparationTests(unittest.TestCase):
             )
             self.assertEqual(artifact["status"], "stale")
             self.assertIn("five-minute", artifact["reason"])
+
+    def test_waiver_preparation_does_not_require_the_unused_historical_pool(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = write_config(root, ("alpha", "beta"))
+            for refresh in ("auto", "force"):
+                with self.subTest(refresh=refresh), patch(
+                    "roster_theory.season_prepare.inspect_expert_inputs",
+                    side_effect=CoverageIncomplete("Only 1 historically eligible expert"),
+                ) as legacy_inspect:
+                    result = prepare_season_inputs(
+                        all_leagues=True, assistant="waiver", config_path=config,
+                        data_dir=root / "data", refresh=refresh,
+                        expert_refresh=lambda *args, **kwargs: self.fail("legacy refresh"),
+                    )
+
+                legacy_inspect.assert_not_called()
+                self.assertEqual(result["errors"], [])
+                self.assertEqual(result["preflight"], [])
+                self.assertEqual(result["provider_calls"], 0)
+                self.assertEqual(result["status"], "attention_required")
+                self.assertEqual(len(result["leagues"]), 2)
+                for league in result["leagues"]:
+                    artifacts = {row["artifact"]: row for row in league["artifacts"]}
+                    self.assertNotIn("experts.inseason-pool", artifacts)
+                    self.assertEqual(artifacts["waiver_inputs"]["status"], "missing")
+                self.assertFalse(result["recommendation_generated"])
+                self.assertFalse(result["sleeper_write_performed"])
 
     def test_fresh_status_avoids_repeating_provider_requests(self):
         ready = {

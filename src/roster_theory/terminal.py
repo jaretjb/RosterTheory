@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Mapping
 
-from ._colosseum import render_logo
+from ._colosseum import MATH_CROSSBAR, MATH_UPRIGHT, render_logo
 
 
 ANSI_RESET = "\x1b[0m"
@@ -104,7 +104,7 @@ def _unicode_is_safe(stream: Any, platform_name: str) -> bool:
     if not encoding:
         return platform_name != "nt"
     try:
-        "╔═◆╗⣿▀▄█".encode(encoding)
+        ("╔═◆╗╚╝║⣿▓▒░╭─╮╰╯" + MATH_CROSSBAR + MATH_UPRIGHT).encode(encoding)
     except (LookupError, UnicodeEncodeError):
         return False
     return True

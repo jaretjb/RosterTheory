@@ -1,4 +1,4 @@
-"""Original Colosseum character-cell logo, shared by CLI and artwork export.
+"""Colosseum and Mathematical Weave logo, shared by CLI and artwork export.
 
 The geometry was selected by the user on October 6, 2026. No image files,
 fonts, dependencies or provider data are needed to render the terminal hero.
@@ -16,6 +16,11 @@ BRONZE = (132, 102, 50)
 DIM = (78, 67, 45)
 MUTED = (159, 155, 138)
 RGB = tuple[int, int, int]
+MATH_CROSSBAR = "∑≈∞π√×−="
+MATH_UPRIGHT = "∫∂πλ√δ"
+MATH_ASCII = {"∑": "S", "≈": "~", "∞": "8", "π": "p", "√": "v",
+              "×": "x", "−": "-", "=": "=", "∫": "f", "∂": "d",
+              "λ": "l", "δ": "d"}
 
 
 def mix(a: RGB, b: RGB, t: float) -> RGB:
@@ -99,12 +104,7 @@ class Canvas:
         self.dots.clear()
 
     def plain(self):
-        def monochrome(cell):
-            if cell.char != "▀":
-                return cell.char
-            top, bottom = cell.fg != BG, cell.bg != BG
-            return "█" if top and bottom else "▀" if top else "▄" if bottom else " "
-        return "\n".join("".join(monochrome(c) for c in row).rstrip() for row in self.cells) + "\n"
+        return "\n".join("".join(c.char for c in row).rstrip() for row in self.cells) + "\n"
 
     def ansi(self):
         rows = []
@@ -142,24 +142,30 @@ def inside(x, y, polygon):
     return result
 
 
-def _word(canvas, value, x, y, *, glyph_width, gap):
-    pixels = {}
+def _word(canvas, value, x, y, *, glyph_width, gap, index_offset=0):
+    """Fill angular letter silhouettes with the user-selected symbol weave."""
     for index, letter in enumerate(value):
         outer, counters = GLYPHS[letter]
-        for py in range(12):
-            for px in range(glyph_width):
-                sx, sy = (px + 0.5) * 9 / glyph_width, py + 0.5
+        mask = set()
+        for py in range(24):
+            for px in range(glyph_width * 2):
+                sx, sy = (px + 0.5) * 9 / (glyph_width * 2), (py + 0.5) / 2
                 if inside(sx, sy, outer) and not any(inside(sx, sy, p) for p in counters):
-                    pixels[(index * (glyph_width + gap) + px, py)] = (
-                        CREAM if py < 2 else GOLD
-                    )
-    word_width = len(value) * glyph_width + (len(value) - 1) * gap
-    for row in range(6):
-        for col in range(word_width):
-            top = pixels.get((col, row * 2), BG)
-            bottom = pixels.get((col, row * 2 + 1), BG)
-            if top != BG or bottom != BG:
-                canvas.put(x + col, y + row, "▀", top, bottom)
+                    mask.add((px, py))
+        occupied = {
+            (px, py) for py in range(6) for px in range(glyph_width)
+            if sum((px * 2 + dx, py * 4 + dy) in mask
+                   for dx in range(2) for dy in range(4)) >= 3
+        }
+        for py in range(6):
+            for px in range(glyph_width):
+                if (px, py) not in occupied:
+                    continue
+                horizontal = (px - 1, py) in occupied or (px + 1, py) in occupied
+                tokens = MATH_CROSSBAR if horizontal else MATH_UPRIGHT
+                symbol = tokens[((index + index_offset) * 3 + px * 5 + py * 2) % len(tokens)]
+                color = mix(GOLD, BRONZE, py * 0.045)
+                canvas.put(x + index * (glyph_width + gap) + px, y + py, symbol, color)
 
 
 def _frame(canvas):
@@ -226,8 +232,8 @@ def build_logo(width: int = WIDTH) -> Canvas:
     word_width = 6 * glyph_width + 5 * gap
     x = (c.width - (word_width * 2 + 7)) // 2
     _word(c, "ROSTER", x, 26, glyph_width=glyph_width, gap=gap)
-    _word(c, "THEORY", x + word_width + 7, 26, glyph_width=glyph_width, gap=gap)
-    c.text(x + word_width + 2, 28, "╱", BRONZE)
+    _word(c, "THEORY", x + word_width + 7, 26, glyph_width=glyph_width, gap=gap,
+          index_offset=6)
     c.center(33, "FANTASY FOOTBALL ASSISTANT", MUTED)
     c.center(35, "DRAFT  ◆  TRADE  ◆  WAIVER", GOLD)
     return c
@@ -238,13 +244,11 @@ def render_logo(*, width: int, color: bool, unicode: bool) -> str:
     canvas = build_logo(width)
     if not unicode:
         replacements = {"╭": "+", "╮": "+", "╰": "+", "╯": "+",
-                        "─": "-", "╱": "/", "◆": "*"}
+                        "─": "-", "◆": "*", **MATH_ASCII}
         density = " .:*+##@@"
         for row in canvas.cells:
             for x, cell in enumerate(row):
-                if cell.char == "▀":
-                    row[x] = Cell("#", GOLD, BG)
-                elif 0x2800 <= ord(cell.char) <= 0x28FF:
+                if 0x2800 <= ord(cell.char) <= 0x28FF:
                     row[x] = Cell(density[(ord(cell.char) - 0x2800).bit_count()],
                                   cell.fg, BG)
                 elif cell.char in replacements:
