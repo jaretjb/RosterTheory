@@ -404,9 +404,12 @@ def _provider_updated_at(value: str | None, captured_at: datetime) -> datetime |
             "%m/%d",
         ):
             try:
-                parsed = datetime.strptime(raw, pattern)
+                parsed = (datetime.strptime(f"{raw}/{captured_at.year}", "%m/%d/%Y")
+                          if pattern == "%m/%d" else datetime.strptime(raw, pattern))
                 if pattern == "%m/%d":
                     parsed = parsed.replace(year=captured_at.year)
+                    if parsed.month == 12 and captured_at.month == 1:
+                        parsed = parsed.replace(year=captured_at.year - 1)
                 break
             except ValueError:
                 continue
@@ -415,6 +418,36 @@ def _provider_updated_at(value: str | None, captured_at: datetime) -> datetime |
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def _provider_update_is_date(value: str | None) -> bool:
+    return bool(value and re.fullmatch(
+        r"(?:\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)", value.strip()))
+
+
+def _provider_update_fresh(value, captured_at, maximum_age, *, now):
+    """Date-only updates have calendar-day precision, never an invented hour.
+
+    A daily window accepts today's or the previous day's publication date;
+    exact timestamps retain the exact hourly gate. Capture freshness is also
+    checked independently by the caller. Sub-day proof needs an actual time.
+    """
+    parsed = _provider_updated_at(value, captured_at)
+    if parsed is None:
+        return False
+    if _provider_update_is_date(value):
+        days = (now.astimezone(timezone.utc).date() - parsed.date()).days
+        return maximum_age >= timedelta(days=1) and 0 <= days <= maximum_age.days
+    return is_fresh(parsed, maximum_age, now=now)
+
+
+def _provider_evidence_age(value, captured_at, *, now):
+    parsed = _provider_updated_at(value, captured_at)
+    capture_age = now - captured_at.astimezone(timezone.utc)
+    publication_age = (timedelta(days=(now.date() - parsed.date()).days)
+                       if parsed and _provider_update_is_date(value)
+                       else now - parsed if parsed else capture_age)
+    return max(0, int(max(capture_age, publication_age).total_seconds()))
 
 
 def _identity_map(
@@ -658,8 +691,8 @@ def build_waiver_wire_evidence(
         now=current,
     )
     provider_time = _provider_updated_at(market.updated_at, market.stamp.captured_at)
-    provider_fresh = provider_time is not None and is_fresh(
-        provider_time,
+    provider_fresh = _provider_update_fresh(
+        market.updated_at, market.stamp.captured_at,
         timedelta(hours=config.maximum_age_hours),
         now=current,
     )
@@ -671,19 +704,8 @@ def build_waiver_wire_evidence(
                 timedelta(hours=config.maximum_age_hours),
                 now=current,
             )
-            and (
-                (
-                    updated := _provider_updated_at(
-                        dataset.updated_at, dataset.stamp.captured_at
-                    )
-                )
-                is not None
-                and is_fresh(
-                    updated,
-                    timedelta(hours=config.maximum_age_hours),
-                    now=current,
-                )
-            )
+            and _provider_update_fresh(dataset.updated_at, dataset.stamp.captured_at,
+                                      timedelta(hours=config.maximum_age_hours), now=current)
             and str(dataset.scoring or "").upper() == config.scoring
             and bool(dataset.observations)
         )
@@ -801,39 +823,16 @@ def build_waiver_wire_evidence(
     stamps = (
         replace(
             market.stamp,
-            freshness_seconds=max(
-                0,
-                int(
-                    (
-                        current
-                        - min(
-                            market.stamp.captured_at.astimezone(timezone.utc),
-                            provider_time or market.stamp.captured_at.astimezone(timezone.utc),
-                        )
-                    ).total_seconds()
-                ),
-            ),
+            freshness_seconds=_provider_evidence_age(
+                market.updated_at, market.stamp.captured_at, now=current),
             fresh=market_stamp_fresh,
         ),
     ) + tuple(
         replace(
             selected[expert_id].stamp,
-            freshness_seconds=max(
-                0,
-                int(
-                    (
-                        current
-                        - min(
-                            selected[expert_id].stamp.captured_at.astimezone(timezone.utc),
-                            _provider_updated_at(
-                                selected[expert_id].updated_at,
-                                selected[expert_id].stamp.captured_at,
-                            )
-                            or selected[expert_id].stamp.captured_at.astimezone(timezone.utc),
-                        )
-                    ).total_seconds()
-                ),
-            ),
+            freshness_seconds=_provider_evidence_age(
+                selected[expert_id].updated_at, selected[expert_id].stamp.captured_at,
+                now=current),
             fresh=selected_fresh_by_expert.get(expert_id, False),
         )
         for expert_id in resolved_expert_ids

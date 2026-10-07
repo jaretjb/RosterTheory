@@ -111,6 +111,76 @@ class WaiverClaimRecommendation:
 
 
 @dataclass(frozen=True, slots=True)
+class WeeklySkillStreamer:
+    add_player_id: str
+    drop_player_id: str | None
+    position: str
+    projected_points: float
+    current_week_lineup_gain: float
+    displaced_starter_ids: tuple[str, ...]
+    ros_decision_label: str
+    ros_tradeoff: str
+
+
+def weekly_skill_streamers(
+    evaluations: Sequence[WaiverEvaluation], *, snapshot: WaiverSnapshot | None = None,
+) -> tuple[WeeklySkillStreamer, ...]:
+    """Mention useful weekly starters without promoting them to ROS claims."""
+    result = []
+    players = {row.player_id: row for row in snapshot.players} if snapshot else {}
+    owners = dict(snapshot.owner_by_player) if snapshot else {}
+    available = {row.player_id for row in snapshot.acquisitions
+                 if row.state in ACQUIRABLE_STATES and row.owner_roster_id is None
+                 and row.player_id not in owners} if snapshot else None
+    for evaluation in evaluations:
+        if evaluation.add_position not in {"QB", "RB", "WR", "TE"}:
+            continue
+        if not evaluation.add_currently_active or not evaluation.material_news_fresh:
+            continue
+        if available is not None and evaluation.add_player_id not in available:
+            continue
+        player = players.get(evaluation.add_player_id)
+        if player and str(player.injury_status or '').upper() in {'OUT', 'IR', 'PUP', 'SUS'}:
+            continue
+        candidates = [row for row in evaluation.candidates
+                      if row.drop_player_id == evaluation.selected_drop_player_id
+                      and evaluation.current_week in row.added_start_weeks
+                      and row.current_week_delta > 0
+                      and (row.current_week_projection_complete or (
+                          row.projection_inputs_complete and waiver_evaluation_ready(evaluation)))]
+        if not candidates:
+            continue
+        selected = min(candidates, key=lambda row: (-row.current_week_delta,
+                                                    row.drop_player_id or ""))
+        week = next(row for row in selected.lineup.weeks
+                    if row.week == evaluation.current_week)
+        failed = [gate.name for gate in evaluation.decision.gates if not gate.passed] if evaluation.decision else []
+        drop_cautions = {
+            'drop_retention_protection': 'the proposed drop is protected for retention',
+            'protected_upside_incremental_value': 'the proposed drop has protected bench upside',
+            'protected_contingency_drop': 'the proposed drop has a protected contingency role',
+            'depth_delta': 'the drop creates too much replacement exposure',
+            'offense_downside_increase': 'the move increases roster downside risk',
+            'qb_hold_value': 'the backup quarterback does not justify its bench cost',
+            'complete_required_evidence': 'some roster evidence is missing',
+        }
+        cautions = [text for gate, text in drop_cautions.items() if gate in failed]
+        tradeoff = ("Drop needs review: " + '; '.join(cautions) if cautions else
+                    "Short-term starter; rest-of-season rank is below the proposed drop"
+                    if "same_position_ros_improvement" in failed else
+                    "Short-term option; review the rest-of-season drop decision"
+                    if evaluation.decision_label not in AFFIRMATIVE_LABELS else
+                    "Also passes the rest-of-season acquisition checks")
+        result.append(WeeklySkillStreamer(
+            evaluation.add_player_id, selected.drop_player_id, evaluation.add_position,
+            selected.current_week_add_points, selected.current_week_delta,
+            week.lineup_exits, evaluation.decision_label or "PASS", tradeoff,
+        ))
+    return tuple(sorted(result, key=lambda row: (-row.current_week_lineup_gain,
+                                                row.add_player_id)))
+
+
+@dataclass(frozen=True, slots=True)
 class WaiverSearch:
     schema_version: int
     evaluation_schema_version: int
@@ -151,6 +221,7 @@ class WaiverSearch:
     coverage_status: str = "EXHAUSTIVE_ELIGIBLE"
     budget_excluded_player_ids: tuple[str, ...] = ()
     claim_branch_checks: tuple[ClaimBranchCheck, ...] = ()
+    weekly_streamers: tuple[WeeklySkillStreamer, ...] = ()
 
 
 def _evaluation_sort_key(evaluation: WaiverEvaluation) -> tuple[object, ...]:
@@ -1036,6 +1107,7 @@ def search_waiver_candidates(
         waiver_wire_evidence=waiver_wire_evidence,
         emergence_evidence=emergence_evidence,
     )
+    weekly_streamers = weekly_skill_streamers(ranked, snapshot=snapshot)
     candidate_hash = stable_hash(
         {
             "eligible_candidate_ids": eligible_ids,
@@ -1045,6 +1117,7 @@ def search_waiver_candidates(
             "notable_candidates": notable_candidates,
             "claim_plan": claim_plan,
             "claim_branch_checks": claim_branch_checks,
+            "weekly_streamers": weekly_streamers,
             "pruning_version": PRUNING_VERSION,
             "contingencies": contingencies,
             "budget_excluded_player_ids": budget_excluded,
@@ -1124,7 +1197,7 @@ def search_waiver_candidates(
             "labels depending on those positions remain blocked"
         )
     base = WaiverSearch(
-        schema_version=11,
+        schema_version=12,
         evaluation_schema_version=17,
         product="WAIVER ASSISTANT",
         operation="BUDGET-LIMITED WAIVER SEARCH" if budget_excluded else "COMPLETE WAIVER SEARCH",
@@ -1172,6 +1245,7 @@ def search_waiver_candidates(
         coverage_status="BUDGET_LIMITED" if budget_excluded else "EXHAUSTIVE_ELIGIBLE",
         budget_excluded_player_ids=tuple(budget_excluded),
         claim_branch_checks=claim_branch_checks,
+        weekly_streamers=weekly_streamers,
     )
     assert_current(snapshot, now=now)
     result = replace(base, evidence_hash=stable_hash(asdict(base)))
@@ -1199,16 +1273,42 @@ def search_waiver_candidates(
     return result
 
 
+def waiver_evaluation_ready(evaluation: WaiverEvaluation) -> bool:
+    """Readiness follows the comparison's actual dependencies, not NFL coverage."""
+    decision = evaluation.decision
+    if not evaluation.material_news_fresh:
+        return False
+    specialist = decision.specialist_evidence if decision else None
+    if specialist and decision.decision_path != 'CONDITIONAL_ROSTER_EVIDENCE':
+        return any(gate.name == 'complete_special_team_evidence' and gate.passed
+                   for gate in decision.gates)
+    if decision and decision.decision_path == 'CONDITIONAL_ROSTER_EVIDENCE':
+        return False
+    if not evaluation.value_inputs_complete or not evaluation.projection_inputs_complete:
+        return False
+    gaps = any(row.reason in {'INCOMPLETE_PROJECTION_EVIDENCE', 'IDENTITY_UNAVAILABLE',
+                              'INCOMPLETE_VALUE_EVIDENCE'} for row in evaluation.exclusions)
+    return not gaps or any(gate.name in {'unchanged_fixed_specialist_slots',
+                                        'independent_roster_risk_bound'} and gate.passed
+                           for gate in (decision.gates if decision else ()))
+
+
 def waiver_readiness(search):
     # Empty exhaustive results are valid. Scope exclusions are not input gaps.
     scope_exclusions = {'OUT_OF_SCOPE_POSITION', 'LEAGUE_MOVES_LOCKED',
                         'ACQUISITION_LOCKED', 'ACQUISITION_UNAVAILABLE',
-                        'NO_PROVED_LEGAL_DROP', 'EXACT_BUDGET_NOT_EVALUATED'}
+                        'NO_PROVED_LEGAL_DROP', 'EXACT_BUDGET_NOT_EVALUATED',
+                        'NO_AUTHORITATIVE_VALUE'}
     missing = [row for row in search.omissions if row.reason not in scope_exclusions]
+    # Omitted targets and routine specialist limits get specific evidence notes.
+    # Only an exceptional unresolved dependency of the reported best comparison
+    # makes the run incomplete. Full exclusions remain in the saved audit.
+    best = next((row for row in search.exact_evaluations
+                 if row.add_player_id == getattr(search, 'best_add_player_id', None)), None)
     return {
-        'inputs_complete': not missing and not any(
-            gap.reason in {'INCOMPLETE_PROJECTION_EVIDENCE', 'IDENTITY_UNAVAILABLE', 'INCOMPLETE_VALUE_EVIDENCE'}
-            for row in search.exact_evaluations for gap in row.exclusions), 'input_gaps': missing,
+        'inputs_complete': (waiver_evaluation_ready(best) if best is not None
+                            else bool(search.exact_evaluations) or not missing),
+        'input_gaps': missing,
         'search_complete': not search.budget_excluded_player_ids,
         'candidate_confidence': {row.add_player_id: {
             'status': ('CONDITIONAL' if row.decision and row.decision.decision_path == 'CONDITIONAL_ROSTER_EVIDENCE'
@@ -1225,7 +1325,7 @@ def save_waiver_search(search: WaiverSearch, path: str | Path) -> Path:
 
 def load_waiver_search(path: str | Path) -> dict[str, object]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
-    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}:
+    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}:
         raise ValueError("Unsupported Waiver search-evidence schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Search evidence must be Waiver-scoped")

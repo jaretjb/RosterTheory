@@ -42,6 +42,8 @@ from roster_theory.waiver.search import (
     save_waiver_search,
     search_waiver_candidates,
     waiver_readiness,
+    waiver_evaluation_ready,
+    weekly_skill_streamers,
 )
 from roster_theory.waiver.snapshot import (
     WaiverSnapshot,
@@ -341,9 +343,7 @@ def evaluate_entered_waiver(
                 'request': {'operation': 'exact', 'add': add, 'drop': drop},
                 'result_hash': evaluation.evidence_hash}, policy=policy,
         revalidation=proof, sources=inputs.source_evidence, as_of=evaluation.evaluated_at,
-        readiness={'inputs_complete': evaluation.value_inputs_complete and evaluation.projection_inputs_complete
-                   and not any(row.reason in {'INCOMPLETE_PROJECTION_EVIDENCE', 'IDENTITY_UNAVAILABLE', 'INCOMPLETE_VALUE_EVIDENCE'}
-                               for row in evaluation.exclusions),
+        readiness={'inputs_complete': waiver_evaluation_ready(evaluation),
                    'search_complete': None, 'candidate_confidence': {
                        'status': ('CONDITIONAL' if evaluation.decision and evaluation.decision.decision_path == 'CONDITIONAL_ROSTER_EVIDENCE'
                                   else 'UNQUANTIFIED'), 'decision_label': evaluation.decision_label,
@@ -487,9 +487,18 @@ def _best_waiver_reason(evaluation: Any, selected: Any) -> str:
     decision = evaluation.decision
     if decision is None:
         return _plain_waiver_reason(evaluation.strongest_uncertainty)
+    if evaluation.decision_label not in AFFIRMATIVE_LABELS:
+        failed = [gate for gate in decision.gates if not gate.passed]
+        if any(gate.name == 'same_position_ros_improvement' for gate in failed):
+            return "The proposed drop ranks higher for the rest of the season."
+        return (failed[0].explanation if failed else
+                "Available evidence does not establish an acquisition.")
     path = decision.decision_path
+    if path == "THREE_SIGNAL_WAIVER_VALUE":
+        return "The acquisition improves available lineup value and clears the retention and roster checks."
     if path in {"K_RANK_PERFORMANCE", "DST_RANK_PERFORMANCE"}:
-        return "The sample-adjusted weekly-rank and league-scored season-total comparison favors the add; projections do not establish the required streaming improvement."
+        return ("Weekly expert ranks and observed league-scored performance favor this one-for-one swap; "
+                "projections do not establish a full custom-scoring point gain.")
     if path == "FRESH_RANK_DOMINANCE":
         return "The add ranks higher this week and for the rest of the season without losing projected value."
     if path == "DST_CURRENT_WEEK_STREAM":
@@ -518,6 +527,7 @@ def _special_team_lines(
             row
             for row in evaluations
             if row.add_position == position and row.candidates
+            and row.candidates[0].same_position
         ),
         key=lambda row: (row.decision_label not in AFFIRMATIVE_LABELS, _evaluation_sort_key(row)),
     )
@@ -539,17 +549,15 @@ def _special_team_lines(
         if evaluation.decision and evaluation.decision.decision_path == "CONDITIONAL_ROSTER_EVIDENCE":
             basis = " | CONDITIONAL: protected missing players may change this comparison"
         if specialist:
-            basis += f" | basis {specialist['basis']}"
-            if specialist["performance_complete"]:
-                basis += (f" | season {specialist['season_add_points']:.2f} vs {specialist['season_drop_points']:.2f} pts"
-                          f" ({specialist['season_add_games']}/{specialist['season_drop_games']} games)")
-            elif not specialist["cross_position"]:
-                basis += " | season comparison unavailable/stale or missing game counts"
+            basis += " | weekly ranks and scored results" if specialist.get("basis") == "RANK_PERFORMANCE" else " | weekly forecast"
+        forecast = (f"{selected.current_week_add_points:.2f} pts | "
+                    f"{selected.current_week_delta:+.2f} vs {drop_name}{rolling}"
+                    if selected.current_week_projection_complete else
+                    f"vs {drop_name} {position}{selected.ownership.current_week_drop_rank or '?'}")
         lines.append(
             f"- {names.get(evaluation.add_player_id, evaluation.add_player_id)}: "
             f"{position}{rank if rank is not None else '?'} | "
-            f"{selected.current_week_add_points:.2f} pts | "
-            f"{selected.current_week_delta:+.2f} vs {drop_name}{rolling} | {label}{basis}"
+            f"{forecast} | {label}{basis}"
         )
     return lines
 
@@ -567,15 +575,8 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
             if claim.drop_player_id
             else "open roster slot"
         )
-        conflict = (
-            " | alternatives "
-            + ", ".join(f"#{number}" for number in claim.mutually_exclusive_priorities)
-            if claim.mutually_exclusive_priorities
-            else " | combine only in a validated branch"
-        )
         plan_lines.append(
             f"{claim.priority}. {claim.position} {add_name} -> drop {drop_name}"
-            f"{conflict}"
         )
     best_evaluation = next(
         (
@@ -620,25 +621,28 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
                 and selected.waiver_value.add.composite_score is not None
                 else "Waiver Value: unavailable"
             ),
-            f"This week: projected lineup change {selected.current_week_delta:+.2f} points.",
+                f"This week: projected lineup change {selected.current_week_delta:+.2f} points."
+                if selected.current_week_projection_complete or (
+                    best_evaluation.add_position in {"QB", "RB", "WR", "TE"}
+                    and waiver_evaluation_ready(best_evaluation))
+                else "This week's comparison uses available expert rankings and scored performance.",
         ]
 
     if plan_lines:
-        lines = ["CLAIM PLAN - ranked single-move options", *plan_lines, "", *lines]
-        lines.extend(("", "CONDITIONAL CLAIM BRANCH CHECKS"))
-        for branch in search.claim_branch_checks:
-            sequence = " then ".join(f"#{priority}" for priority in branch.priorities)
-            lines.append(f"- {sequence}: {'VALIDATED' if branch.accepted else 'DO NOT COMBINE'} | {branch.reason}")
-        lines.append("Only the listed successful prefixes are validated. Other outcomes/combinations require a new report; claims were not submitted.")
+        lines = ["CLAIM ORDER", *plan_lines,
+                 "Claims using the same drop are backups for one roster spot.", "", *lines]
     if search.budget_excluded_player_ids:
         lines = [f"BUDGET LIMITED: {len(search.exact_evaluations)}/{len(search.eligible_candidate_ids)} adds evaluated; best overall move is unproved.",
                  "Not evaluated: " + ", ".join(names.get(pid, pid) for pid in search.budget_excluded_player_ids), *lines]
-    if any(row.decision and row.decision.decision_path == "CONDITIONAL_ROSTER_EVIDENCE"
-           for row in search.exact_evaluations):
-        lines = ["CONDITIONAL COMPARISONS: protected missing players may change some results; the best overall move is unproved.", *lines]
-    elif any(gap.reason in {"INCOMPLETE_PROJECTION_EVIDENCE", "IDENTITY_UNAVAILABLE", "INCOMPLETE_VALUE_EVIDENCE"}
-             for row in search.exact_evaluations for gap in row.exclusions):
-        lines = ["PARTIAL ROSTER EVIDENCE: recommendations cover proved-independent moves; the best overall move is unproved.", *lines]
+    streamers = search.weekly_streamers or weekly_skill_streamers(
+        search.exact_evaluations, snapshot=result.refresh.snapshot)
+    if streamers:
+        lines.extend(("", "WEEKLY SKILL STREAMERS - would enter this week's starting lineup"))
+        for row in streamers:
+            drop = names.get(row.drop_player_id, row.drop_player_id) if row.drop_player_id else "open slot"
+            lines.append(f"- {names.get(row.add_player_id, row.add_player_id)} ({row.position}): "
+                         f"{row.projected_points:.2f} pts; lineup +{row.current_week_lineup_gain:.2f}; "
+                         f"evaluated with drop {drop}. {row.ros_tradeoff}.")
 
     dst_lines = _special_team_lines(search.exact_evaluations, names, "DST")
     if dst_lines:
@@ -646,31 +650,9 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
     kicker_lines = _special_team_lines(search.exact_evaluations, names, "K")
     if kicker_lines:
         lines.extend(("", "KICKER STREAMERS", *kicker_lines))
-    if search.notable_candidates:
-        lines.extend(("", "OTHER PLAYERS TO WATCH"))
-        for candidate in search.notable_candidates:
-            rank_details = []
-            if candidate.waiver_wire_position_rank is not None:
-                rank_details.append(f"WW {candidate.position}{candidate.waiver_wire_position_rank:g}")
-            if candidate.current_week_position_rank is not None:
-                rank_details.append(f"W{search.current_week} {candidate.position}{candidate.current_week_position_rank}")
-            if candidate.rest_of_season_position_rank is not None:
-                rank_details.append(f"ROS {candidate.position}{candidate.rest_of_season_position_rank}")
-            team = f" {candidate.nfl_team}" if candidate.nfl_team else ""
-            reason = (
-                "not exactly evaluated; move quality unknown"
-                if candidate.category == "NOT_EXACTLY_EVALUATED"
-                else
-                "incomplete value coverage; monitor only"
-                if candidate.category == "MISSING_EVIDENCE"
-                else "not enough of an upgrade after accounting for the drop"
-                if candidate.category == "BELOW_THRESHOLD"
-                else "not available in this league"
-            )
-            lines.append(
-                f"- {names.get(candidate.player_id, candidate.player_id)}: "
-                f"{candidate.position}{team} | {' | '.join(rank_details) or 'partial ranks'} | {reason}"
-            )
+    notes = _waiver_evidence_notes(search, names)
+    if notes:
+        lines.extend(("", "EVIDENCE NOTES", *notes))
     lines.extend(
         (
             "",
@@ -679,6 +661,47 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
         )
     )
     return "\n".join((*lines, *run_footer(getattr(result, 'run_manifest', None))))
+
+
+def _waiver_evidence_notes(search, names):
+    notes = []
+    waiver = next((row.waiver_wire_evidence for row in search.exact_evaluations
+                   if row.waiver_wire_evidence is not None), None)
+    if waiver is not None:
+        if not waiver.market_complete:
+            notes.append("- Waiver rankings are stale or unavailable; scoring uses available weekly and ROS ranks.")
+        if waiver.unmatched_fantasypros_ids or waiver.ambiguous_fantasypros_ids:
+            count = len(waiver.unmatched_fantasypros_ids) + len(waiver.ambiguous_fantasypros_ids)
+            notes.append(f"- {count} waiver-ranking entry/entries could not be matched reliably and are excluded.")
+    for row in search.notable_candidates:
+        if row.category in {'MISSING_EVIDENCE', 'NOT_EXACTLY_EVALUATED'}:
+            notes.append(f"- {names.get(row.player_id, row.player_id)}: {row.reason}.")
+    for row in search.omissions:
+        if row.reason == 'ROSTER_PROJECTION_INCOMPLETE':
+            name = names.get(row.player_id, row.player_id)
+            notes.append(f"- {name}: complete custom-scoring forecast unavailable; "
+                         "comparisons use independent available evidence where supported.")
+        elif row.reason == 'ROSTER_VALUE_UNAVAILABLE':
+            notes.append(f"- {names.get(row.player_id, row.player_id)}: ranking value unavailable; "
+                         "moves depending on it are excluded.")
+    incomplete = [row for row in search.omissions
+                  if row.reason in {'INCOMPLETE_PROJECTION_COVERAGE', 'INCOMPLETE_VALUE_COVERAGE',
+                                    'MATERIAL_NEWS_NOT_FRESH'}]
+    if incomplete:
+        shown = ', '.join(names.get(row.player_id, row.player_id) for row in incomplete[:5])
+        suffix = f" and {len(incomplete) - 5} others" if len(incomplete) > 5 else ''
+        notes.append(f"- Evidence unavailable for {shown}{suffix}; excluded comparisons are saved in the audit.")
+    claims = {row.priority: row for row in search.claim_plan}
+    for branch in search.claim_branch_checks:
+        if not branch.accepted and branch.reason != 'Drop is no longer active on this branch':
+            claim = claims.get(branch.priorities[-1]) if branch.priorities else None
+            target = names.get(claim.add_player_id, claim.add_player_id) if claim else 'a claim'
+            notes.append(f"- Combining {target} with earlier successful claims needs review: "
+                         f"{_plain_waiver_reason(branch.reason)}")
+    if any(row.decision and row.decision.decision_path == 'CONDITIONAL_ROSTER_EVIDENCE'
+           for row in search.exact_evaluations):
+        notes.append("- Some comparisons depend on missing roster evidence and remain suggestions only.")
+    return list(dict.fromkeys(notes))
 
 
 def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
@@ -809,7 +832,7 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
         + (", ".join(f"W{week}" for week in selected.added_start_weeks) or "no projected weeks"),
         f"Drop candidates evaluated: {len(evaluation.candidates)}; exclusions: "
         f"{len(evaluation.exclusions)}",
-        "Strongest uncertainty: " + evaluation.strongest_uncertainty,
+        "Why: " + _best_waiver_reason(evaluation, selected),
         f"Saved evidence: {result.output_path}",
     ]
     replacement_weeks = tuple(
@@ -864,6 +887,8 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
             "Reversal conditions: "
             + " | ".join(evaluation.decision.reversal_conditions),
         )
+    if 'real-world calibration' not in evaluation.strongest_uncertainty:
+        lines.insert(-1, 'Evidence note: ' + evaluation.strongest_uncertainty)
     if evaluation.add_position in {"K", "DST"}:
         drop_id = evaluation.selected_drop_player_id
         drop_name = names.get(drop_id, drop_id) if drop_id else "open roster slot"

@@ -10,6 +10,7 @@ from dataclasses import dataclass, replace
 from typing import Callable, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete, RosterIllegal
+from roster_theory.core.specialists import fixed_specialist_swap
 from roster_theory.inseason.evaluation import (
     InSeasonContext,
     WeeklyProjectionMatrix,
@@ -105,7 +106,6 @@ def validate_claim_branch(
     after = set(before)
     added: set[str] = set()
     independent_specialist_positions: set[str] = set()
-    accepted_other_claim = False
     prefix: tuple[int, ...] = ()
     checks: list[ClaimBranchCheck] = []
     skills = {
@@ -148,11 +148,16 @@ def validate_claim_branch(
                 and evaluation.add_position in {"K", "DST"}
                 and selected is not None
                 and selected.same_position
+                and fixed_specialist_swap(
+                    current.players, current.league.roster_positions,
+                    next(t.player_ids for t in current.teams
+                         if t.roster_id == current.user_roster_id), add, drop,
+                ) == evaluation.add_position
             )
-            if independent_specialist and not accepted_other_claim and evaluation.add_position not in independent_specialist_positions:
+            if independent_specialist and evaluation.add_position not in independent_specialist_positions:
                 # K and DST occupy disjoint fixed slots. Each same-position
-                # swap has been re-evaluated on the changed roster; their
-                # Missing or decision-irrelevant future forecasts cannot
+                # swap has been re-evaluated on the changed roster. Missing
+                # or decision-irrelevant future forecasts cannot
                 # establish a cumulative season-point delta for these swaps.
                 checks.append(ClaimBranchCheck(
                     sequence, True,
@@ -163,18 +168,20 @@ def validate_claim_branch(
                 independent_specialist_positions.add(evaluation.add_position)
                 prefix = sequence
                 continue
-            if independent_specialist_positions:
-                checks.append(ClaimBranchCheck(
-                    sequence, False,
-                    "Cumulative point safety cannot be verified after an independent specialist swap",
-                ))
-                continue
+            # Already approved singleton specialist replacements are separate
+            # fixed slots. Compare the remaining roster on both sides without
+            # requiring their decision-irrelevant future point forecasts.
+            separate_ids = {
+                row.player_id for row in snapshot.players
+                if set("DST" if p.upper() == "DEF" else p.upper()
+                       for p in row.positions) & independent_specialist_positions
+            }
             impact = team_impact(
                 context,
                 matrix,
                 snapshot.user_roster_id,
-                before,
-                proposed_roster,
+                before - separate_ids,
+                proposed_roster - separate_ids,
                 options,
                 replacement_exclusions=tuple(sorted(added | {add})),
             )
@@ -220,7 +227,6 @@ def validate_claim_branch(
                 current, after = proposed, proposed_roster
                 added.add(add)
                 prefix = sequence
-                accepted_other_claim = True
         except (CoverageIncomplete, RosterIllegal) as exc:
             checks.append(ClaimBranchCheck(sequence, False, str(exc)))
     return tuple(checks)

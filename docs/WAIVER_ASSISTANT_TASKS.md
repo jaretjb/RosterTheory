@@ -1083,6 +1083,50 @@ Acceptance:
 - Real CLI preparation reaches the fallback in regression coverage; genuinely
   insufficient panels still fail. Run focused/full tests and release gates.
 
+## WA-030 — Weekly skill streamers and usable Waiver reports
+
+Status: implemented and validated October 6, 2026; separate PR required
+
+Goal: make tonight's actionable Waiver choices understandable while preserving
+source, roster and horizon safety.
+
+Acceptance:
+
+- Show skill players who would improve the current starting lineup even when
+  ROS retention policy blocks an acquisition; disclose the chosen drop and
+  weekly versus ROS tradeoff without treating a mention as a proven combined claim.
+- Expected unranked-directory entries and supported specialist fallback paths
+  do not make the whole run incomplete. Genuine dependency failures remain
+  explicit, with specific evidence notes at the end of human reports.
+- Same-position K/DST swaps use their specialist comparison after a skill
+  claim when fixed singleton slots prove independence. Preserve legality and
+  failure for shared slots, multiple holdings, and changed-roster dependencies.
+- Preserve claim order but remove enumerated alternative references,
+  "Other Players to Watch" and fixture-calibration jargon from the human feed.
+  Keep full machine audit data.
+- Handle date-only provider updates as dates rather than fabricated midnight
+  UTC timestamps; stale dates and invalid or future evidence still fail.
+- Add regressions for streamers, normal versus exceptional gaps, specialist
+  claim order and concise output; verify the user's saved evidence offline.
+- Create scoped issues for wider Draft/Trade specialist parity and provider
+  scoring work instead of silently changing their decision models.
+- Run full tests, Ruff, context/privacy/package checks and open a separate PR.
+
+Implementation adds weekly lineup starters with explicit ROS/drop tradeoffs,
+comparison-scoped readiness, concise evidence notes and neutral singleton-slot
+proof for Waiver claim branches. Search schema 12 retains legacy loading;
+synthetic reference decisions are unchanged. All 1,027 tests, Ruff, repository
+and distribution privacy checks, and clean-install smoke pass.
+The requested saved-case computation covers all 113 eligible adds in 227.4
+seconds, surfaces the weekly-only starter and validates the named skill/DST
+pair in both orders. This historical verification is non-actionable.
+
+Larger work is tracked separately: [Draft/Trade singleton specialist parity](https://github.com/jaretjb/RosterTheory/issues/78),
+[K/DST forecast provider contract](https://github.com/jaretjb/RosterTheory/issues/79),
+and [weekly-only skill evaluation without full ROS forecasts](https://github.com/jaretjb/RosterTheory/issues/80).
+The current weekly section uses already evaluated candidates with usable
+current-week evidence; it does not turn a weekly mention into a ROS claim.
+
 ## WA-029 — Full Waiver search within the freshness window
 
 Status: implemented and validated October 6, 2026

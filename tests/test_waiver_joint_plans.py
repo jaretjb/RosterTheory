@@ -605,6 +605,8 @@ class JointWaiverTests(unittest.TestCase):
                 candidates=(
                     replace(
                         template.candidates[0],
+                        same_position=True,
+                        drop_position='K',
                         ownership=replace(
                             template.candidates[0].ownership, current_week_add_rank=rank
                         ),

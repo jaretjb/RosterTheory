@@ -12,7 +12,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
-from roster_theory.waiver.search import waiver_readiness
+from roster_theory.waiver.search import waiver_readiness, waiver_evaluation_ready
 
 from roster_theory.draft.analysis import (
     analyze_snapshot,
@@ -576,8 +576,9 @@ def command_waiver_evaluate(args: argparse.Namespace) -> None:
             "Waiver evaluation", evaluation.league_key, evaluation.horizon,
             evaluation.decision_label or "No authoritative recommendation",
             warnings=evaluation.warnings,
-            complete=evaluation.value_inputs_complete and evaluation.projection_inputs_complete,
-            limitations=(evaluation.strongest_uncertainty,), paths=(result.output_path,),
+            complete=waiver_evaluation_ready(evaluation),
+            limitations=(() if evaluation.decision_label in {'ADD NOW', 'CLAIM', 'ACQUIRE'}
+                         else (evaluation.strongest_uncertainty,)), paths=(result.output_path,),
         ))
 
 

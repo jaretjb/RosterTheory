@@ -1,5 +1,30 @@
 # Active milestone
 
+## WA-030 - Weekly skill streamers and usable Waiver reports (implemented and validated)
+
+Authorized by the user's October 6 request after reviewing the saved Waiver
+report. Use the WA-030 row in `docs/WAIVER_ASSISTANT_TASKS.md`. Surface available
+skill players who improve this week's starting lineup separately from ROS
+acquisitions. Expected unranked-directory and specialist forecast limitations
+must not produce blanket incomplete readiness; retain specific exceptional
+dependency failures and concise end-of-report evidence notes. Validate fixed
+same-position K/DST swaps independently of skill claim order when actual league
+slots prove separation. Remove numbered alternative lists, "Other Players to
+Watch" and audit jargon from human output, preserving ordered claims and
+machine evidence. Repair
+date-only Waiver ranking freshness without inventing precise publication times.
+Use synthetic regression cases and the requested saved report for offline
+verification. File explicit issues for larger Draft/Trade specialist parity
+and any remaining provider scoring undertaking; keep assistant policy separate.
+Run focused/full tests, Ruff, context/privacy/package gates; deliver a separate
+PR without merging or submitting any Sleeper action.
+
+Validation: all 1,027 tests, Ruff, context/privacy/package gates and isolated
+clean installation pass. The requested historical case evaluates all 113
+eligible adds in 227.4 seconds; a weekly-only starter is visible and the named
+skill plus DST swaps validate in either order. Offline diagnostics remain
+non-current and non-actionable. Larger work is recorded in issues #78-#80.
+
 ## WA-029 - Complete full Waiver search within the freshness window (implemented and validated; PR #77)
 
 Authorized by the user's October 6 report that normal Waiver search finishes
