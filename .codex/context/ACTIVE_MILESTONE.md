@@ -1,6 +1,6 @@
 # Active milestone
 
-## WA-030 - Weekly skill streamers and usable Waiver reports (implemented and validated)
+## WA-030 - Weekly skill streamers and usable Waiver reports (implemented and validated; PR #81)
 
 Authorized by the user's October 6 request after reviewing the saved Waiver
 report. Use the WA-030 row in `docs/WAIVER_ASSISTANT_TASKS.md`. Surface available

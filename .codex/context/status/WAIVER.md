@@ -2,7 +2,7 @@
 
 Updated: October 6, 2026 (America/Los_Angeles)
 
-WA-030 adds available skill-player weekly starters separately from ROS claims,
+WA-030 (PR #81) adds available skill-player weekly starters separately from ROS claims,
 with the evaluated drop and retention/safety tradeoffs. Already evaluated
 targets need usable current-week evidence. Owned, locked and inactive targets
 are excluded. "Other Players to Watch", numbered alternatives and routine

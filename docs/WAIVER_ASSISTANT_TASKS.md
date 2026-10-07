@@ -1085,7 +1085,7 @@ Acceptance:
 
 ## WA-030 — Weekly skill streamers and usable Waiver reports
 
-Status: implemented and validated October 6, 2026; separate PR required
+Status: implemented and validated October 6, 2026; [PR #81](https://github.com/jaretjb/RosterTheory/pull/81)
 
 Goal: make tonight's actionable Waiver choices understandable while preserving
 source, roster and horizon safety.
