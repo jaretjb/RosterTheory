@@ -1,6 +1,6 @@
 # RosterTheory
 
-![Roster Theory in oversized, chunky bright-yellow 1990s arcade lettering](docs/assets/roster-theory-terminal-90s.svg)
+![Roster Theory Colosseum logo: a gold football stadium above lettering woven from mathematical symbols](docs/assets/roster-theory-colosseum.svg)
 
 A command-line decision engine for Sleeper leagues, built to answer the
 question a generic rankings page cannot: **what is the best move for this
