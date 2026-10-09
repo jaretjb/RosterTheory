@@ -256,7 +256,7 @@ position limits before making a pick.
 
 ## Trade
 
-Request a current read-only roster diagnosis or target-first trade search. Each
+Request a current read-only roster diagnosis or timed trade search. Each
 analysis refreshes stale schedule/expert evidence, current Sleeper ownership,
 and value boards automatically while reusing fresh caches:
 
@@ -264,6 +264,8 @@ and value boards automatically while reusing fresh caches:
 roster-theory trade diagnose home_league
 roster-theory trade targets home_league
 roster-theory trade search home_league
+roster-theory trade search home_league --opponent 3
+roster-theory trade search home_league --opponent "Team name" --time-budget-seconds 180
 ```
 
 To evaluate a trade you already have in mind:
@@ -278,13 +280,43 @@ Forecast completeness follows the shared
 off-role or rare statistics do not make a forecast incomplete. Remaining
 estimate limitations are disclosed and can make an affected verdict `CONDITIONAL`.
 `trade gaps` and `trade compare` use the same automatic preparation. The
-`targets` command shows `WATCH` cards without implying an offer exists;
-`search` adds exact, grouped offers with separate intrinsic and market verdicts.
+`targets` command shows `WATCH` cards without implying an offer exists.
+
+The `search` command examines all nine one-to-three-player package shapes and returns up to
+ten ranked ideas: recommended offers, negotiation candidates and counteroffer
+ideas. Negotiation candidates improve both lineups and pass every check except
+the opponent's consensus-value floor; their strict verdict remains `COUNTER`.
+Counteroffer ideas show failed checks and any completed one-edit repairs.
+Ordinary roster upgrades are searched even when neither player appears on a
+target card.
+
+League search defaults to 120 seconds; `--opponent` selects one
+roster ID or exact, unambiguous team name for a 300-second deeper search.
+Provider preparation is measured separately. The search deadline is checked
+during computation, so total command time can exceed the search budget.
+Completed evaluations are saved; unfinished work remains unevaluated, with
+coverage by opponent and shape.
+League mode uses full rosters for one-for-one trades and configured player
+pools for larger shapes; opponent mode uses both eligible full rosters. Explicit
+`--max-exact` and `--max-large-exact` add evaluation caps; `--max-results` accepts
+one to ten ideas.
+
+Weights and football thresholds remain in their existing league-local policies;
+optional `execution_profile` settings are versioned separately. Older policy files load
+with the default execution profile and saved evidence can be replayed offline.
+See the [Trade finder guide](docs/TRADE_FINDER.md) for configuration, result
+labels, coverage and replay examples.
+
 These Phase 13 commands require an explicit, league-scoped `trade_target`
-policy (or `--target-policy PATH`). Until its thresholds are supported for that
-league, they stop as uncalibrated; fixture premiums are not production defaults.
+policy (or `--target-policy PATH`). Missing search-policy configuration is
+reported separately from the selected expert weights; fixture premiums are
+not production defaults.
+
 `--ecr-proxy` disables chart claims, while `--trade-market-import PATH` uses an
-authorized local chart. `--snapshot PATH` replays saved evidence offline.
+authorized local chart. ECR-proxy and prior-week chart results remain diagnostics
+and do not fill the ranked ideas list. `--snapshot PATH` replays saved evidence
+offline.
+
 The lower-level `inputs prepare`, `trade refresh`, and `trade values` commands remain
 available for diagnostics and reproducible operations; they are not normal
 end-user prerequisites.

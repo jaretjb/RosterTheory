@@ -25,6 +25,10 @@ from roster_theory.trade.evaluation import (
 )
 from roster_theory.trade.market import TradeMarketBoard, TradeMarketEvidence, TradeMarketPrice
 from roster_theory.trade.snapshot import SKILL_POSITIONS, TradeSnapshot, assert_current
+from roster_theory.trade.execution import cached, checkpoint
+
+weighted_lineup_score = cached(weighted_lineup_score)
+lineup = cached(lineup)
 
 
 TARGET_KINDS = ("BUY_LOW", "SELL_HIGH", "CONSOLIDATE", "NEED_FIT")
@@ -672,6 +676,7 @@ def discover_trade_targets(
     config: TargetDiscoveryConfig,
     performance_context: Sequence[TargetPerformanceContext] = (),
     options: EvaluationOptions = EvaluationOptions(),
+    opponent_roster_ids: tuple[str, ...] | None = None,
 ) -> TargetDiscoveryResult:
     """Discover auditable player targets without constructing or grading packages."""
 
@@ -696,6 +701,9 @@ def discover_trade_targets(
 
     player_by_id = {player.player_id: player for player in snapshot.players}
     teams_by_id = {team.roster_id: team for team in snapshot.teams}
+    if opponent_roster_ids is not None:
+        scope = {snapshot.user_roster_id, *opponent_roster_ids}
+        teams_by_id = {rid: team for rid, team in teams_by_id.items() if rid in scope}
     owners = dict(snapshot.owner_by_player)
     if snapshot.user_roster_id not in teams_by_id:
         raise CoverageIncomplete("User roster is absent from the current snapshot")
@@ -703,6 +711,7 @@ def discover_trade_targets(
         player_id
         for player_id in snapshot.tradeable_player_ids
         if player_id in owners
+        and owners[player_id] in teams_by_id
         and (player := player_by_id.get(player_id)) is not None
         and bool(SKILL_POSITIONS.intersection(position.upper() for position in player.positions))
     }
@@ -717,7 +726,8 @@ def discover_trade_targets(
         for player_id in sorted(rostered_tradeable - fully_valued)
     ]
     exclusions.extend(TargetExclusion(pid, owners.get(pid), None, reason)
-                      for pid, reason in snapshot.player_exclusions)
+                      for pid, reason in snapshot.player_exclusions
+                      if owners.get(pid) in teams_by_id)
     fully_valued -= set(dict(snapshot.player_exclusions))
     direct_board, market_warnings = _direct_board_usable(trade_market)
     pricing_mode = trade_market.mode if direct_board is not None else "ECR-PROXY"
@@ -764,6 +774,7 @@ def discover_trade_targets(
     context = _context(snapshot)
     matrix = build_weekly_projection_matrix(context, projections)
     roster_exclusions = roster_projection_exclusions(snapshot, matrix)
+    roster_exclusions = tuple(row for row in roster_exclusions if row.roster_id in teams_by_id)
     diagnoses = {
         team.roster_id: diagnose_roster(
             snapshot,
@@ -773,7 +784,7 @@ def discover_trade_targets(
             projection_matrix=matrix,
             protect_missing=True,
         )
-        for team in sorted(snapshot.teams, key=lambda row: row.roster_id)
+        for team in sorted(teams_by_id.values(), key=lambda row: row.roster_id)
     }
     score_by_roster = {
         roster_id: weighted_lineup_score(
@@ -783,6 +794,7 @@ def discover_trade_targets(
     }
     candidates: dict[str, list[TradeTarget]] = {kind: [] for kind in TARGET_KINDS}
     for player_id in sorted(fully_valued):
+        checkpoint()
         if any((cell := matrix.cell(player_id, week.week)) is None or cell.points is None
                for week in snapshot.weeks):
             exclusions.append(TargetExclusion(

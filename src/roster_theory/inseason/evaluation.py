@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from bisect import bisect_left
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from itertools import combinations
 from typing import Iterable, Mapping, Protocol, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete
-from roster_theory.core.lineup import LineupPlayer, LineupResult, optimize_lineup
+from roster_theory.core.lineup import LineupPlayer, LineupResult, optimize_lineup, lineup_slots as normalized_slots
 from roster_theory.core.models import Player, Projection
 from roster_theory.core.projections import (
     currently_inactive,
@@ -83,6 +83,8 @@ class WeeklyProjectionMatrix:
     risk_cache: dict[tuple[object, ...], "RiskProfile"] = field(
         default_factory=dict, compare=False, hash=False, repr=False
     )
+    solver_cache: dict = field(default_factory=dict, compare=False, hash=False, repr=False)
+    unowned_cache: dict = field(default_factory=dict, compare=False, hash=False, repr=False)
 
     def cell(self, player_id: str, week: int) -> ProjectionCell | None:
         key = (player_id, week)
@@ -304,6 +306,32 @@ def lineup_slots(context: InSeasonContext) -> tuple[str, ...]:
     )
 
 
+def _solve_cached(matrix, players, slots, points):
+    """Canonical exact solve; irrelevant bench players share one solver result.
+
+    A group with identical eligible slots can occupy at most that many slots.
+    Lower-scoring members (larger IDs on ties) cannot improve any assignment.
+    Preserve the full unused-player list even when the solver input is reduced.
+    """
+    eligible_slots = normalized_slots(slots)
+    groups = {}
+    for player in players:
+        positions = {"DST" if p.upper() == "DEF" else p.upper() for p in player.positions}
+        signature = tuple(i for i, (_, allowed) in enumerate(eligible_slots) if positions.intersection(allowed))
+        groups.setdefault(signature, []).append(player)
+    retained = tuple(p for signature, rows in sorted(groups.items())
+                     for p in sorted(rows, key=lambda p: (-float(points.get(p.player_id, 0)), p.player_id))[:len(signature)])
+    key = (tuple(slots), tuple(sorted((p.player_id, tuple(p.positions), float(points.get(p.player_id, 0))) for p in retained)))
+    result = matrix.solver_cache.get(key)
+    if result is None:
+        result = optimize_lineup(retained, slots, points)
+        if len(matrix.solver_cache) >= 32768:
+            matrix.solver_cache.clear()
+        matrix.solver_cache[key] = result
+    chosen = {a.player_id for a in result.assignments}
+    return replace(result, unused_player_ids=tuple(sorted(p.player_id for p in players if p.player_id not in chosen)))
+
+
 def lineup(
     context: InSeasonContext,
     matrix: WeeklyProjectionMatrix,
@@ -332,7 +360,7 @@ def lineup(
         for player_id in roster_ids
         if (cell := matrix.cell(player_id, week)) is not None and cell.points is not None
     }
-    result = optimize_lineup(
+    result = _solve_cached(matrix,
         tuple(LineupPlayer(player_id, player_by_id[player_id].positions) for player_id in roster_ids),
         lineup_slots(context),
         points,
@@ -370,6 +398,10 @@ def plausible_unowned_players(
     per_position_week: int = 5,
     allowed_player_ids: set[str] | None = None,
 ) -> tuple[str, ...]:
+    key = (context.unowned_player_ids, context.weeks, context.evaluation_positions,
+           per_position_week, None if allowed_player_ids is None else tuple(sorted(allowed_player_ids)))
+    if key in matrix.unowned_cache:
+        return matrix.unowned_cache[key]
     player_by_id = {player.player_id: player for player in context.players}
     result: set[str] = set()
     for week in context.weeks:
@@ -391,7 +423,9 @@ def plausible_unowned_players(
                 key=lambda item: (-item[0], item[1]),
             )
             result.update(player_id for _, player_id in ranked[:per_position_week])
-    return tuple(sorted(result))
+    retained = tuple(sorted(result))
+    matrix.unowned_cache[key] = retained
+    return retained
 
 
 def lineup_with_replacement_floor(
@@ -685,7 +719,7 @@ def _scenario_score(
             for player_id in roster_ids
             if (cell := matrix.cell(player_id, week.week)) is not None and cell.points is not None
         }
-        optimized = optimize_lineup(
+        optimized = _solve_cached(matrix,
             tuple(LineupPlayer(player_id, player_by_id[player_id].positions) for player_id in roster_ids),
             lineup_slots(context),
             points,
@@ -880,9 +914,12 @@ def risk_impact(
     before: set[str],
     after: set[str],
     options: ImpactOptions,
+    *,
+    profile_function=None,
 ) -> RiskImpact:
-    before_profile = risk_profile(context, matrix, roster_id, before, options)
-    after_profile = risk_profile(context, matrix, roster_id, after, options)
+    profile = profile_function or risk_profile
+    before_profile = profile(context, matrix, roster_id, before, options)
+    after_profile = profile(context, matrix, roster_id, after, options)
     return RiskImpact(
         roster_id=roster_id,
         before=before_profile,

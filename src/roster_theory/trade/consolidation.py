@@ -10,6 +10,9 @@ from roster_theory.inseason.evaluation import (
 from roster_theory.trade.evaluation import EvaluationOptions, TradeEvaluation
 from roster_theory.trade.coverage import comparison_roster
 from roster_theory.trade.snapshot import TradeSnapshot
+from roster_theory.trade.execution import cached, checkpoint
+
+team_impact = cached(team_impact)
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +44,14 @@ class ConsolidationEvidence:
     both_outgoing_assets_used: bool
     passes: bool
     warnings: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MultiConsolidationEvidence(ConsolidationEvidence):
+    user_add_player_ids: tuple[str, ...]
+    partner_drop_player_ids: tuple[str, ...]
+    user_add_effects: tuple[tuple[str, float, float], ...]
+    partner_drop_effects: tuple[tuple[str, float, float], ...]
 
 
 def _final_roster(
@@ -77,10 +88,10 @@ def analyze_consolidation(
     minimum_partner_lineup_use: float,
     minimum_partner_depth_use: float,
 ) -> ConsolidationEvidence:
-    """Audit a 2-for-1 against both final rosters, including add and drop."""
+    """Audit two/three-for-one against both final rosters and every add/drop."""
 
-    if len(evaluation.package.from_a) != 2 or len(evaluation.package.from_b) != 1:
-        raise ValueError("Consolidation evidence requires a user 2-for-1 package")
+    if len(evaluation.package.from_a) not in {2, 3} or len(evaluation.package.from_b) != 1:
+        raise ValueError("Consolidation evidence requires a user 2/3-for-1 package")
     if len(evaluation.team_impacts) != 2 or len(evaluation.secondary_moves) != 2:
         raise ValueError("Consolidation evidence requires exact two-team impacts and moves")
     if minimum_starter_upgrade <= 0.0:
@@ -96,11 +107,12 @@ def analyze_consolidation(
     move_by_roster = {move.roster_id: move for move in evaluation.secondary_moves}
     user_move = move_by_roster[user_id]
     partner_move = move_by_roster[partner_id]
+    required = len(evaluation.package.from_a) - 1
     secondary_complete = (
         user_move.kind == "ADD"
-        and len(user_move.chosen_player_ids) == 1
+        and len(user_move.chosen_player_ids) == required
         and partner_move.kind == "DROP"
-        and len(partner_move.chosen_player_ids) == 1
+        and len(partner_move.chosen_player_ids) == required
     )
     add_id = user_move.chosen_player_id if secondary_complete else None
     drop_id = partner_move.chosen_player_id if secondary_complete else None
@@ -138,6 +150,7 @@ def analyze_consolidation(
 
     partner_uses: list[PartnerAssetUse] = []
     for asset in evaluation.package.from_a:
+        checkpoint()
         player_id = asset.player_id
         if player_id not in partner_final:
             partner_uses.append(
@@ -180,7 +193,25 @@ def analyze_consolidation(
         warnings.append("At least one outgoing asset lacks partner lineup or waiver-relative depth use")
     if any(move.search_truncated for move in evaluation.secondary_moves):
         warnings.append("Secondary add/drop search was bounded")
-    return ConsolidationEvidence(
+    extra = {}
+    evidence_type = ConsolidationEvidence
+    if required == 2:
+        evidence_type = MultiConsolidationEvidence
+        def effects(ids, roster_id, final, dropping):
+            rows = []
+            for pid in ids:
+                checkpoint()
+                impact = team_impact(context, matrix, roster_id,
+                    final | {pid} if dropping else final - {pid}, final, options)
+                rows.append((pid, impact.weighted_delta, impact.depth_delta))
+            return tuple(rows)
+        extra = {
+            "user_add_player_ids": user_move.chosen_player_ids,
+            "partner_drop_player_ids": partner_move.chosen_player_ids,
+            "user_add_effects": effects(user_move.chosen_player_ids, user_id, user_final, False),
+            "partner_drop_effects": effects(partner_move.chosen_player_ids, partner_id, partner_final, True),
+        }
+    return evidence_type(
         target_player_id=target_id,
         target_started_weeks=started_weeks,
         target_marginal_lineup_points=target_impact.weighted_delta,
@@ -198,4 +229,5 @@ def analyze_consolidation(
         both_outgoing_assets_used=both_used,
         passes=secondary_complete and starter_passed and both_used and "ROSTER-EVIDENCE-PARTIAL" not in evaluation.modes,
         warnings=tuple(warnings),
+        **extra,
     )

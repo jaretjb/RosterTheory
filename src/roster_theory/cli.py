@@ -11,6 +11,7 @@ from contextlib import redirect_stdout
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Mapping
 from roster_theory.waiver.search import waiver_readiness, waiver_evaluation_ready
 
@@ -837,10 +838,12 @@ def _command_trade_target_workflow(args: argparse.Namespace, *, search: bool) ->
         if args.snapshot:
             _print_json(load_target_workflow_evidence(args.snapshot))
             return
+        preparation_started = perf_counter()
         with interactive_progress(
             "Preparing current Trade evidence", machine_output=args.json
         ):
             _prepare_trade_analysis(args)
+        preparation_seconds = perf_counter() - preparation_started
         with interactive_progress(
             "Searching for Trades" if search else "Finding Trade targets",
             machine_output=args.json,
@@ -865,6 +868,9 @@ def _command_trade_target_workflow(args: argparse.Namespace, *, search: bool) ->
                 max_exact=args.max_exact,
                 max_large_exact=args.max_large_exact,
                 max_results=args.max_results,
+                opponent=getattr(args, 'opponent', None),
+                time_budget_seconds=getattr(args, 'time_budget_seconds', None),
+                prior_preparation_seconds=preparation_seconds,
             )
     except (RosterTheoryError, SleeperError, FantasyProsError, ValueError) as exc:
         _print_product_failure(
@@ -882,8 +888,8 @@ def _command_trade_target_workflow(args: argparse.Namespace, *, search: bool) ->
         _print_human_report(args, format_target_workflow(result), _product_frame(
             "Trade search" if search else "Trade targets",
             result.targets.league_key, result.targets.horizon,
-            "Target-first bounded package search" if search else "Target discovery only",
-            warnings=result.targets.warnings,
+            "Timed baseline package search" if search else "Target discovery only",
+            warnings=() if search and hasattr(result.packages, 'ideas') else result.targets.warnings,
             complete=(getattr(result, 'run_manifest', None) or {}).get('readiness', {}).get('inputs_complete', True),
             search_complete=False if search else None,
             paths=(result.output_path, result.csv_path),
@@ -2083,6 +2089,8 @@ def _add_target_workflow_args(parser: argparse.ArgumentParser) -> None:
         default="balanced",
     )
     parser.add_argument("--small-pool", type=int)
+    parser.add_argument("--opponent", help="Search one roster ID or exact, unambiguous team name")
+    parser.add_argument("--time-budget-seconds", type=float, help="Override finder time budget (league 120s; opponent 300s)")
     parser.add_argument("--large-pool", type=int)
     parser.add_argument("--max-exact", type=int)
     parser.add_argument("--max-large-exact", type=int)

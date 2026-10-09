@@ -1,32 +1,29 @@
 # Trade Assistant current status
 
-Updated: September 30, 2026 (America/Los_Angeles)
+Updated: October 8, 2026 (America/Los_Angeles)
 
-TA-1314 connects normal live Trade runs to completed league-scored outcomes.
-The former path captured expectations but required manual outcome import.
-Collection retains source evidence, historical team identity, pregame timing
-and sample requirements. Missing results remain explicit; early-exit detection
-is limited. Detail: `docs/COMPLETED_TRADE_ASSISTANT_TA_1314.md`.
-Depends on unmerged PR #70. Separate live checks loaded 243/289 outcomes,
-with seven compatible contexts each. All 978 full-suite tests and eight final
-outcome tests pass, plus Ruff, context, package and clean-install checks.
+TA-1315 implements timed baseline search across all nine one-to-three-player
+shapes in [PR #82](https://github.com/jaretjb/RosterTheory/pull/82), open for
+review. The verified wheel is installed locally. League mode defaults to
+120 seconds; an opponent ID or exact,
+unambiguous team name selects a 300-second full-roster search. Up to ten ideas
+preserve strict verdicts: recommended, negotiation candidate, or counteroffer
+idea with failed checks and bounded validated repairs. Expert weights and
+league-local football thresholds are unchanged; execution settings are
+versioned independently. Deadline-interrupted work stays unevaluated. New
+timed manifests replay recorded results without rerunning the clock; legacy
+report loading remains supported.
 
-TA-1313 shipped through PR #25. Trade
-weekly projections now retain the provider's declared STD/HALF/PPR label while
-rescoring usable raw stats under the league's Sleeper settings. Rank scope
-remains exact; rows without required raw stats remain unavailable. The affected
-league's ignored provisional target policy loads with obsolete fields removed,
-without changing active thresholds or claiming calibration. The prior read-only
-League Beta search passed the former projection-format stop, evaluated 52
-packages, and found no offers. Readiness remains INCOMPLETE because two rosters
-each lack one Week 3 player projection. Revalidation against PR #26 passed all
-802 tests, Ruff, and tracked-tree/index privacy gates. No additional provider
-refresh or Sleeper write. Do not treat the live result as a ready recommendation.
+All 1,040 tests pass, including scope isolation, all-nine-shape coverage,
+deadline handling, repair deduplication, price-index bounds and neutral solver
+equivalence. The requested offline case returns ten ideas in each profile:
+league one strict/two negotiation/seven counters; opponent one strict/six
+negotiation/three counters with all nine shapes and 13 repair checks. Missing
+roster and price evidence remains explicit. Release validation and PR handoff
+are recorded in `docs/COMPLETED_TRADE_ASSISTANT_TA_1315.md`.
 
-AC-001–AC-008/#7–#14 are merged through PR #23. Their shared exact gates,
-ranking caps, scoring formats, freshness contracts and bounded-search proofs
-remain in force. Completed evidence is in the matching
-`docs/COMPLETED_ASSISTANT_RELIABILITY_AC_*.md` records. The audit remains open;
-TA-1314 is active. TA-1310 empirical
-calibration remains unpromoted pending sufficient dated evidence. Trade is
-read-only.
+Prior TA-1314 connects live Trade preparation to completed league-scored
+outcomes with source, historical identity and genuine pregame timing. Detail:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1314.md`. Empirical calibration remains
+unpromoted until its dated sample requirements pass. No league's policy or
+result may be transferred to another league. Trade remains read-only.

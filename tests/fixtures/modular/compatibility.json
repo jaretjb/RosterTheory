@@ -3474,6 +3474,28 @@
     },
     {
       "flags": [
+        "--opponent"
+      ],
+      "destination": "opponent",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--time-budget-seconds"
+      ],
+      "destination": "time_budget_seconds",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
         "--large-pool"
       ],
       "destination": "large_pool",
@@ -3692,6 +3714,28 @@
         "--small-pool"
       ],
       "destination": "small_pool",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--opponent"
+      ],
+      "destination": "opponent",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--time-budget-seconds"
+      ],
+      "destination": "time_budget_seconds",
       "required": false,
       "nargs": null,
       "choices": null,

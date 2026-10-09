@@ -1,5 +1,30 @@
 # Active milestone
 
+## TA-1315 - Useful, timed Trade search with opponent scope (implemented and validated; PR #82)
+
+Authorized by the user's October 8 request to implement the reviewed Trade
+finder plan. Use TA-1315 in `docs/TRADE_ASSISTANT_TASKS.md`. Preserve the chosen
+expert weights and league-local football thresholds. Add separately versioned
+execution settings: 120-second league search and 300-second opponent search,
+all nine one-to-three-player shapes, baseline roster upgrades independent of
+target cards, fair opponent/shape scheduling, price-indexed construction,
+deadline checkpoints and run-local evaluation reuse. Keep strict verdicts and
+show up to ten ranked recommended, negotiation and counteroffer ideas with
+specific failures and bounded, validated one-edit repairs. Audit all secondary
+moves and incoming usefulness for three-for-one consolidation. Retain scoped
+coverage gaps, legacy replay and full common valuation/waiver inputs. Migrate
+only the selected league's execution settings. Validate its saved inputs offline, run
+focused/full tests, Ruff, context/privacy/package and clean-install checks,
+then deliver a separate PR without merging or submitting a Sleeper action.
+
+Validation: all 1,040 tests pass, including exact solver equivalence, all-nine
+shape coverage, scope isolation, deadline exclusion, bounded repairs and saved
+replay. The saved league case returns ten ideas in 120.0 seconds (one strict
+recommendation, two negotiation candidates, seven counters); the opponent case
+returns ten in 300.0 seconds (one strict, six negotiation, three counters) and
+checks all nine shapes plus 13 repairs. Football optimizer settings match the
+saved run exactly. Detail: `docs/COMPLETED_TRADE_ASSISTANT_TA_1315.md`.
+
 ## WA-030 - Weekly skill streamers and usable Waiver reports (implemented and validated; PR #81)
 
 Authorized by the user's October 6 request after reviewing the saved Waiver

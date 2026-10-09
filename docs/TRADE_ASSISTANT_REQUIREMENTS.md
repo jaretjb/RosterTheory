@@ -1,6 +1,6 @@
 # RosterTheory trade assistant requirements
 
-Status: Approved baseline; target-first Phase 13 requirements added September 19, 2026
+Status: Approved baseline; timed Trade finder revision added October 8, 2026
 Created: September 4, 2026 (America/Los_Angeles)  
 Scope: Requirements only; this document does not authorize implementation
 
@@ -16,6 +16,13 @@ Its section 6 reconciles this document's sections 2, 6.3, 8.4 and 10-13.
 Trade decision policy and existing safety gates remain in force. Planning does
 not activate implementation.
 
+The TA-1315 finder revision updates sections 3, 8, 9, 11 and 12 for fresh
+searches. Baseline upgrades, opponent scope and timed execution supplement
+target discovery while retaining expert weights and football decision gates.
+See the [finder guide](TRADE_FINDER.md) and
+[implementation record](COMPLETED_TRADE_ASSISTANT_TA_1315.md). This requirements
+update does not authorize additional product work.
+
 ## 1. Purpose
 
 RosterTheory should add a read-only trade assistant that helps a fantasy
@@ -23,7 +30,7 @@ manager improve the expected weekly strength and risk profile of an existing
 team. The first supported use case is the 2026 League Alpha redraft league, where
 Team 4 currently starts three Cincinnati Bengals.
 
-The assistant must answer four different questions without collapsing them
+The assistant must answer five different questions without collapsing them
 into one trade grade:
 
 1. Does the trade improve the user's expected points and usable depth over the
@@ -34,8 +41,8 @@ into one trade grade:
    rules, making the proposal plausibly fair?
 4. Where does the selected-expert view disagree with market consensus strongly
    enough to create a buy-low or sell-high opportunity?
-5. Which underperformers, overperforming surplus assets, and 2-for-1
-   consolidation targets deserve attention before a specific offer is built?
+5. Which underperformers, overperforming surplus assets, and consolidation
+   targets deserve attention before a specific offer is built?
 
 The assistant must not recommend diversification at any price. Three starters
 from one offense are a reason to measure correlated risk, not an automatic
@@ -107,15 +114,17 @@ coverable while newly measuring multi-week offense-wide downside.
 
 ### 3.2 Find trade targets
 
-The user can ask for targets across the league. The assistant must:
+The user can ask for target cards or trade ideas across the league, or search
+one opponent. The assistant must:
 
-- lead with actionable players before constructing offers, separated into
-  buy-low targets, sell-high assets, and consolidation targets;
+- separate target discovery from package search: `targets` leads with buy-low,
+  sell-high, consolidation and need-fit cards; `search` leads with ranked ideas;
 - identify players who improve a real lineup or depth need rather than merely
   adding total projected points to the bench;
 - identify managers whose roster construction gives them a plausible reason
   to trade that player;
-- propose balanced one-for-one and small multi-player packages;
+- construct all nine player-only shapes with one to three players per side,
+  including baseline upgrades that have no target-card label;
 - include any required drop when roster counts become uneven;
 - avoid proposing a player who is not currently on the stated manager's
   authoritative Sleeper roster; and
@@ -135,6 +144,19 @@ league-specific intrinsic/team-value improvement while using the current
 trade-market board to constrain candidate packages to a plausible market price
 band. Market balance helps decide which offers to construct; it must never make
 an intrinsically harmful trade look beneficial.
+
+League search defaults to a 120-second budget and uses full eligible rosters
+for one-for-one trades and configured player pools for larger packages.
+Single-opponent search defaults to 300 seconds and uses both full eligible
+rosters. Resolve a roster ID or an exact, case-sensitive, unambiguous displayed
+team name before diagnosis and discovery; reject self and invalid choices with
+valid alternatives. Keep the complete league valuation and free-agent universe.
+
+Execution settings must be separately versioned from football policy. Rotate
+evaluation across opponents and shapes, disclose pool and time limits, and
+publish only completed evaluations. Record provider preparation separately
+from the cooperative search deadline. Explicit evaluation caps include repair
+attempts; legacy uniform/lane limits must not constrain fresh finder search.
 
 ### 3.3 Find valuation gaps
 
@@ -168,6 +190,9 @@ change. It must not subtract chart values directly from rank-implied VORP;
 comparisons require an audited monotone mapping, percentile/tier comparison, or
 another documented common scale. When no supported chart is available, reports
 must say `ECR-PROXY` and disable chart-specific fairness claims.
+
+ECR-proxy and prior-week chart package results remain diagnostic and must not
+fill the fresh finder's ranked supported ideas.
 
 Recent over- or underperformance is also separate context. It may make a
 player more plausible to shop or acquire, but it must not change authoritative
@@ -709,19 +734,21 @@ MVP scorer.
 
 ### 8.5 Consolidation and deconsolidation
 
-Two-for-one consolidation is a first-class search objective. The assistant
-must look for one incoming player who materially improves the user's starting
-lineup while two outgoing players are replaceable by existing depth or the
-resulting open-slot addition. It must separately test whether both outgoing
+Two- and three-for-one consolidation are first-class search objectives. The
+assistant must look for one incoming player who materially improves the user's
+starting lineup while the outgoing players are replaceable by existing depth or the
+resulting open-slot additions. It must separately test whether all outgoing
 players improve the partner's starters, usable depth, or explicit absence
-coverage after the partner's required drop.
+coverage after the partner's required drops.
 
 Package construction may apply a visible, calibrated consolidation premium to
-the market return demanded for the best player. The exact evaluator remains
-authoritative: it applies both rosters' adds/drops, starter displacement,
-weekly points, depth, and risk. Asset-count preference alone must neither
-promote nor suppress a 2-for-1, and the assistant must not call two nominal
-values additive when one incoming player would be unusable.
+the market return demanded for the sole incoming player, applied once. The
+exact evaluator remains authoritative: it applies both rosters' adds/drops,
+starter displacement, weekly points, depth, and risk. Asset-count preference alone must neither
+promote nor suppress consolidation, and the assistant must not call nominal
+values additive when an incoming player would be unusable. Three-for-one
+evidence must audit both open-slot adds, both forced drops and all three assets'
+use in the partner's final roster.
 
 ## 9. Explanation and presentation requirements
 
@@ -739,12 +766,33 @@ Every evaluated package must lead with football consequences and include:
 - source freshness and completeness; and
 - the strongest reason to disagree with the verdict.
 
-League-wide discovery must lead with target cards before package results. Each
-card names the opportunity type, owner, intrinsic/market evidence, compatible
-recent-performance context, user lineup fit, owner disposability, freshness,
-and whether a partner-credible offer was found. The compact report then groups
-offers under `BUY LOW`, `SELL HIGH`, and `CONSOLIDATE` rather than presenting an
-undifferentiated package list.
+`trade targets` leads with cards naming opportunity type, owner,
+intrinsic/market evidence, compatible recent-performance context, user lineup
+fit, owner disposability, freshness and whether an offer was found. Cards with
+no passing package remain `WATCH` evidence.
+
+`trade search` leads with up to ten supported ideas, ordered by result tier,
+user lineup gain, partner lineup gain, downside, chart-price distance, asset
+count and stable IDs. League presentation chooses an opponent representative
+before filling remaining slots. It must retain strict evaluator verdicts:
+
+- `RECOMMENDED` passes all exact and search gates.
+- `NEGOTIATION_CANDIDATE` improves both lineups and passes every user, evidence,
+  legality, chart fairness and partner usefulness gate; only the opponent's
+  consensus-value floor fails. The strict verdict remains `COUNTER`.
+- `COUNTEROFFER_IDEA` is a complete, legal strict `COUNTER` with positive user
+  lineup gain. Show the failed checks and any completed one-edit repairs.
+
+Repairs add, remove or substitute one asset, stay within three players per
+side, use the same evaluator and share the deadline and caps. At most three
+direct repairs are attempted per counter; they never generate further repairs.
+Do not pad the result with missing, illegal, declined or unsupported-market
+cases, and do not describe negotiation ideas as accepted offers. Fewer than ten
+supported ideas must be reported honestly.
+
+Human output must show names, both gains, required moves and failed checks.
+JSON and CSV must preserve scope, execution settings, timing, selected ideas,
+repairs and per-opponent/shape coverage alongside raw decision evidence.
 
 Detailed output should expose player-level ranks, projected points, tier,
 lineup usage, waiver replacement, risk contribution, selected-expert rank,
@@ -795,6 +843,10 @@ without separate agreement.
   later material player news invalidates affected ballots immediately.
 - Snapshot normalized inputs used for a saved recommendation so the result can
   be reproduced even after live sources change.
+- Timed finder replay verifies recorded completed results without rerunning a
+  wall clock. Preserve scope, execution profile, coverage and termination;
+  label offline replay non-current and non-actionable. Legacy evidence retains
+  its verified replay path.
 - Never print, save, commit, or transmit the FantasyPros API key.
 - Respect source licenses and attribution. Personal cache/export data remains
   ignored under `data/cache/`, `data/exports/`, or `data/manual/`.
@@ -823,14 +875,17 @@ recorded fixtures and a fresh read-only League Alpha snapshot:
 6. It identifies controlled buy-low and sell-high valuation gaps in the
    correct direction and does not treat the market proxy as a known manager
    preference.
-7. It searches every opponent roster and returns only target packages that
-   address an identified user need and give the partner a credible roster
-   rationale.
-8. It evaluates legal one-for-one and two-for-one packages, including the
+7. League search considers every eligible opponent; opponent search limits
+   diagnosis and generation to the selected team. Baseline upgrades do not
+   require target labels. Recommended offers pass existing user and partner
+   gates; other idea tiers retain strict verdicts and failed checks.
+8. It constructs all nine one-to-three-player shapes and evaluates legal
+   packages within the disclosed execution limits, including the
    required add/drop consequence of unequal packages.
 9. It reports expected lineup, depth, risk, selected-versus-market value, and
    partner deltas separately.
-10. It produces the same result from the same saved inputs.
+10. It verifies and reproduces recorded timed results from saved evidence,
+    without assuming that another wall-clock run completes the same packages.
 11. It fails visibly on stale league state, unknown scoring, ambiguous player
    identity, or incomplete valuation coverage.
 12. It never performs a Sleeper write or exposes the FantasyPros key.
@@ -841,6 +896,12 @@ recorded fixtures and a fresh read-only League Alpha snapshot:
 14. At least one hand-audited Bengals-diversification case and one case where
     keeping the stack is better than a discounted trade agree with the exact
     before/after weekly calculations.
+15. It records completed, errored, unevaluated and unconstructed work by
+    opponent/shape. A deadline interruption never publishes a partial package
+    as evaluated, and exhausted coverage retains pool and secondary-move limits.
+16. Controlled fixtures verify sole-gate negotiation qualification, bounded
+    repairs, unchanged football thresholds and exclusion of unsupported-market
+    cases from ranked ideas.
 
 ## 13. Explicit non-goals for the first release
 
