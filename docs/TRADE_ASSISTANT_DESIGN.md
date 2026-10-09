@@ -1,6 +1,6 @@
 # RosterTheory Trade Assistant design
 
-Status: Approved baseline; target-first Phase 13 design added September 19, 2026
+Status: Approved baseline; timed Trade finder revision added October 8, 2026
 Created: September 4, 2026 (America/Los_Angeles)  
 Authority: `docs/TRADE_ASSISTANT_REQUIREMENTS.md`  
 Scope: Design only; this document does not authorize implementation
@@ -12,6 +12,13 @@ test, and unrelated work must not load it.
 
 Planned delivery tasks and their section-level context references are in
 `docs/TRADE_ASSISTANT_TASKS.md`.
+
+The implemented TA-1315 contract in sections 11-15 supersedes the former
+target-first package search and its lane/shape evaluation budgets for fresh
+searches. See the [finder guide](TRADE_FINDER.md) and
+[implementation record](COMPLETED_TRADE_ASSISTANT_TA_1315.md). Saved legacy
+searches retain their replay path. Football decision policy remains separate
+from execution controls.
 
 Approved shared-boundary revision: [modular architecture](MODULAR_ARCHITECTURE.md).
 It maps the extraction of responsibilities described in sections 2-5 and adds
@@ -37,8 +44,8 @@ The first release will:
 - discover buy-low, sell-high, consolidation, and need-fit targets from
   selected/market gaps, optional supported trade-market prices, leakage-safe
   recent-performance context, and exact roster utility;
-- construct mutually useful packages around those targets with independent
-  evaluation coverage for 2-for-1 consolidation; and
+- construct baseline roster upgrades independently of target labels, rotating
+  exact evaluation across opponents and all nine one-to-three-player shapes; and
 - emit a clearly labeled terminal report plus a local evidence bundle.
 
 The design adopts the proposed requirements defaults: balanced expected points
@@ -659,52 +666,73 @@ alternative package because offense-wide downside falls.”
 
 ## 11. League-wide search
 
-Search is a target-first deterministic process so correctness stays tractable
-and the output follows the manager's actual workflow.
+Fresh `trade search` constructs baseline roster upgrades independently of
+target-card labels and display caps. Its exact evaluator retains the user's
+intrinsic-value, risk, depth, legality, partner and market gates. No execution
+setting changes the chosen expert weights or those football thresholds.
 
-Its optimization contract is: maximize the user's intrinsic/team-value gain,
-subject to a compatible market-price fairness band, partner exact-roster
-plausibility, legality, and downside gates. Market value constrains and prunes
-the search; intrinsic value ranks the passing football outcomes.
+1. Resolve league or single-opponent scope before diagnosis and discovery.
+   `--opponent` accepts a roster ID or an exact, case-sensitive, unambiguous
+   displayed team name. Reject self, unknown and ambiguous choices with valid
+   alternatives. Retain the full snapshot, value boards and free-agent universe.
+2. Diagnose the scoped teams and produce auditable `BUY_LOW`, `SELL_HIGH`,
+   `CONSOLIDATE` and `NEED_FIT` target evidence. Ordinary upgrades do not require
+   either asset to appear on a target card.
+3. Construct all nine player-only shapes with one to three assets on each
+   side. League mode uses full eligible rosters for one-for-one trades and the
+   configured player pools for larger shapes. Opponent mode uses both full
+   eligible rosters. Report price and roster exclusions explicitly.
+4. Index bundles by price and prune pairs outside the existing broad fairness
+   band before exact lineup work. Order each opponent/shape queue by fair
+   estimated mutual gains, then user/partner gains and chart distance.
+5. Rotate queues across opponents and shapes. Evaluate unique packages with
+   the existing exact evaluator, including bounded add/drop consequences.
+   The run-local cache shares a completed decision across duplicate packages
+   and repairs, bound to the same snapshot, boards, projections, scoring,
+   horizon and policy.
+6. For a counteroffer idea, check at most three one-edit repairs that add,
+   remove or substitute one asset. Keep one to three players per side; apply
+   the same evaluator, deadline and explicit caps. Do not expand repairs
+   recursively. Primary evaluations receive a round before repair work.
+7. Return up to ten supported ideas with strict verdicts and failed checks:
+   `RECOMMENDED` passes exact and search gates; `NEGOTIATION_CANDIDATE` improves
+   both lineups and fails only the strict opponent consensus-value floor;
+   `COUNTEROFFER_IDEA` is a complete, legal strict `COUNTER` with positive user
+   lineup gain. Missing, illegal, declined, ECR-proxy and prior-week chart cases
+   remain diagnostics and do not fill the ranked list.
 
-1. Diagnose every team's weekly starters, weak slots, surplus usable depth,
-   waiver alternatives, intrinsic-versus-trade-market gaps, market-ECR
-   corroboration, and compatible recent-performance residuals.
-2. Produce auditable `BUY_LOW`, `SELL_HIGH`, `CONSOLIDATE`, and `NEED_FIT`
-   target lanes before constructing offers.
-3. For each target/opponent, seed outgoing assets from user surplus, trade-
-   market price, low exact marginal cost, and partner need. Enumerate unique
-   player-only 1-for-1, 2-for-1, 1-for-2, and bounded 2-for-2 packages.
-4. Apply cheap admissible filters: ownership, supported positions, legal
-   roster count, the broad trade-market fairness band, a plausible need for
-   both teams, and no clearly dominated asset bundle.
-5. Reserve independent exact-evaluation budgets by target lane and package
-   size so 1-for-1 candidates cannot consume the 2-for-1 budget, then run the
-   exact `TradeEvaluator` on survivors including add/drop effects.
-6. Remove duplicates and Pareto-dominated packages within each lane. Do not let
-   asset count alone dominate an otherwise superior consolidation result.
-7. Return target cards plus a small frontier spanning buy-low, sell-high,
-   consolidation, best expected-points gain, lower risk, and easiest
-   partner-positive construction.
+Idea ordering is lexicographic: result tier, descending user lineup gain,
+descending partner lineup gain, lower downside, smaller chart-price distance,
+fewer assets and stable IDs. League presentation chooses an opponent
+representative before filling remaining slots. This ordering preserves strict
+verdicts; it does not claim ten passing offers or a probability of acceptance.
 
-Search is not restricted to same-position swaps. A partner's “surplus” means a
-player is displaced from useful weekly lineups and can be replaced above the
-waiver floor; roster count alone is insufficient.
+Two- and three-for-one consolidation apply the existing premium once to the
+sole received asset. Show the starter upgrade, every open-slot add and forced
+drop, and each outgoing asset's use in the partner's final roster. Three-for-one
+therefore audits two adds, two drops and all three partner additions.
 
-Default ordering is lexicographic, not a hidden weighted sum:
+The optional, separately versioned `execution_profile` defaults to 120 seconds
+for league search, 300 seconds for opponent search, ten ideas and three repairs
+per counter. Older league policies load those defaults. `--time-budget-seconds`
+overrides the budget; `--max-results` accepts 1-10. `--max-exact` caps attempts
+per opponent/shape for one-for-one and two-for-one; `--max-large-exact` caps
+each other shape, including three-for-one. Repairs count against their resulting
+shape's cap. The old uniform/lane budgets remain for legacy replay, and do not
+govern fresh finder searches.
 
-1. pass user intrinsic-value and downside gates;
-2. pass trade-market fairness and partner near-neutral/need gates;
-3. maximize the user's expected weekly/team-value gain;
-4. prefer stronger cross-model agreement;
-5. apply the selected risk posture; and
-6. prefer fewer assets and no forced drop when otherwise tied.
+The cooperative deadline covers discovery, construction, evaluation and
+repairs. Input/provider preparation is timed separately. Checkpoints can make
+elapsed time exceed the budget; an interrupted package is never published as
+evaluated. Per-opponent/shape coverage records price pruning, constructed
+eligibility, attempted and completed work, errors, unevaluated packages,
+unfinished construction, explicit caps and pool limits. `EXHAUSTED` requires
+completed construction and completed evaluations or explicit errors for all
+eligible packages in that domain. It does not claim full-roster coverage when
+configured pools or secondary-move bounds apply.
 
-The final tie-break in step 6 applies within an objective lane. It cannot make
-the `SIMPLE` lane suppress the best passing `CONSOLIDATE` result. A 2-for-1
-must additionally show the target's starter upgrade, the user's open-slot add,
-the partner's forced drop, each incoming asset's partner use, and the visible
-market premium applied to the best player.
+The [finder guide](TRADE_FINDER.md) contains the configuration schema and CLI
+examples. [TA-1315](COMPLETED_TRADE_ASSISTANT_TA_1315.md) records validation.
 
 ## 12. CLI and report design
 
@@ -717,6 +745,8 @@ python -m roster_theory trade gaps league_alpha
 python -m roster_theory trade targets league_alpha
 python -m roster_theory trade evaluate league_alpha --send PLAYER --receive PLAYER
 python -m roster_theory trade search league_alpha
+python -m roster_theory trade search league_alpha --opponent 3
+python -m roster_theory trade search league_alpha --opponent "Team name" --time-budget-seconds 180
 python -m roster_theory trade compare league_alpha --packages FILE
 ```
 
@@ -737,25 +767,20 @@ TRADE ASSISTANT — League Alpha — Half-PPR — Weeks 1-17
 Data: Sleeper current | WEEKLY-PROXY ranks 4h | weekly projections 2h | injuries 18m
 ```
 
-`trade targets` stops after target discovery and does not imply that a passing
-offer exists. `trade search` reuses the identical target evidence, constructs
-packages, and presents, in order:
+`trade targets` stops after discovery and can show `WATCH` cards without a
+passing offer. Fresh `trade search` retains target evidence but leads with its
+ranked ideas, both lineup gains, strict verdicts, specific failed checks,
+required moves and completed repairs. Scope, execution time, termination,
+coverage and concise evidence warnings accompany the list. Full JSON preserves
+target cards, exact gates, weekly/depth/risk effects, value-board evidence,
+reversal conditions and exclusions.
 
-1. `BUY LOW`, `SELL HIGH`, and `CONSOLIDATE` target cards, including `WATCH`
-   targets with no current package;
-2. proposed offers grouped under the target that generated them;
-3. user weekly starter-point, depth, and playoff deltas;
-4. concentration/downside/upside changes;
-5. partner lineup/depth result and market fairness;
-6. selected, pre-shrink, market-consensus, optional trade-market, raw
-   projection, performance-context, and disagreement views;
-7. best/worst affected weeks and add/drop consequences;
-8. strongest reversal condition; and
-9. completeness, freshness, and provenance warnings.
-
-JSON is the canonical full result. CSV exports contain flat player-value,
-weekly-impact, and candidate-summary tables. Terminal output never collapses
-rank, projected points, team value, and risk into one unlabeled score.
+JSON is the canonical full result. JSON and CSV preserve selected ideas,
+repairs, scope, execution settings, coverage and timing alongside existing
+decision evidence. Terminal output never collapses rank, projected points,
+team value and risk into one unlabeled score. Missing `trade_target` setup is
+identified as missing search configuration independently of selected expert
+weights; the existing machine failure status remains `uncalibrated`.
 
 ## 13. Evidence storage
 
@@ -776,6 +801,13 @@ manifest is written last and identifies every completed artifact. Exports keep
 only the normalized rows needed for personal reproduction, never the API key
 or an unnecessary licensed bulk payload.
 
+New timed `finder_search` manifests verify the recorded targets and completed
+package results and replay them without rerunning a wall clock. Legacy target
+and optimizer manifests retain their original replay path. Offline replay is
+explicitly non-current and non-actionable. Deadline-limited runs preserve their
+recorded scope, settings, coverage and termination instead of implying that a
+later rerun must complete the same candidates.
+
 ## 14. Error and degraded-mode behavior
 
 Errors are typed and converted to concise user-facing stop reasons:
@@ -784,7 +816,8 @@ Errors are typed and converted to concise user-facing stop reasons:
 - `StaleData`: required data exceeds its freshness gate; stop or refresh.
 - `IdentityIncomplete`: any affected player is unmatched/ambiguous; stop.
 - `CoverageIncomplete`: a required rank/projection curve has a gap; automated
-  search stops.
+  search stops. Roster-level exclusions are individually reported in search
+  coverage rather than silently discarded.
 - `UnsupportedScoring`: Sleeper scoring contains an unimplemented stat; stop.
 - `RosterIllegal`: the package cannot produce legal rosters; decline without
   scoring it.
@@ -802,9 +835,11 @@ points. Current ownership is never allowed to degrade to a stale recommendation.
 `ECR-PROXY` is the normal trade-market degraded mode when no supported current
 chart exists. It permits target and package analysis using the two existing
 rank boards, but disables chart-price, chart-change, and consolidation-premium
-claims. Missing compatible actual-versus-pregame evidence suppresses the
-performance label only; it does not suppress an otherwise supported intrinsic
-target. Partial performance samples remain visible and cannot clear a gate.
+claims. Fresh ranked finder ideas exclude ECR-proxy and prior-week chart cases;
+their analysis remains diagnostic. Missing compatible actual-versus-pregame
+evidence suppresses the performance label only; it does not suppress an
+otherwise supported intrinsic target. Partial performance samples remain
+visible and cannot clear a gate.
 
 ## 15. Verification strategy
 
@@ -829,9 +864,12 @@ Required test groups are:
 - weekly team marginal value and package symmetry;
 - correlation shrinkage and offense-wide scenarios;
 - candidate pruning without loss of controlled optimal packages;
-- target-lane and package-size budget isolation, including a 2-for-1 that the
-  former shared exact-evaluation bound would miss;
-- consolidation premium, user add, partner drop, and incoming-use accounting;
+- baseline generation without target labels, all nine shapes, opponent scope,
+  queue rotation, explicit caps and cooperative deadline interruption;
+- idea tiers with unchanged strict gates, sole-gate negotiation qualification,
+  bounded one-edit repairs and exclusion of unsupported pricing from ideas;
+- two- and three-for-one premium, adds, drops and incoming-use accounting;
+- exact solver/cache equivalence, stable ties and complete unused-player lists;
 - decision labels and reversal explanations;
 - freshness, incomplete coverage, and `ECR-ONLY` behavior; and
 - deterministic evidence reproduction from an identical manifest.
@@ -848,8 +886,11 @@ Golden integration fixtures cover:
 Phase 13 adds golden cases for an underperforming player whose selected ROS
 value remains strong, an overperforming expendable user asset, a valid
 two-for-one in which both partner additions start, a rejected nominally fair
-two-for-one whose second asset is unusable, and identical search behavior in
-`ECR-PROXY` except for disabled chart-specific claims.
+two-for-one whose second asset is unusable, and diagnostic `ECR-PROXY` analysis
+with disabled chart-specific claims. TA-1315 additionally verifies baseline
+upgrades absent from target cards, three-player shapes, repair accounting,
+deadline coverage and hash-verified recorded replay. Legacy optimizer fixtures
+continue to cover the former lane/shape budget behavior.
 
 The entire existing Draft Assistant suite remains a regression gate after each
 shared extraction. Live authenticated probes are manual integration checks

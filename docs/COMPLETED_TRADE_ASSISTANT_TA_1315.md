@@ -11,10 +11,11 @@ search flags and dependency health were verified. No PR merge was performed.
 
 ## Behavior
 
-`trade search home_league` spends up to 120 seconds on discovery, construction
-and exact evaluation. `--opponent 3` or an exact, unambiguous displayed team
-name selects a 300-second deeper search. `--time-budget-seconds` overrides that
-execution budget; preparation has a separate timer. Self, unknown and ambiguous
+`trade search home_league` defaults to a 120-second cooperative budget for
+discovery, construction and exact evaluation. `--opponent 3` or an exact,
+case-sensitive, unambiguous displayed team name selects a 300-second deeper
+search. `--time-budget-seconds` overrides that execution budget; preparation
+has a separate timer. Self, unknown and ambiguous
 opponents are rejected with valid choices before discovery or diagnosis.
 
 All nine shapes with one to three players on either side are constructed.
@@ -64,6 +65,13 @@ the opponent's final roster. Two-for-one fields remain compatible.
 }
 ```
 
+This object belongs in the top-level `execution_profile` property of the
+existing league-local search policy. Budgets must be finite and positive,
+`max_ideas` must be 1-10 and `repairs_per_counter` must be 0-3. The
+[finder guide](TRADE_FINDER.md) documents the complete configuration excerpt,
+per-opponent/shape caps and result interpretation. Fresh searches use this
+execution profile rather than legacy uniform/lane exact-evaluation budgets.
+
 Only the requested local league file was migrated, adding that section while
 retaining all prior football settings. Legacy policies load with execution
 defaults. Legacy saved reports retain their verified offline loader. New timed
@@ -72,6 +80,8 @@ clock. They are non-current and non-actionable.
 
 Deadlines checkpoint discovery, bundle construction, exact evaluations and
 secondary combinations. An interrupted package is not published as evaluated.
+These are cooperative checkpoints rather than a hard command-time ceiling;
+provider preparation and report writing are outside the search budget.
 Per-opponent/shape counts distinguish price pruning, constructed eligible,
 attempted, completed, unevaluated, unconstructed, explicit caps and pool limits.
 Secondary search retains its existing bounded pool and combination rules.
@@ -87,7 +97,9 @@ Trade policy.
 `scripts/benchmark_trade_finder.py MANIFEST EVIDENCE --output PATH` restores
 verified saved inputs and evaluates at the original evidence time, explicitly
 as OFFLINE / NON-ACTIONABLE. Use `--opponent ID` for the deep profile. It never
-refreshes providers or submits a transaction.
+refreshes providers or submits a transaction. It reuses recorded target
+discovery, so the benchmark search timer covers construction and evaluation
+rather than fresh discovery. Input restoration is timed separately.
 
 ## Validation
 

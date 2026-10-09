@@ -2,6 +2,13 @@
 
 ## 0.1.0 — Unreleased alpha
 
+- Timed Trade finder with all nine one-to-three-player package shapes,
+  baseline roster upgrades, and optional single-opponent searches. Ranked
+  results distinguish recommended offers, negotiation candidates, and
+  counteroffer ideas while retaining strict verdicts and failed checks.
+- Separate Trade execution settings, bounded one-edit counteroffer repairs,
+  completed-versus-unevaluated coverage, and verified offline replay of timed
+  search results. Expert weights and football decision thresholds are retained.
 - Restored the MIT license on October 6, 2026, with Jaret Brown's copyright
   notice and required preservation of copyright and license notices. Earlier
   revisions released under the Unlicense remain available under those terms.
