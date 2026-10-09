@@ -2,6 +2,10 @@
 
 ## 0.1.0 — Unreleased alpha
 
+- Trade finder roster safeguards protect both teams' starter coverage before
+  assumed waiver adds, reject excess one-starter depth, and require useful
+  incoming assets. QB bundle estimates account for shared starting slots;
+  counteroffers now require passing user gates and a plausible partner outcome.
 - Timed Trade finder with all nine one-to-three-player package shapes,
   baseline roster upgrades, and optional single-opponent searches. Ranked
   results distinguish recommended offers, negotiation candidates, and
