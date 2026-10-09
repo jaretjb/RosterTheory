@@ -5,6 +5,10 @@ upgrades, label useful strict counters as no offers, and stop after four exact
 evaluations per lane/shape. The new baseline generation uses the existing
 expert boards, projections, scoring, price bands and decision thresholds.
 
+Delivered in [PR #82](https://github.com/jaretjb/RosterTheory/pull/82), open for
+review. The validated wheel replaces the local installed command; its new
+search flags and dependency health were verified. No PR merge was performed.
+
 ## Behavior
 
 `trade search home_league` spends up to 120 seconds on discovery, construction

@@ -1,6 +1,6 @@
 # Active milestone
 
-## TA-1315 - Useful, timed Trade search with opponent scope (implemented and validated; PR handoff)
+## TA-1315 - Useful, timed Trade search with opponent scope (implemented and validated; PR #82)
 
 Authorized by the user's October 8 request to implement the reviewed Trade
 finder plan. Use TA-1315 in `docs/TRADE_ASSISTANT_TASKS.md`. Preserve the chosen

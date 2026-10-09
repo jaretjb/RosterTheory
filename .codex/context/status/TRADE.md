@@ -3,7 +3,9 @@
 Updated: October 8, 2026 (America/Los_Angeles)
 
 TA-1315 implements timed baseline search across all nine one-to-three-player
-shapes. League mode defaults to 120 seconds; an opponent ID or exact,
+shapes in [PR #82](https://github.com/jaretjb/RosterTheory/pull/82), open for
+review. The verified wheel is installed locally. League mode defaults to
+120 seconds; an opponent ID or exact,
 unambiguous team name selects a 300-second full-roster search. Up to ten ideas
 preserve strict verdicts: recommended, negotiation candidate, or counteroffer
 idea with failed checks and bounded validated repairs. Expert weights and
