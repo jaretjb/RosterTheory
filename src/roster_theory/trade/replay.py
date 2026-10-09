@@ -3,7 +3,7 @@ from datetime import datetime
 import json
 
 from roster_theory.core.models import Projection
-from roster_theory.core.provenance import canonical_json
+from roster_theory.core.provenance import canonical_json, stable_hash
 from roster_theory.core.run_contract import evaluation_as_of, load_run_manifest, restore_record
 from roster_theory.trade.boards import ValueBoard, ValuationGap
 from roster_theory.trade.evaluation import EvaluationOptions, TradePackage, build_entered_package, evaluate_trade
@@ -42,6 +42,15 @@ def replay_trade_manifest(path):
                 options=restore_record(EvaluationOptions, policy['options']),
                 config=restore_record(SearchConfig, policy['search']))
             expected, actual = inputs['result_hash'], result.evidence_hash
+        elif operation == 'finder_search':
+            # Timed searches are not reproducible by rerunning a wall clock.
+            # Verify and replay exactly the completed evidence that was saved.
+            result = inputs['recorded_result']
+            expected = (inputs['target_hash'], inputs['package_hash'])
+            actual = tuple(stable_hash({**result[k], 'evidence_hash': ''})
+                           for k in ('targets', 'packages'))
+            if tuple(result[k]['evidence_hash'] for k in ('targets', 'packages')) != expected:
+                raise ValueError('Recorded finder evidence hash differs from its manifest')
         elif operation in ('targets', 'target_search'):
             settings = restore_record(_TargetPolicyBundle, policy['target_policy'])
             options = restore_record(EvaluationOptions, policy['options'])

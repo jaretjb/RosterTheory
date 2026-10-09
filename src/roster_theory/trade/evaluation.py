@@ -43,6 +43,7 @@ from roster_theory.inseason.evaluation import (
 from roster_theory.providers.cache import atomic_write_json
 from roster_theory.trade.boards import BoardPlayerValue, ESTIMATED_VALUE_WARNING, ValueBoard
 from roster_theory.trade.snapshot import SKILL_POSITIONS, TradeSnapshot, assert_current
+from roster_theory.trade.execution import cached, checkpoint
 
 
 MAX_PACKAGE_PLAYERS_PER_TEAM = 4
@@ -354,6 +355,7 @@ def build_weekly_projection_matrix(
     return build_inseason_projection_matrix(_inseason_context(snapshot), projections)
 
 
+@cached
 def _inseason_context(snapshot: TradeSnapshot) -> InSeasonContext:
     return InSeasonContext(
         players=snapshot.players,
@@ -485,6 +487,7 @@ def _secondary_move(
     candidate_cache: dict[tuple[str, ...], SecondaryCandidate] = {}
 
     def score_candidate(player_ids: tuple[str, ...]) -> SecondaryCandidate:
+        checkpoint()
         if player_ids in candidate_cache:
             return candidate_cache[player_ids]
         candidate_roster = (roster - set(player_ids)) if dropping else (roster | set(player_ids))
@@ -563,6 +566,7 @@ def _secondary_move(
             )
         individually_scored: list[SecondaryCandidate] = []
         for player_id in automatic_candidates:
+            checkpoint()
             if not dropping and any((cell := matrix.cell(player_id, week.week)) is None or cell.points is None
                                     for week in snapshot.weeks):
                 exclusions[player_id] = "PROJECTION_EVIDENCE_UNAVAILABLE"
@@ -581,6 +585,7 @@ def _secondary_move(
         candidate_sets_list: list[tuple[str, ...]] = []
         combination_truncated = False
         for extra in combinations(remaining_pool, choose_count):
+            checkpoint()
             if len(candidate_sets_list) >= MAX_SECONDARY_COMBINATIONS:
                 combination_truncated = True
                 break
@@ -626,6 +631,7 @@ def _depth_above_waiver(
     )
 
 
+@cached
 def _team_impact(
     snapshot: TradeSnapshot,
     matrix: WeeklyProjectionMatrix,
@@ -691,6 +697,7 @@ def _pair_type(player_a: Player, player_b: Player) -> str:
     return "SAME_OFFENSE"
 
 
+@cached
 def _risk_profile(
     snapshot: TradeSnapshot,
     matrix: WeeklyProjectionMatrix,
@@ -703,6 +710,7 @@ def _risk_profile(
     )
 
 
+@cached
 def _risk_impact(
     snapshot: TradeSnapshot,
     matrix: WeeklyProjectionMatrix,
@@ -712,10 +720,12 @@ def _risk_impact(
     options: EvaluationOptions,
 ) -> RiskImpact:
     return inseason_risk_impact(
-        _inseason_context(snapshot), matrix, roster_id, before, after, options
+        _inseason_context(snapshot), matrix, roster_id, before, after, options,
+        profile_function=cached(inseason_risk_profile),
     )
 
 
+@cached
 def diagnose_roster(
     snapshot: TradeSnapshot,
     projections: Sequence[Projection],

@@ -95,7 +95,7 @@ class TargetWorkflowTests(unittest.TestCase):
             self.assertEqual(market_resolve.call_count, 3)
             self.assertTrue(all(call.kwargs["source"] is None for call in market_resolve.call_args_list))
             self.assertEqual(proxy.targets.pricing_mode, "ECR-PROXY")
-            self.assertIn("chart price/change unavailable", format_target_workflow(proxy))
+            self.assertEqual(proxy.packages.pricing_mode, "ECR-PROXY")
             self.assertTrue(all(
                 row.market_fairness.consolidation_premium_value is None
                 for row in proxy.packages.evaluated_decisions
@@ -106,14 +106,11 @@ class TargetWorkflowTests(unittest.TestCase):
             self.assertTrue(search.packages.evaluated_decisions)
             self.assertIn("WATCH", format_target_workflow(targets))
             formatted = format_target_workflow(search)
-            self.assertLess(
-                formatted.index(search.targets.targets[0].player_name),
-                formatted.index("OFFERS"),
-            )
-            self.assertIn("WIN / FAIR", formatted)
-            self.assertIn("Policy: UNVALIDATED", formatted)
-            self.assertIn("partner lineup", formatted)
-            self.assertIn("Premium sensitivity", formatted)
+            self.assertIn("Trade ideas", formatted)
+            self.assertIn("strict verdict", formatted)
+            self.assertIn("Football policy: UNVALIDATED", formatted)
+            self.assertIn("opponent", formatted)
+            self.assertIn("trade-finder-execution-v1", formatted)
             self.assertEqual(target_workflow_report(search)["evidence_hash"], search.evidence_hash)
             self.assertEqual(
                 target_workflow_report(search)["performance"]["coverage"]["evaluated"],
@@ -127,6 +124,10 @@ class TargetWorkflowTests(unittest.TestCase):
             csv_text = search.csv_path.read_text(encoding="utf-8-sig")
             self.assertIn("TARGET", csv_text)
             self.assertIn("OFFER", csv_text)
+            self.assertIn("IDEA", csv_text)
+            self.assertIn("provider_preparation_seconds", target_workflow_report(search)["performance"])
+            self.assertEqual(load_target_workflow_evidence(search.output_path)["packages"]["ideas"][0]["status"],
+                             search.packages.ideas[0].status)
             self.assertIn("premium_sensitivity", csv_text)
             self.assertTrue(search.feedback_path.is_file())
             saved = json.loads(search.output_path.read_text(encoding="utf-8"))

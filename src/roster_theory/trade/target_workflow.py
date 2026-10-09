@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping
+from time import perf_counter
 
 from roster_theory.core.errors import Uncalibrated
 from roster_theory.core.provenance import stable_hash
@@ -16,6 +17,8 @@ from roster_theory.sleeper import resolve_league_policy_path
 from roster_theory.stats_guy_fantasy import StatsGuyFantasyClient
 from roster_theory.trade.board_service import BoardRefreshResult, refresh_value_boards
 from roster_theory.trade.evaluation import EvaluationOptions
+from roster_theory.trade.execution import FinderExecutionPolicy, SearchDeadline, SearchExecution, search_execution
+from roster_theory.trade.finder import find_trade_packages, resolve_scope, FinderResult
 from roster_theory.trade.evaluation_service import _options_from_policy, finish_trade_run
 from roster_theory.trade.market import (
     TradeMarketEvidence,
@@ -37,6 +40,7 @@ from roster_theory.trade.targets import (
     TARGET_KINDS,
     TargetDiscoveryConfig,
     TargetDiscoveryResult,
+    TargetExclusion,
     discover_trade_targets,
 )
 
@@ -66,6 +70,7 @@ class _TargetPolicyBundle:
     basis: str
     version: str
     performance: PerformancePolicy | None
+    execution: FinderExecutionPolicy | None = None
 
 
 CSV_FIELDS = (
@@ -78,6 +83,8 @@ CSV_FIELDS = (
     "market_price_delta", "market_premium", "premium_sensitivity", "user_lineup_delta",
     "user_depth_delta", "partner_lineup_delta", "partner_depth_delta",
     "user_add", "partner_drop",
+    "failed_checks", "repair_status", "evaluation_hash",
+    "user_selected_delta", "partner_selected_delta", "user_downside_delta",
 )
 
 
@@ -102,8 +109,8 @@ def _policy(
         )
     except Uncalibrated as exc:
         raise Uncalibrated(
-            f"uncalibrated: league {league_key!r} needs a separately supported "
-            "Phase 13 trade_target policy; configure it for this league or pass "
+            f"Trade search configuration is missing for league {league_key!r}. "
+            "This is separate from the chosen expert weights. Configure trade_target or pass "
             "--target-policy PATH"
         ) from exc
     try:
@@ -117,6 +124,8 @@ def _policy(
         if not basis.strip():
             raise ValueError("Trade target policy basis is required")
         target = TargetDiscoveryConfig(**value["target_discovery"])
+        execution = (FinderExecutionPolicy(**value["execution_profile"])
+                     if "execution_profile" in value else None)
         performance_data = value.get("performance_policy")
         performance = None
         if performance_data is not None:
@@ -140,7 +149,7 @@ def _policy(
         return _TargetPolicyBundle(
             target, None, status,
             basis,
-            str(value.get("version", "unspecified")), performance,
+            str(value.get("version", "unspecified")), performance, execution,
         )
     if small_pool is not None:
         optimizer = replace(optimizer, outgoing_pool_limit=small_pool)
@@ -166,12 +175,43 @@ def _policy(
     return _TargetPolicyBundle(
         target, optimizer, status,
         basis,
-        str(value.get("version", "unspecified")), performance,
+        str(value.get("version", "unspecified")), performance, execution,
     )
 
 
 def _csv_rows(result: TargetWorkflowResult) -> tuple[dict[str, Any], ...]:
     rows: list[dict[str, Any]] = []
+    if isinstance(result.packages, FinderResult):
+        for idea in result.packages.ideas:
+            d = idea.decision
+            rows.append({"record_type": "IDEA", "lane": d.lane,
+                "owner_roster_id": d.opponent_roster_id, "status": idea.status,
+                "send_player_ids": ";".join(d.sent_player_ids),
+                "receive_player_ids": ";".join(d.received_player_ids),
+                "package_verdict": d.package_verdict, "recommendation_status": idea.status,
+                "intrinsic_outcome": d.intrinsic_outcome,
+                "market_status": d.market_fairness.status,
+                "user_lineup_delta": d.user_weighted_lineup_delta,
+                "partner_lineup_delta": d.partner_weighted_lineup_delta,
+                "user_selected_delta": d.user_selected_delta,
+                "partner_selected_delta": d.partner_selected_delta,
+                "user_depth_delta": d.user_depth_delta,
+                "partner_depth_delta": d.partner_depth_delta,
+                "user_downside_delta": d.user_downside_delta,
+                "market_price_delta": d.market_fairness.user_price_delta,
+                "market_premium": d.market_fairness.consolidation_premium_value,
+                "pricing_mode": d.market_fairness.mode,
+                "user_add": ";".join(p for m in idea.evaluation.secondary_moves if m.kind == "ADD" and m.roster_id == result.board_refresh.refresh.snapshot.user_roster_id for p in m.chosen_player_ids),
+                "partner_drop": ";".join(p for m in idea.evaluation.secondary_moves if m.kind == "DROP" and m.roster_id == d.opponent_roster_id for p in m.chosen_player_ids),
+                "failed_checks": ";".join(idea.failed_checks),
+                "repair_status": idea.repair_search_status, "evaluation_hash": d.evaluation_hash})
+            for repair in idea.repairs:
+                rows.append({"record_type": "REPAIR", "owner_roster_id": d.opponent_roster_id,
+                    "status": repair.status, "send_player_ids": ";".join(repair.sent_player_ids),
+                    "receive_player_ids": ";".join(repair.received_player_ids),
+                    "package_verdict": repair.package_verdict,
+                    "failed_checks": ";".join(repair.failed_checks),
+                    "evaluation_hash": repair.evaluation_hash})
     statuses = {
         (row.lane, row.player_id): row
         for row in result.packages.target_statuses
@@ -224,8 +264,8 @@ def _csv_rows(result: TargetWorkflowResult) -> tuple[dict[str, Any], ...]:
                 "user_depth_delta": row.user_depth_delta,
                 "partner_lineup_delta": row.partner_weighted_lineup_delta,
                 "partner_depth_delta": row.partner_depth_delta,
-                "user_add": row.consolidation.user_add_player_id if row.consolidation else "",
-                "partner_drop": row.consolidation.partner_drop_player_id if row.consolidation else "",
+                "user_add": ";".join(p for m in row.evaluation.secondary_moves if m.kind == "ADD" and m.roster_id == row.evaluation.package.roster_a_id for p in m.chosen_player_ids),
+                "partner_drop": ";".join(p for m in row.evaluation.secondary_moves if m.kind == "DROP" and m.roster_id == row.opponent_roster_id for p in m.chosen_player_ids),
             })
     return tuple(rows)
 
@@ -274,6 +314,30 @@ def _write_feedback_template(path: Path, result: TargetWorkflowResult) -> None:
         writer.writerows(rows)
 
 
+def _interrupted_discovery(snapshot, refresh, market, config, scope):
+    """Retain input gaps even when discovery cannot finish before the deadline."""
+    from roster_theory.trade.coverage import roster_projection_exclusions
+    from roster_theory.trade.target_optimizer import _context
+    from roster_theory.inseason.evaluation import build_weekly_projection_matrix
+    matrix = build_weekly_projection_matrix(_context(snapshot), refresh.weekly_projections)
+    included = {snapshot.user_roster_id, *scope.opponent_roster_ids}
+    selected = {r.player_id for r in refresh.selected_final.players}
+    ecr = {r.player_id for r in refresh.market.players}
+    priced = {r.player_id for r in market.board.prices} if market.board else selected & ecr
+    owners = dict(snapshot.owner_by_player)
+    exclusions = tuple(TargetExclusion(pid, owners.get(pid), None, reason)
+        for pid in snapshot.tradeable_player_ids if owners.get(pid) in included
+        for reason in (("MISSING_SELECTED_OR_MARKET_ECR_VALUE",) if pid not in selected & ecr
+                       else ("MISSING_TRADE_MARKET_PRICE",) if pid not in priced else ()))
+    base = TargetDiscoveryResult(1, snapshot.manifest.analysis_id, snapshot.league_key,
+        snapshot.ranking_horizon, market.mode if market.board else "ECR-PROXY",
+        stable_hash(refresh.selected_final), stable_hash(refresh.market),
+        market.board.evidence_hash if market.board else None, config, (), (), exclusions,
+        ("Target discovery reached the time budget; unfinished targets were not published.",), "",
+        tuple(r for r in roster_projection_exclusions(snapshot, matrix) if r.roster_id in included))
+    return replace(base, evidence_hash=stable_hash(asdict(base)))
+
+
 def run_target_workflow(
     league_key: str,
     *,
@@ -296,9 +360,13 @@ def run_target_workflow(
     max_exact: int | None = None,
     max_large_exact: int | None = None,
     max_results: int | None = None,
+    opponent: str | None = None,
+    time_budget_seconds: float | None = None,
+    prior_preparation_seconds: float = 0.0,
 ) -> TargetWorkflowResult:
     """Prepare one target discovery, then optionally construct exact packages."""
 
+    preparation_started = perf_counter()
     policy = _policy(
         league_key,
         search=search,
@@ -324,6 +392,7 @@ def run_target_workflow(
         budget_path=budget_path,
     )
     snapshot = refresh.refresh.snapshot
+    scope = resolve_scope(snapshot, opponent) if search else None
     performance_history = (
         update_performance_history(
             refresh,
@@ -350,8 +419,17 @@ def run_target_workflow(
     )
     normalized_options = _options_from_policy(options, decision_path)
     as_of = datetime.now(timezone.utc)
-    targets = evaluate_at(as_of, discover_trade_targets,
-        snapshot,
+    preparation_seconds = prior_preparation_seconds + perf_counter() - preparation_started
+    finder_enabled = search
+    finder_policy = (policy.execution or FinderExecutionPolicy()) if finder_enabled else None
+    execution = (SearchExecution(
+        time_budget_seconds if time_budget_seconds is not None else (
+            finder_policy.opponent_seconds if opponent is not None else finder_policy.league_seconds),
+        stable_hash((snapshot, refresh.weekly_projections, refresh.selected_final, refresh.market,
+                     market, normalized_options, policy, snapshot.ranking_horizon)),
+    ) if finder_enabled else None)
+    discovery_started = perf_counter()
+    discovery_args = dict(
         projections=refresh.weekly_projections,
         selected_board=refresh.selected_final,
         market_ecr_board=refresh.market,
@@ -363,11 +441,25 @@ def run_target_workflow(
             if performance_history and performance_history.evidence else ()
         ),
     )
+    if finder_enabled:
+        discovery_args['opponent_roster_ids'] = scope.opponent_roster_ids
+        try:
+            with search_execution(execution):
+                targets = evaluate_at(as_of, discover_trade_targets, snapshot, **discovery_args)
+        except SearchDeadline:
+            targets = _interrupted_discovery(snapshot, refresh, market, policy.discovery, scope)
+    else:
+        targets = evaluate_at(as_of, discover_trade_targets, snapshot, **discovery_args)
+    discovery_seconds = perf_counter() - discovery_started
     if search and policy.optimizer is None:
         raise ValueError("Search requires a league-scoped target optimizer policy")
     performance: dict[str, Any] = {}
+    package_function = find_trade_packages if finder_enabled else optimize_target_packages
+    finder_args = dict(scope=scope, execution_policy=finder_policy, execution=execution,
+                       max_exact=max_exact, max_large_exact=max_large_exact,
+                       max_results=max_results) if finder_enabled else {}
     packages = (
-        evaluate_at(as_of, optimize_target_packages,
+        evaluate_at(as_of, package_function,
             snapshot,
             projections=refresh.weekly_projections,
             selected_board=refresh.selected_final,
@@ -377,8 +469,11 @@ def run_target_workflow(
             config=policy.optimizer,
             options=normalized_options,
             metrics=performance,
+            **finder_args,
         ) if search else None
     )
+    performance.update(provider_preparation_seconds=round(preparation_seconds, 3),
+                       discovery_seconds=round(discovery_seconds, 3))
     prior_board = market.prior_board or (
         market.board if market.mode == "PRIOR_WEEK_MARKET" else None
     )
@@ -420,6 +515,7 @@ def run_target_workflow(
         ),
         "targets": asdict(targets),
         "packages": asdict(packages) if packages else None,
+        "performance": performance if search else None,
         "warnings": tuple(dict.fromkeys((*market.warnings, *targets.warnings, *(packages.warnings if packages else ())))),
         "evidence_hash": "",
     }
@@ -429,9 +525,10 @@ def run_target_workflow(
         f"trade_{'search' if search else 'targets'}_{evidence_hash[:16]}.json"
     ))
     manifest = finish_trade_run(target, refresh, as_of=as_of,
-        inputs={'operation': 'target_search' if search else 'targets', 'trade_market': market,
+        inputs={'operation': 'finder_search' if finder_enabled else 'target_search' if search else 'targets', 'trade_market': market,
                 'performance_context': performance_history.evidence.contexts if performance_history and performance_history.evidence else (),
-                'target_hash': targets.evidence_hash, 'package_hash': packages.evidence_hash if packages else None},
+                'target_hash': targets.evidence_hash, 'package_hash': packages.evidence_hash if packages else None,
+                **({'recorded_result': {'targets': asdict(targets), 'packages': asdict(packages)}} if finder_enabled else {})},
         policy={'options': normalized_options, 'target_policy': policy},
         readiness={'inputs_complete': not targets.roster_exclusions and not any(
                        any(token in row.reason for token in ('MISSING', 'INCOMPLETE', 'UNAVAILABLE'))
@@ -492,6 +589,8 @@ def target_workflow_report(result: TargetWorkflowResult) -> dict[str, Any]:
 
 
 def format_target_workflow(result: TargetWorkflowResult) -> str:
+    if isinstance(result.packages, FinderResult):
+        return _format_finder(result)
     names = {row.player_id: row.name for row in result.board_refresh.refresh.snapshot.players}
     statuses = {
         (row.lane, row.player_id): row for row in result.packages.target_statuses
@@ -657,4 +756,59 @@ def format_target_workflow(result: TargetWorkflowResult) -> str:
         lines.append("No offer passed the exact intrinsic, market, partner, and risk gates; targets remain WATCH.")
     for warning in tuple(dict.fromkeys((*result.targets.warnings, *(result.packages.warnings if result.packages else ())))):
         lines.append(f"Warning: {warning}")
+    return "\n".join((*lines, *run_footer(result.run_manifest)))
+
+
+def _format_finder(result: TargetWorkflowResult) -> str:
+    packages = result.packages
+    snapshot = result.board_refresh.refresh.snapshot
+    names = {p.player_id: p.name for p in snapshot.players}
+    teams = {t.roster_id: t.display_name for t in snapshot.teams}
+    player_list = lambda ids: ", ".join(names.get(p, p) for p in ids)
+    labels = {"RECOMMENDED": "Recommended", "NEGOTIATION_CANDIDATE": "Negotiation candidate",
+              "COUNTEROFFER_IDEA": "Counteroffer idea"}
+    lines = [f"Trade ideas — {snapshot.league_key}",
+             f"Scope: {packages.scope.mode.lower()} | {len(packages.ideas)} ideas | {len(packages.evaluated_decisions)} completed evaluations",
+             f"Search: {packages.timing['search_seconds']:.1f}s / {packages.execution_profile['time_budget_seconds']:g}s | {packages.termination.lower().replace('_', ' ')}"]
+    lines.append(f"Football policy: {result.policy_status}; execution {packages.execution_profile['version']}")
+    for idea in packages.ideas:
+        d = idea.decision
+        lines.extend(("", f"{labels[idea.status]} with {teams[d.opponent_roster_id]}",
+            f"Send {player_list(d.sent_player_ids)} → Receive {player_list(d.received_player_ids)}",
+            f"ROS lineup: you {d.user_weighted_lineup_delta:+.2f}, opponent {d.partner_weighted_lineup_delta:+.2f} | chart {d.market_fairness.status.lower()} | strict verdict {d.package_verdict}"))
+        if idea.failed_checks:
+            gates = {g.name: g for g in d.decision_axes.gates} if d.decision_axes else {}
+            labels_for_gates = {"partner_market_delta": "Opponent consensus value",
+                "user_selected_value_delta": "Your selected-expert value", "user_offense_downside": "Your downside risk",
+                "chart_fairness": "Chart price gap", "partner_plausibility": "Opponent roster usefulness",
+                "consolidation_usefulness": "Every incoming player's usefulness"}
+            for name in idea.failed_checks:
+                gate = gates.get(name)
+                detail = f" ({gate.actual} {gate.comparison} {gate.threshold} required)" if gate else ""
+                lines.append(f"Check to resolve: {labels_for_gates.get(name, name.replace('_', ' '))}{detail}")
+        moves = [f"{teams[m.roster_id]} {m.kind.lower()}: {player_list(m.chosen_player_ids)}"
+                 for m in idea.evaluation.secondary_moves if m.kind != "NONE"]
+        if moves:
+            lines.append("Required moves: " + "; ".join(moves))
+        if idea.status == 'COUNTEROFFER_IDEA':
+            lines.append(f"Repair search: {idea.repair_search_status.lower().replace('_', ' ')}; {len(idea.repairs)} checked")
+        for repair in idea.repairs:
+            lines.append(f"Checked repair: send {player_list(repair.sent_player_ids)} → receive {player_list(repair.received_player_ids)}; {labels.get(repair.status, repair.status.lower())}; strict {repair.package_verdict}")
+            if repair.failed_checks:
+                lines.append("  Remaining checks: " + ", ".join(repair.failed_checks))
+    if not packages.ideas:
+        lines.append("No supported ideas in the completed evaluations. Unfinished packages remain unevaluated.")
+    lines.append("")
+    for rid, name in zip(packages.scope.opponent_roster_ids, packages.scope.opponent_team_names):
+        rows = [c for c in packages.shape_coverage if c.opponent_roster_id == rid]
+        lines.append(f"{name}: {sum(c.evaluated for c in rows)} evaluated, {sum(c.unevaluated for c in rows)} constructed but unevaluated; {sum(c.pool_limited for c in rows)} shapes use limited pools")
+    notes = []
+    if packages.roster_exclusions:
+        notes.append("Protected missing roster projections: " + ", ".join(sorted({r.roster_id for r in packages.roster_exclusions})))
+    gaps = [e for e in result.targets.exclusions if any(s in e.reason for s in ("MISSING", "INCOMPLETE", "UNAVAILABLE"))]
+    if gaps:
+        notes.append(f"{len(gaps)} scoped asset evidence gaps; see saved diagnostics")
+    notes.extend(("Negotiation and counteroffer ideas retain their failed checks and are not approved offers.",
+                  "Full coverage, timing and evidence are in the saved JSON. No trade is submitted."))
+    lines.extend(f"Evidence note: {note}" for note in notes)
     return "\n".join((*lines, *run_footer(result.run_manifest)))
