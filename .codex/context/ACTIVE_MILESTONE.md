@@ -1,6 +1,34 @@
 # Active milestone
 
-## TA-1315 - Useful, timed Trade search with opponent scope (implemented and validated; PR #82)
+## TA-1316 - Plausible Trade packages and useful counteroffers (implemented and validated; PR handoff pending)
+
+Authorized by the user's October 8 request to implement the reviewed fixes
+for two-quarterback offers. Preserve expert weights and football thresholds.
+Protect both teams' positional starter coverage before assumed waiver adds;
+restore league-slot-aware incoming usefulness and redundant one-starter
+position checks. Score competing quarterback bundles jointly in the cheap
+queue estimate. Admit counteroffers only when user value, risk, depth and
+roster checks pass and the partner outcome stays within the existing policy.
+Keep rejected packages and failures auditable; validate any bounded repairs
+with the same safeguards. Preserve superflex/multi-QB formats, QB exchanges,
+scope, deadlines, strict verdicts and historical replay. Update README and
+affected Trade documentation. Validate saved inputs offline, run focused/full
+tests, Ruff, context/privacy/package and clean-install checks, update the local
+installed command, then publish a separate PR without merging or Sleeper writes.
+Use TA-1316 in `docs/TRADE_ASSISTANT_TASKS.md`; relevant requirements are
+sections 3, 8 and 9 and design sections 11-15. Record detailed validation in
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1316.md` and update only Trade status.
+
+Validation: all 1,051 tests pass. The saved league case completes 21 exact
+evaluations in 120.036 seconds and returns four supported ideas (one strict
+recommendation, three negotiation candidates), excluding both invalid two-QB
+packages. Configured football thresholds match the saved source. Coverage
+accounting, conditional incoming use and bounded rejection evidence pass.
+Ruff, compilation, distribution privacy and clean installation pass; the
+verified wheel is installed locally. Detail:
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1316.md`. Publish only the separate PR.
+
+## Previous TA-1315 - Useful, timed Trade search with opponent scope (merged PR #82)
 
 Authorized by the user's October 8 request to implement the reviewed Trade
 finder plan. Use TA-1315 in `docs/TRADE_ASSISTANT_TASKS.md`. Preserve the chosen

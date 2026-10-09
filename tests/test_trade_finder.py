@@ -53,11 +53,13 @@ class TradeFinderTests(unittest.TestCase):
         expected = sum(math.comb(5, a) * math.comb(4, b) for a, b in SHAPES)
         self.assertEqual(result.termination, "EXHAUSTED")
         self.assertEqual(sum(c.enumerated for c in result.shape_coverage), expected)
-        self.assertEqual(sum(c.evaluated for c in result.shape_coverage), expected)
-        self.assertEqual(len(result.evaluated_decisions), expected)
+        self.assertEqual(sum(c.evaluated + c.roster_pruned for c in result.shape_coverage), expected)
+        self.assertEqual(len(result.evaluated_decisions), sum(c.evaluated for c in result.shape_coverage))
+        self.assertGreater(sum(c.roster_pruned for c in result.shape_coverage), 0)
         self.assertEqual({d.package_size for d in result.evaluated_decisions},
-                         {f"{a}-for-{b}" for a, b in SHAPES})
-        self.assertEqual(len({(d.sent_player_ids, d.received_player_ids) for d in result.evaluated_decisions}), expected)
+                         {c.package_size for c in result.shape_coverage if c.eligible})
+        self.assertEqual(len({(d.sent_player_ids, d.received_player_ids) for d in result.evaluated_decisions}),
+                         len(result.evaluated_decisions))
         three = next(d for d in result.evaluated_decisions if d.package_size == "3-for-1")
         self.assertEqual(len(three.consolidation.user_add_player_ids), 2)
         self.assertEqual(len(three.consolidation.partner_drop_player_ids), 2)
@@ -116,7 +118,7 @@ class TradeFinderTests(unittest.TestCase):
         self.assertEqual(result.termination, "TIME_BUDGET")
         self.assertEqual(len(result.evaluated_decisions), 9)
         self.assertEqual({d.package_size for d in result.evaluated_decisions},
-                         {f"{a}-for-{b}" for a, b in SHAPES})
+                         {c.package_size for c in result.shape_coverage if c.eligible})
         self.assertEqual(sum(c.attempted for c in result.shape_coverage), 10)
         self.assertEqual(sum(c.evaluated for c in result.shape_coverage), 9)
         self.assertGreater(sum(c.unevaluated for c in result.shape_coverage), 0)
@@ -135,11 +137,11 @@ class TradeFinderTests(unittest.TestCase):
             market_fairness=replace(d.market_fairness, mode="CURRENT_MARKET", status="FAIR", within_band=True))
         self.assertEqual(idea_status(d, minimum_gain=0.5), "NEGOTIATION_CANDIDATE")
         self.assertEqual(d.package_verdict, "COUNTER")
-        self.assertEqual(idea_status(d, minimum_gain=0.5, partner_assets_used=False), "COUNTEROFFER_IDEA")
+        self.assertIsNone(idea_status(d, minimum_gain=0.5, partner_assets_used=False))
         self.assertEqual(idea_status(replace(d, complete_and_legal=False), minimum_gain=0.5), None)
         self.assertEqual(idea_status(replace(d, partner_weighted_lineup_delta=0), minimum_gain=0.5), "COUNTEROFFER_IDEA")
         self.assertEqual(idea_status(replace(d, package_verdict="DECLINE"), minimum_gain=0.5), None)
-        self.assertEqual(idea_status(replace(d, user_weighted_lineup_delta=0.2), minimum_gain=0.5), "COUNTEROFFER_IDEA")
+        self.assertIsNone(idea_status(replace(d, user_weighted_lineup_delta=0.2), minimum_gain=0.5))
         self.assertIn("minimum_lineup_gain", finder.failed_checks(replace(d, user_weighted_lineup_delta=0.2), 0.5))
         self.assertIsNone(idea_status(replace(d, accepted=True, market_fairness=replace(d.market_fairness, mode="ECR-PROXY")), minimum_gain=0.5))
 
@@ -172,7 +174,12 @@ class TradeFinderTests(unittest.TestCase):
         for idea in result.ideas:
             self.assertLessEqual(len(idea.repairs), 2)
             for repair in idea.repairs:
-                self.assertIn(repair.evaluation_hash, by_hash)
+                if repair.status == "ROSTER_REJECTED":
+                    self.assertIsNone(repair.package_verdict)
+                    self.assertFalse(repair.evaluation_hash)
+                    self.assertTrue(repair.failed_checks)
+                    continue
+                self.assertIn(repair.evaluation_hash, set(by_hash))
                 self.assertEqual(repair.package_verdict, by_hash[repair.evaluation_hash].package_verdict)
 
     def test_ranking_preserves_tiers_and_opponent_representatives(self):

@@ -52,14 +52,19 @@ missing, ambiguous, partial, and unavailable evidence stays visible.
 Fresh `trade search` leads with ranked `RECOMMENDED`, `NEGOTIATION_CANDIDATE`
 and `COUNTEROFFER_IDEA` results, showing names, both lineup gains, strict
 verdicts, failed checks, required moves and completed repairs. Negotiation and
-counteroffer ideas retain `COUNTER`; they are not passing offers. Diagnostic
-ECR-proxy and prior-week chart cases do not fill the ranked list.
+counteroffer ideas retain `COUNTER`; they are not passing offers. Counteroffers
+must pass all user and roster checks and remain within the partner's existing
+lineup/depth policy. Diagnostic ECR-proxy and prior-week chart cases do not fill
+the ranked list.
 
 Human reports and saved evidence disclose scope, execution settings, separate
 preparation/search timers, termination and per-opponent/shape coverage. JSON
 and CSV retain selected ideas and repair evidence as well as exact decision
-gates. An unfinished evaluation remains unevaluated. A timer-limited result
-does not imply exhaustive coverage or a guaranteed number of passing offers.
+gates, conditional incoming-use evidence and roster-pruning counts/reasons.
+Bounded rejection samples identify excluded packages; pruned repairs have no
+invented exact verdict or hash. An unfinished evaluation remains unevaluated.
+A timer-limited result does not imply exhaustive coverage or a guaranteed
+number of passing offers.
 
 A missing `trade_target` configuration identifies the missing search policy in
 the failure reason independently of selected expert weights. The existing

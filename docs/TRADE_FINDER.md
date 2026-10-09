@@ -41,7 +41,7 @@ completed evaluations do not support ten. The result labels mean:
 | --- | --- |
 | `RECOMMENDED` | Passes the existing exact evaluator and search gates. |
 | `NEGOTIATION_CANDIDATE` | Improves both lineups and passes user value, risk, depth, evidence, legality, chart fairness and partner usefulness checks. Its sole failed strict gate is the opponent's consensus-value floor; its strict verdict remains `COUNTER`. |
-| `COUNTEROFFER_IDEA` | A complete, legal strict `COUNTER` with positive user lineup gain. Failed checks show what would need to change. |
+| `COUNTEROFFER_IDEA` | A complete, legal strict `COUNTER` that passes user value, risk, depth, minimum lineup gain and roster checks. The partner remains within the existing lineup/depth policy, and every incoming asset has a useful role. Remaining price/value checks show what needs to change. |
 
 Negotiation candidates and counteroffer ideas are starting points for review,
 not passing offers or predictions that another manager will accept. Incomplete,
@@ -53,6 +53,31 @@ downside, chart-price distance, asset count and stable IDs. League results
 choose an opponent representative before filling the remaining slots. Player
 names, both lineup gains, required adds/drops and failed checks are visible in
 the human report. JSON and CSV retain the detailed evidence.
+
+Before exact evaluation, both teams must retain their existing viable coverage
+for dedicated starter positions using the actual exchanged assets. An assumed
+waiver addition cannot rescue a package that strips that coverage. Known
+existing shortages remain disclosed; the package cannot worsen them.
+
+The existing Trade rule permits one reserve at a position with exactly one
+eligible starting slot. After required drops, an exchange that increases that
+position's player count beyond two is filtered. This excludes adding a third
+quarterback in a one-QB league, while preserving QB-for-QB exchanges and using actual slot
+capacity in superflex or multi-QB leagues. Required drops are checked again
+after exact evaluation. Construction allows a required drop to resolve excess
+depth only when the actual exchanged assets already preserve starter coverage.
+
+Incoming-player usefulness is measured conditional on the full final roster:
+remove each acquired player in turn and measure lost lineup points or usable
+depth above waivers. Both teams' incoming assets must clear the existing
+asset-use thresholds. Starting the player in a few modeled weeks does not by
+itself prove useful marginal value. The cheap queue estimate also scores the
+QB bundle jointly rather than adding improvements that compete for one slot.
+
+The finder records `trade-finder-roster-v1` separately from the unchanged
+expert weights, football thresholds and execution profile. User-loss and
+implausible partner cases remain diagnostics even when their raw projected
+point change is positive.
 
 For a counteroffer idea, the finder can evaluate up to three direct repairs
 that add, remove or substitute one asset. Repairs use the same evaluator and
@@ -110,6 +135,11 @@ Reports disclose the scope, execution profile, timers and termination reason.
 Per-opponent/shape coverage separates enumerated pairs, price pruning,
 constructed eligible packages, attempts, completed evaluations, errors,
 unevaluated packages, unfinished construction, explicit caps and pool limits.
+Roster pruning has its own count and per-reason totals; a package can fail
+multiple checks. Saved rejection samples retain up to three examples per
+opponent, shape, stage and reason. Completed package checks retain exact failed
+gates and incoming-use evidence. Repairs apply the same rules, and a
+roster-pruned repair has no exact verdict or evaluation hash.
 `TIME_BUDGET` or `EXACT_CAP` means further work remains. `EXHAUSTED` describes
 the constructed search domain; configured pools and bounded add/drop search
 still limit coverage. Unevaluated packages may contain better trades.
@@ -129,6 +159,8 @@ verified saved inputs at the original evidence time. Add `--opponent ID` and
 so its search timing measures construction and evaluation rather than a fresh
 end-to-end command. It never refreshes providers or submits a transaction.
 
-See [TA-1315 validation](COMPLETED_TRADE_ASSISTANT_TA_1315.md) for recorded
-benchmarks and tests, and the [Trade design](TRADE_ASSISTANT_DESIGN.md#11-league-wide-search)
+See [TA-1316 validation](COMPLETED_TRADE_ASSISTANT_TA_1316.md) for the roster and
+counteroffer corrections, [TA-1315 validation](COMPLETED_TRADE_ASSISTANT_TA_1315.md)
+for the original timed finder's recorded benchmarks and tests, and the
+[Trade design](TRADE_ASSISTANT_DESIGN.md#11-league-wide-search)
 for the execution contract.

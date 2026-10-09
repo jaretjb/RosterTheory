@@ -781,7 +781,19 @@ before filling remaining slots. It must retain strict evaluator verdicts:
   legality, chart fairness and partner usefulness gate; only the opponent's
   consensus-value floor fails. The strict verdict remains `COUNTER`.
 - `COUNTEROFFER_IDEA` is a complete, legal strict `COUNTER` with positive user
-  lineup gain. Show the failed checks and any completed one-edit repairs.
+  lineup gain above the existing minimum, all user value/risk/depth and roster
+  checks passed, and a partner outcome within the existing lineup/depth policy.
+  Show remaining price/value checks and any completed one-edit repairs.
+
+Both teams must retain viable dedicated-starter coverage before assumed
+waiver additions. Respect the existing one-reserve rule at positions with
+exactly one eligible starter slot, while preserving valid QB swaps and actual
+superflex/multi-QB capacity. Every incoming player must supply conditional
+lineup or above-waiver depth value after the other incoming assets and required
+moves are included. Use the existing asset-use thresholds. Estimate competing
+QB bundles jointly; individual marginal gains cannot be added as independent
+benefits. Keep user-loss and implausible partner cases diagnostic. Record roster
+pruning counts, reason totals, bounded examples and completed package checks.
 
 Repairs add, remove or substitute one asset, stay within three players per
 side, use the same evaluator and share the deadline and caps. At most three

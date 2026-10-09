@@ -85,6 +85,10 @@ CSV_FIELDS = (
     "user_add", "partner_drop",
     "failed_checks", "repair_status", "evaluation_hash",
     "user_selected_delta", "partner_selected_delta", "user_downside_delta",
+    "scope", "roster_policy_version", "search_seconds", "execution_profile", "package_size",
+    "enumerated", "price_pruned", "roster_pruned", "eligible", "evaluated", "unevaluated",
+    "unconstructed", "repair_pruned", "prune_reasons", "starter_weeks",
+    "asset_lineup_delta", "asset_depth_delta",
 )
 
 
@@ -182,6 +186,35 @@ def _policy(
 def _csv_rows(result: TargetWorkflowResult) -> tuple[dict[str, Any], ...]:
     rows: list[dict[str, Any]] = []
     if isinstance(result.packages, FinderResult):
+        packages = result.packages
+        rows.append({"record_type": "EXECUTION", "status": packages.termination,
+            "scope": packages.scope.mode, "roster_policy_version": packages.roster_policy_version,
+            "search_seconds": packages.timing["search_seconds"],
+            "execution_profile": json.dumps(packages.execution_profile, sort_keys=True)})
+        for coverage in packages.shape_coverage:
+            rows.append({"record_type": "COVERAGE", "owner_roster_id": coverage.opponent_roster_id,
+                "package_size": coverage.package_size, "status": coverage.status,
+                "enumerated": coverage.enumerated, "price_pruned": coverage.price_pruned,
+                "roster_pruned": coverage.roster_pruned, "eligible": coverage.eligible,
+                "evaluated": coverage.evaluated, "unevaluated": coverage.unevaluated,
+                "unconstructed": coverage.unconstructed, "repair_pruned": coverage.repair_pruned,
+                "prune_reasons": json.dumps(coverage.prune_reasons)})
+        for rejection in packages.rejection_samples:
+            rows.append({"record_type": "ROSTER_REJECTION_SAMPLE", "owner_roster_id": rejection.opponent_roster_id,
+                "send_player_ids": ";".join(rejection.sent_player_ids),
+                "receive_player_ids": ";".join(rejection.received_player_ids),
+                "status": rejection.stage, "failed_checks": ";".join(rejection.failed_checks)})
+        for check in packages.package_checks:
+            rows.append({"record_type": "PACKAGE_CHECK", "owner_roster_id": check.opponent_roster_id,
+                "send_player_ids": ";".join(check.sent_player_ids),
+                "receive_player_ids": ";".join(check.received_player_ids),
+                "failed_checks": ";".join(check.failed_checks), "evaluation_hash": check.evaluation_hash})
+            for use in check.incoming_usage:
+                rows.append({"record_type": "INCOMING_USE", "owner_roster_id": use.roster_id,
+                    "target_player_id": use.player_id, "status": "USEFUL" if use.useful else "UNUSED",
+                    "starter_weeks": ";".join(str(w) for w in use.starter_weeks),
+                    "asset_lineup_delta": use.lineup_delta, "asset_depth_delta": use.depth_delta,
+                    "evaluation_hash": check.evaluation_hash})
         for idea in result.packages.ideas:
             d = idea.decision
             rows.append({"record_type": "IDEA", "lane": d.lane,
@@ -793,7 +826,8 @@ def _format_finder(result: TargetWorkflowResult) -> str:
         if idea.status == 'COUNTEROFFER_IDEA':
             lines.append(f"Repair search: {idea.repair_search_status.lower().replace('_', ' ')}; {len(idea.repairs)} checked")
         for repair in idea.repairs:
-            lines.append(f"Checked repair: send {player_list(repair.sent_player_ids)} → receive {player_list(repair.received_player_ids)}; {labels.get(repair.status, repair.status.lower())}; strict {repair.package_verdict}")
+            verdict = repair.package_verdict or "not evaluated"
+            lines.append(f"Checked repair: send {player_list(repair.sent_player_ids)} → receive {player_list(repair.received_player_ids)}; {labels.get(repair.status, repair.status.lower())}; strict {verdict}")
             if repair.failed_checks:
                 lines.append("  Remaining checks: " + ", ".join(repair.failed_checks))
     if not packages.ideas:
@@ -801,7 +835,7 @@ def _format_finder(result: TargetWorkflowResult) -> str:
     lines.append("")
     for rid, name in zip(packages.scope.opponent_roster_ids, packages.scope.opponent_team_names):
         rows = [c for c in packages.shape_coverage if c.opponent_roster_id == rid]
-        lines.append(f"{name}: {sum(c.evaluated for c in rows)} evaluated, {sum(c.unevaluated for c in rows)} constructed but unevaluated; {sum(c.pool_limited for c in rows)} shapes use limited pools")
+        lines.append(f"{name}: {sum(c.evaluated for c in rows)} evaluated, {sum(c.unevaluated for c in rows)} constructed but unevaluated, {sum(c.roster_pruned for c in rows)} roster-pruned; {sum(c.pool_limited for c in rows)} shapes use limited pools")
     notes = []
     if packages.roster_exclusions:
         notes.append("Protected missing roster projections: " + ", ".join(sorted({r.roster_id for r in packages.roster_exclusions})))

@@ -1,6 +1,6 @@
 # RosterTheory Trade Assistant design
 
-Status: Approved baseline; timed Trade finder revision added October 8, 2026
+Status: Approved baseline; timed finder and roster-plausibility revisions added October 8, 2026
 Created: September 4, 2026 (America/Los_Angeles)  
 Authority: `docs/TRADE_ASSISTANT_REQUIREMENTS.md`  
 Scope: Design only; this document does not authorize implementation
@@ -683,7 +683,14 @@ setting changes the chosen expert weights or those football thresholds.
    configured player pools for larger shapes. Opponent mode uses both full
    eligible rosters. Report price and roster exclusions explicitly.
 4. Index bundles by price and prune pairs outside the existing broad fairness
-   band before exact lineup work. Order each opponent/shape queue by fair
+   band before exact lineup work. Protect both teams' viable dedicated-starter
+   coverage before assumed waiver additions. Restore the Trade rule allowing
+   one reserve at a position with one eligible starter slot; reject an
+   exchange that increases its count beyond that capacity. Respect superflex
+   and multi-QB slot eligibility. Required drops may resolve excess depth;
+   the final roster must verify the actual drop. Jointly estimate all exchanged
+   quarterbacks against the same lineup slots instead of adding individual improvements.
+   Order each opponent/shape queue by fair
    estimated mutual gains, then user/partner gains and chart distance.
 5. Rotate queues across opponents and shapes. Evaluate unique packages with
    the existing exact evaluator, including bounded add/drop consequences.
@@ -698,7 +705,13 @@ setting changes the chosen expert weights or those football thresholds.
    `RECOMMENDED` passes exact and search gates; `NEGOTIATION_CANDIDATE` improves
    both lineups and fails only the strict opponent consensus-value floor;
    `COUNTEROFFER_IDEA` is a complete, legal strict `COUNTER` with positive user
-   lineup gain. Missing, illegal, declined, ECR-proxy and prior-week chart cases
+   lineup gain above the existing minimum, all user value/risk/depth gates
+   passed, and a partner outcome within the existing lineup/depth policy.
+   Every incoming asset on both teams must supply conditional lineup or
+   above-waiver depth use under the existing asset-use thresholds. Check final
+   roster coverage and redundancy after required moves; apply all checks to
+   repairs. Missing, illegal, declined, user-loss, implausible partner,
+   ECR-proxy and prior-week chart cases
    remain diagnostics and do not fill the ranked list.
 
 Idea ordering is lexicographic: result tier, descending user lineup gain,
@@ -731,8 +744,16 @@ completed construction and completed evaluations or explicit errors for all
 eligible packages in that domain. It does not claim full-roster coverage when
 configured pools or secondary-move bounds apply.
 
+Fresh results record `trade-finder-roster-v1`, per-opponent/shape roster-pruning
+counts and reason totals, bounded rejection samples, and completed package
+checks with marginal incoming-use evidence. An exact football verdict remains
+unchanged when search-only roster checks exclude the package. A pruned repair
+has explicit failures without an invented exact verdict or hash. JSON and CSV
+preserve this evidence. Sampling never substitutes for complete count totals.
+
 The [finder guide](TRADE_FINDER.md) contains the configuration schema and CLI
-examples. [TA-1315](COMPLETED_TRADE_ASSISTANT_TA_1315.md) records validation.
+examples. [TA-1316](COMPLETED_TRADE_ASSISTANT_TA_1316.md) records these corrections;
+[TA-1315](COMPLETED_TRADE_ASSISTANT_TA_1315.md) records the original timed finder.
 
 ## 12. CLI and report design
 

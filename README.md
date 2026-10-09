@@ -286,9 +286,17 @@ The `search` command examines all nine one-to-three-player package shapes and re
 ten ranked ideas: recommended offers, negotiation candidates and counteroffer
 ideas. Negotiation candidates improve both lineups and pass every check except
 the opponent's consensus-value floor; their strict verdict remains `COUNTER`.
-Counteroffer ideas show failed checks and any completed one-edit repairs.
+Counteroffer ideas must pass your value, risk, depth and roster checks, remain
+within the opponent's lineup policy, and give every incoming player a useful
+role. They show remaining price/value checks and any completed one-edit repairs.
 Ordinary roster upgrades are searched even when neither player appears on a
 target card.
+
+The finder protects both teams' starter coverage before assuming waiver adds.
+It filters excess depth at positions with one eligible starter slot, including
+an added third quarterback in a one-QB league. QB swaps, superflex and multi-QB
+formats use their actual slot capacity. Competing quarterbacks are estimated
+as a bundle; failed roster checks remain visible in saved diagnostics.
 
 League search defaults to 120 seconds; `--opponent` selects one
 roster ID or exact, unambiguous team name for a 300-second deeper search.
