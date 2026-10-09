@@ -2,8 +2,8 @@
 
 Updated: October 8, 2026 (America/Los_Angeles)
 
-TA-1316 is implemented and validated on
-`codex/trade-finder-roster-plausibility`; separate PR handoff is pending.
+TA-1316 is implemented and validated in
+[PR #83](https://github.com/jaretjb/RosterTheory/pull/83), open for review.
 The wheel is installed locally. The finder protects starter coverage before
 waiver additions, rejects increased excess depth, measures conditional
 incoming use, and scores QB bundles jointly. Counteroffers pass user/roster

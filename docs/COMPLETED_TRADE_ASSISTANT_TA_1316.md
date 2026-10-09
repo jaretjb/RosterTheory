@@ -69,6 +69,6 @@ reports `trade-finder-roster-v1`, and `trade search --help` retains opponent
 scope and time-budget controls. README, the finder guide, requirements,
 design, CLI contract, task index and Trade handoff are updated.
 
-Separate branch: `codex/trade-finder-roster-plausibility`. Pull-request handoff
-is pending. No provider refresh, league-policy mutation or Sleeper write was
-performed.
+Separate branch: `codex/trade-finder-roster-plausibility`. Handoff:
+[PR #83](https://github.com/jaretjb/RosterTheory/pull/83), open for review.
+No provider refresh, league-policy mutation or Sleeper write was performed.

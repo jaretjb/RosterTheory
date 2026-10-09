@@ -1,6 +1,6 @@
 # Active milestone
 
-## TA-1316 - Plausible Trade packages and useful counteroffers (implemented and validated; PR handoff pending)
+## TA-1316 - Plausible Trade packages and useful counteroffers (implemented and validated; PR #83)
 
 Authorized by the user's October 8 request to implement the reviewed fixes
 for two-quarterback offers. Preserve expert weights and football thresholds.
@@ -26,7 +26,8 @@ packages. Configured football thresholds match the saved source. Coverage
 accounting, conditional incoming use and bounded rejection evidence pass.
 Ruff, compilation, distribution privacy and clean installation pass; the
 verified wheel is installed locally. Detail:
-`docs/COMPLETED_TRADE_ASSISTANT_TA_1316.md`. Publish only the separate PR.
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1316.md`. Handoff:
+[PR #83](https://github.com/jaretjb/RosterTheory/pull/83), open for review.
 
 ## Previous TA-1315 - Useful, timed Trade search with opponent scope (merged PR #82)
 
