@@ -1,3 +1,9 @@
+"""Legacy two-field ROS selection retained for compatibility.
+
+Live Waiver preparation uses ``waiver.expert_selection`` and five-season
+history. This selector must not be reconnected to the live command.
+"""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass

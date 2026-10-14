@@ -89,6 +89,18 @@ Waiver Wire rankings, if the provider capability passes, remain a separately
 labeled acquisition signal. They may not be silently blended into long-term
 ownership value.
 
+Weekly and ROS Waiver rank signals select contributors independently by
+horizon and position from five completed seasons of weekly accuracy. Weight
+the historical years newest to oldest 30/26/21/15/8, adjust for missing-year
+coverage, and limit source concentration. Preserve the calculated expert
+weights when combining individual ballots. Declare weekly accuracy as a proxy
+for ROS. Retain market consensus separately; missing selected-player ballots
+must not silently receive ECR ranks. Reconcile advertised contributors with
+usable individual ballots and preserve history, freshness, identity,
+publication, missing-player and exclusion evidence. Partial historical
+populations remain disclosed; a clipped public leaderboard must not define
+the full competition field size.
+
 ## 5. Evaluation requirements
 
 For every add/drop alternative, calculate and preserve:

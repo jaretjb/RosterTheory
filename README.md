@@ -338,6 +338,27 @@ evidence and reuses fresh cached inputs automatically:
 roster-theory waiver search home_league
 ```
 
+Weekly and rest-of-season (ROS) rank signals use separately selected expert
+panels for each position. Expert selection uses five completed seasons of
+weekly accuracy, weighted 30%, 26%, 21%, 15%, and 8% from newest to oldest,
+with a penalty for missing historical years and a limit of two experts from
+one source. ROS uses weekly accuracy as a disclosed proxy. Selected ranks
+retain the historical expert weights; unfiltered ECR remains separate market
+evidence and cannot fill missing selected-player ballots.
+
+The saved audit records each contributor's history, update dates, publication,
+weights, and exclusion reasons. A contributor advertised by FantasyPros but
+missing from the embedded ballots is checked with an individual expert request
+before selection. Missing or unhonored expert filters remain explicit.
+Historical accuracy is read from
+`data/manual/fantasypros/inseason_accuracy_FIRSTYEAR_LASTYEAR.csv`; an unavailable
+or invalid file triggers a cached, budgeted historical API refresh. Responses
+must declare the requested accuracy year and cover the annual rank population.
+Public top-ten tables cannot be treated as a ten-expert field. Partial retained
+historical populations are disclosed, and missing years receive the coverage
+penalty rather than invented ranks. Expert names and weights appear in report
+evidence notes.
+
 `--inputs PATH` remains available for an explicit reproducible input bundle.
 
 To evaluate one move:

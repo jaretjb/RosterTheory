@@ -665,6 +665,16 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
 
 def _waiver_evidence_notes(search, names):
     notes = []
+    selection = search.ros_panel_evidence or {}
+    if selection.get("schema_version") == "roster-theory.waiver-expert-selection/v2":
+        history = selection.get("history") or {}
+        if not history.get("population_complete", False):
+            notes.append("Historical expert coverage is partial; missing years receive a coverage penalty, "
+                         "and selection does not establish the best panel across every expert.")
+        for key, panel in sorted((selection.get("panels") or {}).items()):
+            members = ", ".join(f"{row['expert_name']} ({row['weight']:.0%})"
+                                for row in panel.get("members", ()))
+            notes.append(f"{key.replace(':', ' ')} experts: {members or 'unavailable'}.")
     waiver = next((row.waiver_wire_evidence for row in search.exact_evaluations
                    if row.waiver_wire_evidence is not None), None)
     if waiver is not None:

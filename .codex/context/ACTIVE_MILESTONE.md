@@ -1,5 +1,31 @@
 # Active milestone
 
+## WA-031 - Restore historical expert weighting and contributor reconciliation (implemented and validated; PR handoff)
+
+Authorized by the user's October 13 request to implement recommendations 1-2.
+Use WA-031 in `docs/WAIVER_ASSISTANT_TASKS.md`. Restore Waiver-owned weekly and
+ROS expert selection from five completed seasons, weighted newest to oldest
+30/26/21/15/8, with historical coverage and source concentration safeguards.
+Select available contributors independently by horizon and position, preserve
+their historical weights, and audit missing ballots, identity, history,
+freshness and selection exclusions. Preserve unfiltered market consensus as
+separate evidence; never silently substitute it for selected-expert ranks.
+Reconcile advertised contributors with actual usable individual ballots.
+Load Waiver requirements sections 4-6 and design Architecture, Data flow and
+Fail-closed boundaries. Keep Waiver acquisition, QB holding, injury retention,
+league scoring and league-local numeric calibration unchanged. Preserve Trade,
+Draft, budget, freshness, deterministic replay and read-only provider behavior.
+Validate focused fixtures, saved evidence where available, full tests, Ruff,
+context/privacy/package checks and clean installation. Update only Waiver
+status and record detailed evidence in `docs/COMPLETED_WAIVER_ASSISTANT_WA_031.md`.
+Publish a separate PR; do not merge or submit any Sleeper action.
+
+Validation: all 1,069 tests pass, along with Ruff, context/privacy/package gates
+and isolated installation. Independent live input preparation succeeded for
+both leagues. Archived history is restored locally but remains partial; API
+year/filter violations are rejected and audited. The verified wheel is installed
+locally. Detail: `docs/COMPLETED_WAIVER_ASSISTANT_WA_031.md`.
+
 ## TA-1316 - Plausible Trade packages and useful counteroffers (implemented and validated; PR #83)
 
 Authorized by the user's October 8 request to implement the reviewed fixes

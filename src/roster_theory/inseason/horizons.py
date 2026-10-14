@@ -67,6 +67,7 @@ def filter_ros_ballots(
     now: datetime,
     maximum_age: timedelta = timedelta(days=14),
     material_categories: Iterable[str] = MATERIAL_NEWS_CATEGORIES,
+    expected_horizon: str = ROS,
 ) -> BallotFreshnessResult:
     """Apply freshness to contributor ballots, never to the response capture.
 
@@ -95,8 +96,8 @@ def filter_ros_ballots(
     exclusions: list[BallotExclusion] = []
     position_status: dict[tuple[str, str], tuple[datetime | None, str | None]] = {}
     for ballot in ballots:
-        if ballot.horizon.upper() != ROS:
-            raise ValueError("Ballot freshness applies only to ROS observations")
+        if ballot.horizon.upper() != expected_horizon:
+            raise ValueError(f"Ballot freshness requires {expected_horizon} observations")
         expert_id = str(ballot.expert_id or "")
         if not expert_id:
             raise ValueError("Contributor ballots require an expert ID")

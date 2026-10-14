@@ -1,5 +1,35 @@
 # Waiver Assistant task backlog
 
+## WA-031 — Historical expert weighting and contributor reconciliation
+
+Status: implemented October 13, 2026; authorized recommendations 1-2.
+Evidence: `docs/COMPLETED_WAIVER_ASSISTANT_WA_031.md`.
+
+Goal: restore five-season, recency-weighted expert evidence for weekly and ROS
+Waiver analysis and explain provider contributor coverage before selecting it.
+
+Context: requirements sections 4-6; design Architecture, Data flow and
+Fail-closed boundaries. This supersedes WA-024's ROS panel selection method
+only; player signal weights and all acquisition/retention rules are unchanged.
+
+Acceptance:
+
+- Use five completed seasons with newest-to-oldest weights 30/26/21/15/8,
+  historical coverage adjustment and source concentration limits. Declare
+  weekly historical accuracy as a proxy for ROS, not measured ROS accuracy.
+- Select contributor coverage independently for each horizon and position;
+  combine selected individual ballots with their historical weights.
+- Preserve market ranks separately and never silently replace selected ranks
+  with unfiltered ECR when selected coverage is unavailable.
+- Audit every discovered contributor and its identity, historical coverage,
+  publication/freshness, missing ballot and selection-cutoff decisions.
+- Preserve scoped ranking/provider authority, request pacing and shared daily
+  budget, caches, unknown identities, missing players, deterministic replay,
+  Trade/Draft behavior and read-only recommendations.
+- Cover unequal historical weights, recent single-season outliers, fallback to
+  the next qualified published contributor, independent positional coverage,
+  absent/stale/partial ballots, no-ECR substitution and integration/replay.
+
 Updated: September 14, 2026 (America/Los_Angeles)
 Initial league: `league_alpha`
 
