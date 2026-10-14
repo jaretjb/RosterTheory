@@ -1070,22 +1070,6 @@ def _quarterback_holding_evidence(
             if "QB" in _normalized_positions(player_by_id[player_id])
         )
     )
-    current_row = next(
-        row for row in lineup_impact.weeks if row.week == snapshot.manifest.current_week
-    )
-    current_qbs_on_bye = bool(roster_qb_ids) and all(
-        (cell := matrix.cell(player_id, current_row.week)) is not None
-        and cell.availability == "BYE"
-        for player_id in roster_qb_ids
-    )
-    if add_player.player_id in current_row.after_starters and not current_qbs_on_bye:
-        return _not_applicable_qb_holding(
-            reason="CURRENT_STARTER_UPGRADE",
-            one_qb_format=True,
-            cross_position_drop=cross_position_drop,
-            options=options,
-        )
-
     acquisitions = {row.player_id: row.state for row in snapshot.acquisitions}
     unowned_qb_ids = tuple(
         sorted(
@@ -1175,7 +1159,13 @@ def _quarterback_holding_evidence(
                 ) * row.weight
             elif edge > 0:
                 close_call_weeks.append(row.week)
-        insurance_values.append(max(0.0, add_points - baseline_points))
+        owned_points = sorted((float(cell.points) for pid in roster_qb_ids
+            if (cell := matrix.cell(pid, row.week)) is not None
+            and cell.availability == 'ACTIVE' and cell.points is not None), reverse=True)
+        # A third quarterback insures against the best already-owned backup,
+        # not merely against an unowned streaming baseline.
+        insurance_baseline = max(baseline_points, owned_points[1] if len(owned_points) > 1 else 0.0)
+        insurance_values.append(max(0.0, add_points - insurance_baseline))
 
     credited_weeks = set(required_bye_weeks) | set(discretionary_start_weeks)
     ordered_week_numbers = tuple(week.week for week in context.weeks)
@@ -1213,7 +1203,9 @@ def _quarterback_holding_evidence(
             (value_map[player_id].market_value for player_id in replacement_ids),
             default=0.0,
         )
-        drop_value = value_map[drop_id]
+        drop_value = value_map.get(drop_id)
+        if drop_value is None:
+            raise CoverageIncomplete(f'Value inputs missing for proposed drop {drop_id}')
         raw_bench_cost = max(
             0.0,
             drop_value.selected_value - replacement_selected,

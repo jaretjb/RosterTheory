@@ -338,6 +338,23 @@ evidence and reuses fresh cached inputs automatically:
 roster-theory waiver search home_league
 ```
 
+The default report gives an ordered weekly roster plan: legal IR preparations,
+adds and exact drops, independent specialist swaps, and alternatives if a claim
+fails. Actual owned-player starter coverage and projected offense points are
+shown separately from assumed waiver replacements. The bounded planner explains
+close calls, later bye vacancies and the need to make room when an IR player
+returns. Its materiality settings use controlled fixtures rather than measured
+win probabilities.
+
+Use `--objective ros` for the season-oriented single-pair report. A private
+`--plan-policy PATH` can override the separately versioned, league-scoped planning
+limits. `--availability PATH` supplies a documented, expiring current-week
+counterfactual without replacing Sleeper's status. The JSON file must include
+`league_key`, numeric `season` and `week`, and `players` rows with `player_id`,
+`status` (`ACTIVE` or `INACTIVE`), `authority` (`USER_SCENARIO` or `PROVIDER_REPORT`),
+`source`, timezone-aware `observed_at`, and `expires_at`. Every conditional report
+retains a platform-status fallback; changed-week or expired assumptions fail.
+
 Weekly and rest-of-season (ROS) rank signals use separately selected expert
 panels for each position. Expert selection uses five completed seasons of
 weekly accuracy, weighted 30%, 26%, 21%, 15%, and 8% from newest to oldest,

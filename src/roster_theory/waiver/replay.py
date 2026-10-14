@@ -14,6 +14,7 @@ from roster_theory.waiver.priority import WaiverPriorityWeights, build_waiver_pr
 from roster_theory.waiver.search import search_waiver_candidates
 from roster_theory.waiver.service import _news_freshness
 from roster_theory.waiver.snapshot import load_waiver_snapshot
+from roster_theory.waiver.weekly import WeeklyPlanPolicy
 
 
 def replay_waiver_manifest(path):
@@ -39,7 +40,9 @@ def replay_waiver_manifest(path):
         input_bundle_hash=inputs.input_hash, availability_source=inputs.availability_source, now=as_of)
     if request['operation'] == 'search':
         result = search_waiver_candidates(snapshot, **common, policy=policy,
-            enable_pruning=request['enable_pruning'], exact_candidate_budget=request['exact_candidate_budget'])
+            enable_pruning=request['enable_pruning'], exact_candidate_budget=request['exact_candidate_budget'],
+            planning_policy=WeeklyPlanPolicy(**request['planning_policy']) if request.get('planning_policy') else None,
+            availability=tuple(request.get('availability', ())))
     elif request['operation'] == 'exact':
         priorities = build_waiver_priority_scores(
             players=snapshot.players, values=inputs.values,

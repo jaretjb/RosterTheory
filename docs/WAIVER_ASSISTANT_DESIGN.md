@@ -38,6 +38,19 @@ Provider caches may be shared when request parameters and normalized semantics
 are identical. Waiver exports live under `data/exports/waiver/`; configuration
 lives under `config/waiver/`.
 
+WA-032 adds a Waiver-owned planning layer after exact single-pair evidence.
+`waiver.weekly` builds immutable IR preparations and bounded skill combinations,
+scores actual owned-player lineups, records future vacancies/reactivation cost,
+and revalidates winning sequences through the exact evaluator. Joint depth/risk
+is recalculated instead of summed from singleton effects. Independent specialist
+swaps use their existing policy on the changed roster. Conditional failed-claim
+branches exclude the unavailable target and retain successful prerequisites.
+`weekly_plan` is the primary weekly recommendation; `exact_evaluations` and the
+legacy `claim_plan` retain season comparison evidence. Search schema 13 includes
+planning settings, bounds, source assumptions, alternatives and deterministic
+hashes. Replay records the selected objective and full planning/scenario inputs.
+No shared Draft/Trade policy or new hosting/storage framework is introduced.
+
 ## Initial interfaces
 
 - `waiver refresh <league>`: data-only snapshot and completeness report.

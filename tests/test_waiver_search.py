@@ -1569,10 +1569,10 @@ class WaiverSearchServiceAndCliTests(unittest.TestCase):
             report = format_waiver_search(result)
             self.assertEqual(
                 waiver_search_action_summary(result),
-                "ADD NOW: add Target Quarterback; drop Bench Receiver",
+                "add Target Quarterback; drop Bench Receiver",
             )
-            self.assertIn("BEST MOVE", report)
-            self.assertIn("projected lineup change", report)
+            self.assertIn("RECOMMENDED MOVES", report)
+            self.assertIn("Owned-player offense", report)
             self.assertIn("No bid or claim-success probability is predicted", report)
             self.assertNotIn("Eligible players", report)
             self.assertNotIn("exact evaluations", report)
