@@ -64,6 +64,17 @@ to hide controlled best moves.
 The user can compare multiple add/drop pairs from the same immutable input
 snapshot. The comparison must not refresh inputs between candidates.
 
+### 3.4 Exact weekly roster plan (WA-032)
+
+The normal search reports ordered weekly moves, starting with legal IR
+placements that create no-drop openings. Compare complete bounded combinations
+and show actual owned-player coverage and points independently of assumed
+replacement floors. Keep no action, close alternatives, successful prerequisites
+and failed-claim repair branches. Recompute changed-roster evidence and joint
+depth/risk before recommending a sequence. Preserve source/scenario distinctions;
+IR eligibility does not establish a recovery date, and reactivation cost remains
+explicit. `--objective ros` retains the season-oriented single-pair view.
+
 ## 4. Data requirements
 
 Sleeper is authoritative for league rules, roster membership, reserve state,
@@ -89,6 +100,18 @@ Waiver Wire rankings, if the provider capability passes, remain a separately
 labeled acquisition signal. They may not be silently blended into long-term
 ownership value.
 
+Weekly and ROS Waiver rank signals select contributors independently by
+horizon and position from five completed seasons of weekly accuracy. Weight
+the historical years newest to oldest 30/26/21/15/8, adjust for missing-year
+coverage, and limit source concentration. Preserve the calculated expert
+weights when combining individual ballots. Declare weekly accuracy as a proxy
+for ROS. Retain market consensus separately; missing selected-player ballots
+must not silently receive ECR ranks. Reconcile advertised contributors with
+usable individual ballots and preserve history, freshness, identity,
+publication, missing-player and exclusion evidence. Partial historical
+populations remain disclosed; a clipped public leaderboard must not define
+the full competition field size.
+
 ## 5. Evaluation requirements
 
 For every add/drop alternative, calculate and preserve:
@@ -102,6 +125,35 @@ For every add/drop alternative, calculate and preserve:
 - bye and playoff coverage;
 - player availability, injury, role, and material-news warnings; and
 - offense concentration and the existing supported risk scenarios.
+
+Weekly planning uses a separately versioned, league-scoped execution/materiality
+policy. Default controlled settings compare at most two skill acquisitions,
+six legal drops per branch, sixteen candidate targets, twelve retained prefixes,
+and six hundred roster comparisons. Forecast differences within one current-week
+point are close calls; a three-point remaining-horizon difference is material.
+Each additional move requires coverage repair, material weekly improvement or
+material remaining-lineup benefit. Within close weekly outcomes prefer expert
+ROS ownership, usable depth, and fewer unnecessary moves. These settings are
+controlled defaults, not outcome-calibrated football accuracy. Optional private
+policies belong to exactly one league; bounds and omissions remain in evidence.
+
+Every additional one-QB holding receives meaningful-start and incremental
+insurance assessment against already-owned QBs. A marginal current start is
+not exempt. A third QB's insurance compares with the existing backup. Outgoing
+QB coverage over the next three decision weeks cannot assume a future streamer
+will be acquired. Current fixed-position coverage cannot be exchanged for an
+unrelated higher-scoring flex player. Injury retention distinguishes the exact
+replacement cutoff from players above it and preserves conservative protection
+when drop consequences are uncertain.
+
+Weekly coverage plans may accept documented ranking or small season tradeoffs;
+identity, roster/drop legality, news freshness, projection/value coverage,
+protected contingent upside and recomputed risk/depth remain mandatory. A
+missing selected ballot is never silently supplied by ECR. Explain WATCH
+alternatives, actual future vacancies, source disagreements and the chosen
+expert weights/publication dates. Availability scenario files must bind league,
+season, week, known player, source/authority, observed time and expiry; they only
+alter the current-week counterfactual and retain a platform-status fallback.
 
 When the shared long-term value board is explicitly identified as a common
 non-ROS horizon, it must not silently overrule complete fresher evidence. A

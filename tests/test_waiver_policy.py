@@ -108,9 +108,11 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
             replace(load_waiver_policy(POLICY_PATH), priority_enabled=True),
         )
         self.assertEqual(result.selected_drop_player_id, "bench")
-        self.assertEqual(result.decision_label, "ADD NOW")
-        self.assertEqual(result.decision.decision_path, "THREE_SIGNAL_WAIVER_VALUE")
+        self.assertEqual(result.decision_label, "PASS")
+        self.assertEqual(result.decision.decision_path, "THREE_SIGNAL_WAIVER_VALUE_FAILURE")
         self.assertEqual(result.candidates[0].waiver_value.value_delta, 40.0)
+        self.assertTrue(result.candidates[0].holding.applicable)
+        self.assertTrue(any(g.name == 'qb_hold_value' and not g.passed for g in result.decision.gates))
 
     def evaluate_contingent_rb(
         self,
@@ -593,7 +595,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
             **common,
         )
         self.assertEqual(immediate.decision_label, "ADD NOW")
-        self.assertEqual(immediate.decision.decision_path, "IMMEDIATE")
+        self.assertEqual(immediate.decision.decision_path, "QB_HOLD")
         self.assertEqual(insurance.decision_label, "CLAIM")
         self.assertEqual(insurance.decision.decision_path, "QB_INJURY_INSURANCE")
         self.assertEqual(negative_drop.decision_label, "PASS")
@@ -622,7 +624,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         result = self.evaluate()
         selected = result.candidates[0]
         self.assertEqual(result.decision_label, "ADD NOW")
-        self.assertEqual(result.decision.decision_path, "IMMEDIATE")
+        self.assertEqual(result.decision.decision_path, "QB_HOLD")
         self.assertEqual(selected.lineup.weighted_delta, 4.0)
         self.assertEqual(selected.current_week_delta, 2.0)
         self.assertEqual(

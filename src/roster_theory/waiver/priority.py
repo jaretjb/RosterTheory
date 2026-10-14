@@ -469,7 +469,7 @@ def build_waiver_priority_scores(
             owned
             and position is not None
             and retention_ros is not None
-            and retention_ros <= replacement_ranks[position]
+            and retention_ros < replacement_ranks[position]
             and injury_status
             in {
                 "Q",
@@ -504,7 +504,9 @@ def build_waiver_priority_scores(
             score_purpose="RETENTION" if owned else "ACQUISITION",
             retention_protected=retention_protected,
             retention_protection_reason=(
-                "Injury uncertainty cannot override above-replacement ROS value"
+                "Injury uncertainty cannot override above-replacement ROS value; "
+                f"ROS rank {retention_ros}, replacement rank {replacement_ranks[position]}, "
+                f"distance {replacement_ranks[position] - retention_ros}"
                 if retention_protected
                 else None
             ),

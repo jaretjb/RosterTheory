@@ -50,6 +50,7 @@ from roster_theory.waiver.snapshot import (
     build_waiver_snapshot,
     save_waiver_snapshot,
 )
+from roster_theory.waiver.weekly import load_plan_policy, load_availability, format_weekly_plan
 
 
 @dataclass(frozen=True, slots=True)
@@ -375,6 +376,9 @@ def search_waivers(
     enable_pruning: bool = True,
     exact_candidate_budget: int | None = None,
     clock: Callable[[], datetime] | None = None,
+    objective: str = 'weekly',
+    planning_policy_path: str | Path | None = None,
+    availability_path: str | Path | None = None,
 ) -> WaiverSearchResult:
     wall_clock = clock or (lambda: datetime.now(timezone.utc))
     input_check_time = now or wall_clock()
@@ -395,6 +399,12 @@ def search_waivers(
         availability_by_player=dict(inputs.availability_by_player),
     )
     evaluation_time = now or wall_clock()
+    if objective not in {'weekly', 'ros'}:
+        raise ValueError('Waiver objective must be weekly or ros')
+    planning_policy = load_plan_policy(planning_policy_path, league_key) if objective == 'weekly' else None
+    availability = load_availability(availability_path, refresh.snapshot, now=evaluation_time)
+    if availability and objective != 'weekly':
+        raise ValueError('Availability scenarios require the weekly planning objective')
     performance: dict[str, Any] = {}
     search = search_waiver_candidates(
         refresh.snapshot,
@@ -418,6 +428,8 @@ def search_waivers(
         # different effective timestamps while the search is in progress.
         now=evaluation_time,
         metrics=performance,
+        planning_policy=planning_policy,
+        availability=availability,
     )
     final_check_time = wall_clock()
     if not is_fresh(inputs.captured_at, timedelta(minutes=10), now=final_check_time):
@@ -432,7 +444,9 @@ def search_waivers(
     manifest = record_run(target, snapshot=refresh.snapshot,
         inputs={'bundle': input_payload,
                 'request': {'operation': 'search', 'enable_pruning': enable_pruning,
-                            'exact_candidate_budget': exact_candidate_budget},
+                            'exact_candidate_budget': exact_candidate_budget,
+                            'objective': objective, 'availability': availability,
+                            'planning_policy': planning_policy},
                 'result_hash': search.evidence_hash}, policy=policy,
         revalidation=proof, sources=inputs.source_evidence, as_of=evaluation_time,
         readiness=waiver_readiness(search))
@@ -453,6 +467,12 @@ def waiver_search_report(result: WaiverSearchResult) -> dict[str, Any]:
 
 def waiver_search_action_summary(result: WaiverSearchResult) -> str:
     search = result.search
+    if search.weekly_plan is not None:
+        names = {p.player_id:p.name for p in result.refresh.snapshot.players}
+        steps = search.weekly_plan.selected.steps
+        return '; '.join(('IR ' if s.kind == 'IR' else 'add ') + names.get(s.player_id,s.player_id)
+            + (f'; drop {names.get(s.drop_player_id,s.drop_player_id)}' if s.drop_player_id else '')
+            for s in steps) if steps else 'KEEP ROSTER'
     if search.recommended_action == "NO ACTION" or search.best_add_player_id is None:
         return "NO ACTION AMONG EVALUATED MOVES" if search.budget_excluded_player_ids else "NO ACTION"
     names = {
@@ -567,6 +587,14 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
     names = {
         player.player_id: player.name for player in result.refresh.snapshot.players
     }
+    if search.weekly_plan is not None:
+        notes = _waiver_evidence_notes(search, names)
+        lines = [format_weekly_plan(search.weekly_plan, names)]
+        if notes:
+            lines.extend(('', 'EVIDENCE NOTES', *notes))
+        lines.extend(('', 'BEFORE YOU ACT',
+            'Confirm availability and claim mechanism in Sleeper. No bid or claim-success probability is predicted.'))
+        return '\n'.join((*lines, *run_footer(getattr(result, 'run_manifest', None))))
     plan_lines = []
     for claim in search.claim_plan:
         add_name = names.get(claim.add_player_id, claim.add_player_id)
@@ -665,6 +693,21 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
 
 def _waiver_evidence_notes(search, names):
     notes = []
+    selection = search.ros_panel_evidence or {}
+    if selection.get("schema_version") == "roster-theory.waiver-expert-selection/v2":
+        history = selection.get("history") or {}
+        if not history.get("population_complete", False):
+            notes.append("Historical expert coverage is partial; missing years receive a coverage penalty, "
+                         "and selection does not establish the best panel across every expert.")
+        for key, panel in sorted((selection.get("panels") or {}).items()):
+            members = ", ".join(f"{row['expert_name']} ({row['weight']:.0%})"
+                                for row in panel.get("members", ()))
+            notes.append(f"{key.replace(':', ' ')} experts: {members or 'unavailable'}.")
+            updates = {row['expert_id']: row.get('position_update') for row in panel.get('candidates', ())}
+            dates = ', '.join(f"{row['expert_name']} {updates.get(row['expert_id']) or 'update unavailable'}"
+                              for row in panel.get('members', ()))
+            if dates:
+                notes.append(f"{key.replace(':', ' ')} updates: {dates}.")
     waiver = next((row.waiver_wire_evidence for row in search.exact_evaluations
                    if row.waiver_wire_evidence is not None), None)
     if waiver is not None:

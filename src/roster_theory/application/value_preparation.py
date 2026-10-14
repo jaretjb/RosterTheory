@@ -215,6 +215,7 @@ class BoardRefreshResult:
     ranking_format: RankingFormat | None = None
     source_evidence: tuple[Mapping[str, Any], ...] = ()
     news_coverage: Mapping[str, Any] | None = None
+    weekly_market_rankings: tuple[RankObservation, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -1105,6 +1106,9 @@ def refresh_value_boards(
         [ValueInputs, datetime], ExpertPoolResolution
     ] | None = None,
     require_all_rostered_market_coverage: bool = False,
+    expert_input_resolver: Callable[..., ValueInputs] | None = None,
+    selected_rank_aggregator: Callable[..., tuple[SelectedRank, ...]] | None = None,
+    weekly_rank_aggregator: Callable[..., tuple[RankObservation, ...]] | None = None,
 ) -> BoardRefreshResult:
     # During Week 1 the final Draft boards own long-term value. The current
     # weekly feed is still fetched below, but only as a separate signal.
@@ -1124,13 +1128,14 @@ def refresh_value_boards(
         if include_special_teams
         else tuple(POSITION_MINIMUMS)
     )
+    client = fantasypros_client or FantasyProsClient(
+        before_retry=lambda: (
+            reserve_requests(Path(budget_path), 1), pace_request(Path(budget_path))
+        )
+    )
     inputs = _fetch_value_inputs(
         refresh,
-        client=fantasypros_client or FantasyProsClient(
-            before_retry=lambda: (
-                reserve_requests(Path(budget_path), 1), pace_request(Path(budget_path))
-            )
-        ),
+        client=client,
         cache_dir=Path(cache_dir),
         budget_path=Path(budget_path),
         ranking_positions=ranking_positions,
@@ -1138,6 +1143,9 @@ def refresh_value_boards(
         ros_ranking_max_age=ros_ranking_max_age,
         ros_experts_max_age=ros_experts_max_age,
     )
+    if expert_input_resolver is not None:
+        inputs = expert_input_resolver(inputs, snapshot, client, Path(cache_dir),
+                                       Path(budget_path), datetime.now(timezone.utc))
     all_identities = tuple(
         identity
         for dataset in (
@@ -1158,6 +1166,12 @@ def refresh_value_boards(
         for row in dataset.observations
         if (mapped := _canonical_rank(row, identity_map, retain_unmatched_slot=True)) is not None
     )
+    weekly_selected_rows = weekly_market_rows
+    if weekly_rank_aggregator is not None:
+        weekly_ballots = tuple(mapped for dataset in inputs.weekly_rankings
+            for row in dataset.contributor_observations
+            if (mapped := _canonical_rank(row, identity_map, retain_unmatched_slot=True)) is not None)
+        weekly_selected_rows = weekly_rank_aggregator(weekly_market_rows, weekly_ballots)
     if expert_pool_resolver is None and expert_pool_path is None:
         if default_expert_pool_resolver is None:
             raise ValueError("An in-season expert-panel selector is required")
@@ -1242,6 +1256,9 @@ def refresh_value_boards(
         }
         selected_ros_complete = all(count >= 2 for count in contributor_counts.values())
         market_ros_complete = _ros_market_is_complete(inputs.ros_rankings)
+        if selected_rank_aggregator is not None and not selected_ros_complete:
+            raise CoverageIncomplete("Selected ROS expert ballots do not cover every required position "
+                                     "after freshness/news checks; market or Draft ranks cannot substitute")
     stage = choose_season_stage(
         snapshot.manifest.current_week,
         selected_ros_fresh=selected_ros_complete,
@@ -1336,7 +1353,7 @@ def refresh_value_boards(
             is not None
             and mapped.player_id in required_ids
         )
-        selected_ranks = aggregate_selected_ranks(
+        selected_ranks = (selected_rank_aggregator or aggregate_selected_ranks)(
             required_market,
             contributor_rows,
             weights,
@@ -1504,7 +1521,7 @@ def refresh_value_boards(
     gaps = valuation_gaps(selected_final, market)
     weekly_by_id = {
         row.player_id: row
-        for row in weekly_market_rows
+        for row in weekly_selected_rows
         if row.player_id in positions
     }
     current_projection = {
@@ -1723,7 +1740,8 @@ def refresh_value_boards(
         horizon_views=horizon_views,
         prospective_snapshot_path=prospective_target,
         weekly_projections=canonical_projections,
-        weekly_rankings=weekly_market_rows,
+        weekly_rankings=weekly_selected_rows,
+        weekly_market_rankings=weekly_market_rows,
         ros_rankings=canonical_ros_rows,
         expert_pool=pool,
         expert_pool_evidence=dict(pool_resolution.evidence),

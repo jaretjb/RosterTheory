@@ -4274,102 +4274,138 @@
   ],
   "waiver search": [
     {
+      "action": "_HelpAction",
+      "choices": null,
+      "default": "==SUPPRESS==",
+      "destination": "help",
       "flags": [
         "-h",
         "--help"
       ],
-      "destination": "help",
-      "required": false,
       "nargs": 0,
-      "choices": null,
-      "default": "==SUPPRESS==",
-      "action": "_HelpAction"
+      "required": false
     },
     {
-      "flags": [],
-      "destination": "league",
-      "required": true,
-      "nargs": null,
+      "action": "_StoreAction",
       "choices": null,
       "default": null,
-      "action": "_StoreAction"
+      "destination": "league",
+      "flags": [],
+      "nargs": null,
+      "required": true
     },
     {
+      "action": "_StoreAction",
+      "choices": [
+        "weekly",
+        "ros"
+      ],
+      "default": "weekly",
+      "destination": "objective",
+      "flags": [
+        "--objective"
+      ],
+      "nargs": null,
+      "required": false
+    },
+    {
+      "action": "_StoreAction",
+      "choices": null,
+      "default": null,
+      "destination": "plan_policy",
+      "flags": [
+        "--plan-policy"
+      ],
+      "nargs": null,
+      "required": false
+    },
+    {
+      "action": "_StoreAction",
+      "choices": null,
+      "default": null,
+      "destination": "availability",
+      "flags": [
+        "--availability"
+      ],
+      "nargs": null,
+      "required": false
+    },
+    {
+      "action": "_StoreAction",
+      "choices": null,
+      "default": null,
+      "destination": "inputs",
       "flags": [
         "--inputs"
       ],
-      "destination": "inputs",
-      "required": false,
       "nargs": null,
-      "choices": null,
-      "default": null,
-      "action": "_StoreAction"
+      "required": false
     },
     {
+      "action": "_StoreAction",
+      "choices": null,
+      "default": "data/cache/waiver/sleeper/players_nfl.json",
+      "destination": "player_cache",
       "flags": [
         "--player-cache"
       ],
-      "destination": "player_cache",
-      "required": false,
       "nargs": null,
-      "choices": null,
-      "default": "data/cache/waiver/sleeper/players_nfl.json",
-      "action": "_StoreAction"
+      "required": false
     },
     {
+      "action": "_StoreAction",
+      "choices": null,
+      "default": null,
+      "destination": "policy",
       "flags": [
         "--policy"
       ],
-      "destination": "policy",
-      "required": false,
       "nargs": null,
-      "choices": null,
-      "default": null,
-      "action": "_StoreAction"
+      "required": false
     },
     {
+      "action": "_StoreAction",
+      "choices": null,
+      "default": null,
+      "destination": "snapshot",
       "flags": [
         "--snapshot"
       ],
-      "destination": "snapshot",
-      "required": false,
       "nargs": null,
-      "choices": null,
-      "default": null,
-      "action": "_StoreAction"
+      "required": false
     },
     {
+      "action": "_StoreAction",
+      "choices": null,
+      "default": null,
+      "destination": "save_evidence",
       "flags": [
         "--save-evidence"
       ],
-      "destination": "save_evidence",
-      "required": false,
       "nargs": null,
-      "choices": null,
-      "default": null,
-      "action": "_StoreAction"
+      "required": false
     },
     {
+      "action": "_StoreAction",
+      "choices": null,
+      "default": null,
+      "destination": "exact_candidate_budget",
       "flags": [
         "--exact-candidate-budget"
       ],
-      "destination": "exact_candidate_budget",
-      "required": false,
       "nargs": null,
-      "choices": null,
-      "default": null,
-      "action": "_StoreAction"
+      "required": false
     },
     {
+      "action": "_StoreTrueAction",
+      "choices": null,
+      "default": false,
+      "destination": "json",
       "flags": [
         "--json"
       ],
-      "destination": "json",
-      "required": false,
       "nargs": 0,
-      "choices": null,
-      "default": false,
-      "action": "_StoreTrueAction"
+      "required": false
     }
   ],
   "waiver": [

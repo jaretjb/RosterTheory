@@ -1,5 +1,75 @@
 # Waiver Assistant task backlog
 
+## WA-032 — Exact weekly roster plans
+
+Status: implemented and validated; separate PR handoff. Authorized October 13,
+2026 in the weekly roster analysis chat. Evidence:
+`docs/COMPLETED_WAIVER_ASSISTANT_WA_032.md`.
+
+Goal: turn current league evidence into a concrete ordered weekly roster plan
+while preserving useful long-term holdings and disclosing decision uncertainty.
+Context: requirements sections 3-6 and 8; design Architecture, Data flow and
+Fail-closed boundaries. This changes Waiver decision/planning only.
+
+Acceptance:
+
+- Discover legal IR placements and resulting no-drop openings, with eligibility,
+  capacity, prerequisites and eventual reactivation cost explicitly preserved.
+- Show the actual owned-player starting coverage before/after every plan;
+  keep assumed replacement floors separately labeled and never count a future
+  streamer as already acquired.
+- Compare bounded complete combinations, retaining no action, alternatives for
+  one spot and separately executable requests; re-evaluate changed rosters and
+  successful/failed claim branches with evidence-bound deterministic limits.
+- Use documented weekly coverage, material lineup improvement, useful depth,
+  expert ROS value and risk to order plans. Small differences are close calls;
+  numerical settings remain separately versioned and league-scoped.
+- Apply meaningful-start and incremental-insurance checks to every additional
+  one-QB holding and protect outgoing QB bye coverage without assuming a future
+  waiver replacement is guaranteed. Preserve multi-QB formats.
+- Make retention proportional to actual drop consequences and replacement
+  distance; missing relevant evidence stays conservative. Keep injury status
+  and user/provider availability scenarios separate, sourced and immutable.
+- Surface plausible WATCH tradeoffs and ranking/projection disagreements,
+  expert weights and timestamps; evidence/legality failures cannot be promoted
+  by an objective or materiality setting.
+- Verify independent synthetic league cases, marginal third QBs, only/backup TE,
+  IR expiry, joint coverage, conflicting forecasts, unavailable ballots and
+  failed claims. Replay the two user-requested private examples locally; public
+  tests/docs contain synthetic evidence only.
+- Preserve Draft/Trade policy, league scoring, provider cache/budget/freshness,
+  and read-only behavior. Run full release gates and publish a separate PR.
+
+## WA-031 — Historical expert weighting and contributor reconciliation
+
+Status: implemented October 13, 2026; authorized recommendations 1-2.
+Evidence: `docs/COMPLETED_WAIVER_ASSISTANT_WA_031.md`.
+
+Goal: restore five-season, recency-weighted expert evidence for weekly and ROS
+Waiver analysis and explain provider contributor coverage before selecting it.
+
+Context: requirements sections 4-6; design Architecture, Data flow and
+Fail-closed boundaries. This supersedes WA-024's ROS panel selection method
+only; player signal weights and all acquisition/retention rules are unchanged.
+
+Acceptance:
+
+- Use five completed seasons with newest-to-oldest weights 30/26/21/15/8,
+  historical coverage adjustment and source concentration limits. Declare
+  weekly historical accuracy as a proxy for ROS, not measured ROS accuracy.
+- Select contributor coverage independently for each horizon and position;
+  combine selected individual ballots with their historical weights.
+- Preserve market ranks separately and never silently replace selected ranks
+  with unfiltered ECR when selected coverage is unavailable.
+- Audit every discovered contributor and its identity, historical coverage,
+  publication/freshness, missing ballot and selection-cutoff decisions.
+- Preserve scoped ranking/provider authority, request pacing and shared daily
+  budget, caches, unknown identities, missing players, deterministic replay,
+  Trade/Draft behavior and read-only recommendations.
+- Cover unequal historical weights, recent single-season outliers, fallback to
+  the next qualified published contributor, independent positional coverage,
+  absent/stale/partial ballots, no-ECR substitution and integration/replay.
+
 Updated: September 14, 2026 (America/Los_Angeles)
 Initial league: `league_alpha`
 

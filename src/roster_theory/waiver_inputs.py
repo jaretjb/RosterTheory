@@ -20,7 +20,7 @@ from roster_theory.waiver.evaluation import (
     PlayerValueInput,
     save_waiver_evaluation_inputs,
 )
-from roster_theory.waiver.expert_panel import WaiverRosPanelSelector
+from roster_theory.waiver.expert_selection import WaiverExpertPreparation
 from roster_theory.application.value_preparation import (
     ValueRefresh,
     ValueSnapshot,
@@ -461,6 +461,7 @@ def build_waiver_inputs(
     )
     if ww_config.scoring != format_evidence.scoring:
         raise ValueError("Waiver Wire configuration scoring does not match league format " + format_evidence.scoring)
+    expert_preparation = WaiverExpertPreparation(league_key)
     board = refresh_value_boards(
         league_key,
         refresh_snapshot=lambda _league_key, **_kwargs: _waiver_value_refresh(
@@ -477,7 +478,10 @@ def build_waiver_inputs(
         weekly_ranking_max_age=timedelta(hours=2),
         ros_ranking_max_age=timedelta(hours=2),
         ros_experts_max_age=timedelta(hours=2),
-        expert_pool_resolver=WaiverRosPanelSelector(league_key),
+        expert_pool_resolver=expert_preparation,
+        expert_input_resolver=expert_preparation.prepare_inputs,
+        selected_rank_aggregator=expert_preparation.aggregate_ros,
+        weekly_rank_aggregator=expert_preparation.aggregate_weekly,
         require_all_rostered_market_coverage=False,
     )
     snapshot = board.refresh.snapshot

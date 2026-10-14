@@ -203,7 +203,7 @@ class WaiverPriorityTests(unittest.TestCase):
             ("WEEKLY", "BELOW_RETENTION_WEEKLY_CUTOFF"),
             protected.missing_signals,
         )
-        self.assertTrue(protected.retention_protected)
+        self.assertFalse(protected.retention_protected)
         self.assertEqual(protected.composite_score, 50.0)
 
     def test_recent_performance_is_bounded_to_six_points(self):
