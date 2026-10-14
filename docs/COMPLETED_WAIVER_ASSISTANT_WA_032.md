@@ -71,9 +71,12 @@ used one new FantasyPros request; the final audits reused cached premium
 evidence. Current ownership was respected, including an already-filled IR
 slot, and a newly supported specialist change appeared in the other league.
 The fresh plans retained the agreed skill moves and specialist comparisons.
-All private names, scores, settings and replay artifacts remain ignored.
+Unchanged-build, GET-free offline replay independently verified each fresh
+result's exact evidence hash. All private names, scores, settings and replay
+artifacts remain ignored.
 
-The implementation is handed off on `codex/waiver-weekly-roster-plans`, stacked
+The implementation is handed off in [PR #85](https://github.com/jaretjb/RosterTheory/pull/85)
+on `codex/waiver-weekly-roster-plans`, stacked
 on the unmerged WA-031 dependency; neither branch is merged by this task.
 Bounded combinations do not establish a global optimum;
 forecast and historical-expert coverage limitations remain visible in reports.

@@ -2,7 +2,7 @@
 
 Updated: October 13, 2026 (America/Los_Angeles)
 
-WA-032 is implemented and validated for separate PR handoff on
+WA-032 is implemented and validated in [PR #85](https://github.com/jaretjb/RosterTheory/pull/85) on
 `codex/waiver-weekly-roster-plans`, stacked on the unmerged WA-031 dependency.
 Default search now returns ordered IR preparations, exact additions/drops and
 independent specialist swaps. Bounded combinations compare actual owned-player
@@ -15,7 +15,8 @@ fallbacks. `--objective ros` preserves the season-oriented view.
 All 1,087 tests, Ruff, context/privacy/package gates and isolated installation
 pass. The verified update is installed locally. Saved and fresh evidence was
 audited independently in both requested leagues; fresh publication revalidation
-passed. Plans reflect current ownership and disclose bounded search, close calls,
+passed. Unchanged-build offline replay verified both exact result hashes.
+Plans reflect current ownership and disclose bounded search, close calls,
 reactivation cost and coverage limitations. Detailed evidence:
 `docs/COMPLETED_WAIVER_ASSISTANT_WA_032.md`.
 
