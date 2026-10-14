@@ -1,5 +1,23 @@
 # Active milestone
 
+## WA-032 - Exact weekly roster plans (implemented and validated; PR handoff)
+
+Authorized by the user's October 13 request to implement the reviewed Waiver
+changes and return the exact weekly moves. Use WA-032 in
+`docs/WAIVER_ASSISTANT_TASKS.md`; load requirements sections 3-6 and 8 and design
+Architecture, Data flow and Fail-closed boundaries. Discover legal IR openings;
+compare actual owned-player coverage separately from replacement floors;
+produce ordered, bounded multi-move plans with explicit alternatives and
+failure branches. Add documented availability scenarios, meaningful QB use
+and outgoing bye coverage, roster-based materiality and retention decisions,
+and visible close-call alternatives. Preserve authoritative expert inputs,
+league-local scoring/policies, caches, freshness, provider budgets and read-only
+behavior. Validate synthetic edge cases and the two requested saved league
+examples independently; fresh provider audits follow completeness checks.
+Run focused/full tests, Ruff, context/privacy/package and clean-install gates.
+Record evidence in `docs/COMPLETED_WAIVER_ASSISTANT_WA_032.md`, update only Waiver
+status, and deliver a separate PR without merging or any Sleeper write.
+
 ## WA-031 - Restore historical expert weighting and contributor reconciliation (implemented and validated; PR handoff)
 
 Authorized by the user's October 13 request to implement recommendations 1-2.

@@ -333,8 +333,8 @@
         "roster_exclusions": []
       },
       "waiver_search": {
-        "semantic_hash": "6636759c6eb64f3fc3038d84d1a745a2658ad02ace582a56a1bb441ad570f9e8",
-        "bytes": 1586071,
+        "semantic_hash": "96b377dedfe1198125891b1cad853fdab99cebb8da1f4b2ea907e84cf9575386",
+        "bytes": 1585611,
         "schema_fields": [
           "schema_version",
           "evaluation_schema_version",
@@ -375,7 +375,8 @@
           "coverage_status",
           "budget_excluded_player_ids",
           "claim_branch_checks",
-          "weekly_streamers"
+          "weekly_streamers",
+          "weekly_plan"
         ],
         "coverage_status": "EXHAUSTIVE_ELIGIBLE",
         "warnings": [
@@ -873,7 +874,7 @@
             "selected_drop_player_id": "r1_14",
             "decision": {
               "calibration_mode": "CONTROLLED_FIXTURES",
-              "decision_path": "QB_INJURY_INSURANCE",
+              "decision_path": "INCOMPLETE_OR_NEAR_THRESHOLD",
               "elite_dst_exception": false,
               "gates": [
                 {
@@ -917,11 +918,11 @@
                   "threshold": 0.0
                 },
                 {
-                  "actual": true,
+                  "actual": false,
                   "comparison": "==",
                   "explanation": "A one-QB backup needs positive net hold value or materially superior injury insurance",
                   "name": "immediate_insurance_or_qb_hold_value",
-                  "passed": true,
+                  "passed": false,
                   "threshold": true
                 },
                 {
@@ -957,7 +958,7 @@
                   "threshold": 0.0
                 }
               ],
-              "label": "ACQUIRE",
+              "label": "WATCH",
               "policy_hash": "3e76206ac680045833b4fee5d059bcedded51a9f6e264549a27238cbad0c7a02",
               "policy_version": "reference_a-synthetic-v1",
               "priority_score": 0.0,
@@ -1318,8 +1319,8 @@
         "roster_exclusions": []
       },
       "waiver_search": {
-        "semantic_hash": "822c02cb2b0b3961d445abf8b74dce32507c4fb03dd4d7434477c06f2c7cf5ca",
-        "bytes": 1601001,
+        "semantic_hash": "33b34de43d76ed3ea4e3b5caae70452073ce4fb50076a01d3a5da32526c2d14a",
+        "bytes": 1600541,
         "schema_fields": [
           "schema_version",
           "evaluation_schema_version",
@@ -1360,7 +1361,8 @@
           "coverage_status",
           "budget_excluded_player_ids",
           "claim_branch_checks",
-          "weekly_streamers"
+          "weekly_streamers",
+          "weekly_plan"
         ],
         "coverage_status": "EXHAUSTIVE_ELIGIBLE",
         "warnings": [
@@ -1858,7 +1860,7 @@
             "selected_drop_player_id": "r1_14",
             "decision": {
               "calibration_mode": "CONTROLLED_FIXTURES",
-              "decision_path": "QB_INJURY_INSURANCE",
+              "decision_path": "INCOMPLETE_OR_NEAR_THRESHOLD",
               "elite_dst_exception": false,
               "gates": [
                 {
@@ -1902,11 +1904,11 @@
                   "threshold": 0.0
                 },
                 {
-                  "actual": true,
+                  "actual": false,
                   "comparison": "==",
                   "explanation": "A one-QB backup needs positive net hold value or materially superior injury insurance",
                   "name": "immediate_insurance_or_qb_hold_value",
-                  "passed": true,
+                  "passed": false,
                   "threshold": true
                 },
                 {
@@ -1942,7 +1944,7 @@
                   "threshold": 0.0
                 }
               ],
-              "label": "ACQUIRE",
+              "label": "WATCH",
               "policy_hash": "009f48b2aac94ecc391e1c316145e21a5d637b87162eb41b39a88b2938fc6a83",
               "policy_version": "reference_b-synthetic-v1",
               "priority_score": 0.0,

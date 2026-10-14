@@ -634,6 +634,9 @@ def command_waiver_search(args: argparse.Namespace) -> None:
                 player_cache_path=args.player_cache,
                 policy_path=args.policy,
                 config_path=_config_path(args),
+                objective=getattr(args, 'objective', 'weekly'),
+                planning_policy_path=getattr(args, 'plan_policy', None),
+                availability_path=getattr(args, 'availability', None),
             )
     except (RosterTheoryError, SleeperError, KeyError, ValueError) as exc:
         _print_product_failure("WAIVER ASSISTANT search", args, exc)
@@ -653,7 +656,7 @@ def command_waiver_search(args: argparse.Namespace) -> None:
                     "INCOMPLETE"
                     if not waiver_readiness(search)['inputs_complete']
                     else "BOUNDED"
-                    if search.budget_excluded_player_ids
+                    if search.budget_excluded_player_ids or getattr(search, 'weekly_plan', None) is not None
                     else "READY"
                 ),
                 result=waiver_search_action_summary(result),
@@ -2606,6 +2609,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Prepare current evidence and produce a read-only Waiver report",
     )
     waiver_search.add_argument("league")
+    waiver_search.add_argument('--objective', choices=('weekly', 'ros'), default='weekly',
+        help='Default: an ordered weekly roster plan; ros retains season-oriented single-pair analysis')
+    waiver_search.add_argument('--plan-policy', help='League-scoped weekly planning limits and materiality JSON')
+    waiver_search.add_argument('--availability', help='Sourced, expiring current-week availability scenario JSON')
     waiver_search.add_argument(
         "--inputs",
         help="Use an existing immutable input bundle instead of preparing automatically",
