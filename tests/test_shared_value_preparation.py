@@ -66,6 +66,7 @@ class SharedValuePreparationTests(unittest.TestCase):
             self.assertIs(adapt.call_args.args[0], refresh)
         self.assertEqual(shared.call_args.kwargs["output_root"], "data/exports/waiver")
         self.assertEqual(shared.call_args.kwargs["snapshot_filename"], "value_snapshot.json")
+        self.assertTrue(shared.call_args.kwargs['allow_partial_expert_panels'])
 
     def test_waiver_adapts_its_own_snapshot_without_trade_workflow(self):
         active = SimpleNamespace(player_id="rb1", positions=("RB",), active=True, nfl_team="SEA")

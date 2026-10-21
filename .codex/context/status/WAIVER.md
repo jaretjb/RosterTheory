@@ -1,6 +1,17 @@
 # Waiver Assistant current status
 
-Updated: October 13, 2026 (America/Los_Angeles)
+Updated: October 20, 2026 (America/Los_Angeles)
+
+WA-032 scoped-completeness amendment repairs directory-wide QB vetoes in both
+single-pair policy and changed-roster planning. Baselines use available active
+weekly forecasts independently of ownership ranks and other weeks' gaps; all
+omissions remain audited. Qualified reserve experts can supply missing player
+ballots with historical weights and source limits. Position-specific panel
+shortages are local to Waiver and do not change Draft/Trade preparation defaults.
+Full suite: 1,092 tests pass; Ruff, repository/package privacy and clean install
+pass. Fresh read-only validation confirms the reported QB's completeness gate
+passes; remaining WATCH is a value-policy disagreement, not missing-directory
+evidence. Detail: `docs/COMPLETED_WAIVER_SCOPED_COMPLETENESS.md`.
 
 WA-032 is implemented and validated in [PR #85](https://github.com/jaretjb/RosterTheory/pull/85) on
 `codex/waiver-weekly-roster-plans`, stacked on the unmerged WA-031 dependency.

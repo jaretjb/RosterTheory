@@ -1109,6 +1109,7 @@ def refresh_value_boards(
     expert_input_resolver: Callable[..., ValueInputs] | None = None,
     selected_rank_aggregator: Callable[..., tuple[SelectedRank, ...]] | None = None,
     weekly_rank_aggregator: Callable[..., tuple[RankObservation, ...]] | None = None,
+    allow_partial_expert_panels: bool = False,
 ) -> BoardRefreshResult:
     # During Week 1 the final Draft boards own long-term value. The current
     # weekly feed is still fetched below, but only as a separate signal.
@@ -1256,7 +1257,7 @@ def refresh_value_boards(
         }
         selected_ros_complete = all(count >= 2 for count in contributor_counts.values())
         market_ros_complete = _ros_market_is_complete(inputs.ros_rankings)
-        if selected_rank_aggregator is not None and not selected_ros_complete:
+        if selected_rank_aggregator is not None and not selected_ros_complete and not allow_partial_expert_panels:
             raise CoverageIncomplete("Selected ROS expert ballots do not cover every required position "
                                      "after freshness/news checks; market or Draft ranks cannot substitute")
     stage = choose_season_stage(
@@ -1266,6 +1267,13 @@ def refresh_value_boards(
         market_ros_fresh=market_ros_complete,
         market_ros_complete=market_ros_complete,
     )
+    if (allow_partial_expert_panels and snapshot.manifest.current_week >= 2
+            and not selected_ros_complete and market_ros_complete
+            and any(count >= 2 for count in contributor_counts.values())):
+        stage = SeasonStageDecision(
+            mode='ROS', selected_source='available fresh selected-expert ROS panels',
+            market_source='fresh complete market ROS ECR', usable=True, review_required=True,
+            reasons=('Partial selected-expert position coverage; unsupported player ranks stay unavailable',))
     if not stage.usable:
         raise CoverageIncomplete("; ".join(stage.reasons))
 

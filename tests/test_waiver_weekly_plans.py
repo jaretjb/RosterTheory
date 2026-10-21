@@ -64,6 +64,24 @@ def plan(data, **kwargs):
 
 
 class WeeklyPlanTests(unittest.TestCase):
+    def test_directory_only_qb_does_not_prevent_bye_coverage_plan(self):
+        from roster_theory.waiver.snapshot import PlayerAcquisition
+        data = list(fixture(ir=False, extra_qb=False))
+        s, weeks, projections, vals, policy, legality, news, _ = data
+        # The owned QB is on bye now. An unforecast backup must not veto
+        # acquiring the usable QB to fill the actual starting vacancy.
+        weeks = (replace(weeks[0], bye_teams=('QTEAM',)), *weeks[1:])
+        missing = Player('directory_only', 'Unforecast Backup', ('QB',), nfl_team='XXX', active=True)
+        s = replace(s, players=(*s.players, missing), acquisitions=(*s.acquisitions,
+            PlayerAcquisition('directory_only', 'FREE_AGENT', None, (), ('fixture',))))
+        evaluations = (apply_waiver_policy(evaluate_waiver(s, add_player_id='marginal',
+            weeks=weeks, projections=projections, values=vals, drop_legality=legality,
+            news_fresh=news, now=NOW), policy),)
+        result = plan((s, weeks, projections, vals, policy, legality, news, evaluations))
+        self.assertTrue(any(step.player_id == 'marginal' for step in result.selected.steps))
+        self.assertFalse(any(slot.startswith('QB:') for slot, _, _ in result.baseline.starters))
+        self.assertTrue(any(slot.startswith('QB:') for slot, _, _ in result.selected.current.starters))
+
     def test_cli_defaults_to_weekly_and_exposes_separate_ros_mode(self):
         parser=build_parser()
         self.assertEqual(parser.parse_args(['waiver','search','home_league']).objective,'weekly')

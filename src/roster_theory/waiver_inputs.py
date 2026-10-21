@@ -481,6 +481,7 @@ def build_waiver_inputs(
         expert_pool_resolver=expert_preparation,
         expert_input_resolver=expert_preparation.prepare_inputs,
         selected_rank_aggregator=expert_preparation.aggregate_ros,
+        allow_partial_expert_panels=True,
         weekly_rank_aggregator=expert_preparation.aggregate_weekly,
         require_all_rostered_market_coverage=False,
     )

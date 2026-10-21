@@ -126,11 +126,12 @@ def select_position_panel(*, experts, scores, published_ids, position, now,
                      "members": [asdict(member) for member in members], "candidates": audit}
 
 
-def strict_selected_ranks(market, ballots, weights, *, horizon, minimum_size=MINIMUM_SIZE):
+def strict_selected_ranks(market, ballots, weights, *, horizon, minimum_size=MINIMUM_SIZE,
+                          fallback_weights=None, sources=None):
     """Use only selected ballots; missing players never receive a market anchor."""
     grouped = defaultdict(dict)
     for row in ballots:
-        weight = weights.get(row.position, {}).get(str(row.expert_id))
+        weight = (fallback_weights or weights).get(row.position, {}).get(str(row.expert_id))
         rank = row.position_rank
         if (weight and row.horizon == horizon and isinstance(rank, (int, float))
                 and not isinstance(rank, bool) and isfinite(rank) and rank > 0):
@@ -147,21 +148,38 @@ def strict_selected_ranks(market, ballots, weights, *, horizon, minimum_size=MIN
             if row.position != position:
                 continue
             ranks = grouped[(position, row.player_id)]
+            player_panel = panel
+            if fallback_weights:
+                # Choose the best qualified available contributors for this
+                # player, retaining source concentration and historical weights.
+                chosen, counts = {}, defaultdict(int)
+                pool = fallback_weights.get(position, {})
+                for expert_id in sorted(ranks, key=lambda e: (-pool[e], e)):
+                    source = (sources or {}).get((position, expert_id), expert_id).casefold()
+                    if counts[source] >= MAXIMUM_SOURCE_COUNT:
+                        continue
+                    chosen[expert_id] = pool[expert_id]
+                    counts[source] += 1
+                    if len(chosen) == PREFERRED_SIZE:
+                        break
+                total = sum(chosen.values())
+                player_panel = {e: weight / total for e, weight in chosen.items()} if total else {}
+                ranks = {e: ranks[e] for e in player_panel}
             if len(ranks) < minimum_size:
                 continue
-            present = sum(panel[expert_id] for expert_id in ranks)
-            average = sum(panel[expert_id] * rank for expert_id, rank in ranks.items()) / present
-            observations.append((average, row.player_id, row, ranks, present))
-        for ordinal, (average, player_id, row, ranks, present) in enumerate(
+            present = sum(player_panel[expert_id] for expert_id in ranks)
+            average = sum(player_panel[expert_id] * rank for expert_id, rank in ranks.items()) / present
+            observations.append((average, row.player_id, row, ranks, present, player_panel))
+        for ordinal, (average, player_id, row, ranks, present, player_panel) in enumerate(
                 sorted(observations, key=lambda item: (item[0], item[1])), 1):
             result.append(SelectedRank(player_id=player_id, position=position,
                 raw_position_rank=average, raw_overall_rank=None,
                 final_position_rank=ordinal, final_overall_rank=None,
                 market_position_rank=int(row.position_rank), market_overall_rank=None,
-                dispersion=(sum(panel[e] * (rank - average) ** 2 for e, rank in ranks.items())
+                dispersion=(sum(player_panel[e] * (rank - average) ** 2 for e, rank in ranks.items())
                             / present) ** 0.5,
                 contributor_weight=present,
-                contributions=tuple((e, ranks[e], panel[e]) for e in sorted(ranks)),
+                contributions=tuple((e, ranks[e], player_panel[e]) for e in sorted(ranks)),
                 omissions=tuple((e, "missing_player_ballot") for e in sorted(panel) if e not in ranks),
                 shrinkage_to_ecr=0.0))
     return tuple(sorted(result, key=lambda row: row.player_id))
@@ -334,8 +352,10 @@ class WaiverExpertPreparation:
                     advertised_ids=advertised, failure_reasons=failures)
                 self.panels[(horizon, position)] = members
                 self.evidence["panels"][f"{horizon}:{position}"] = evidence
-                selected_ids = {m.expert_id for m in members}
-                selected_ballots = tuple(row for row in ballots if str(row.expert_id) in selected_ids)
+                eligible_ids = {row['expert_id'] for row in evidence['candidates']
+                    if row['reason'] in {'historical_accuracy_selection', 'below_selection_cutoff',
+                                         'source_concentration_limit', 'eligible'}}
+                selected_ballots = tuple(row for row in ballots if str(row.expert_id) in eligible_ids)
                 freshness = filter_ros_ballots(selected_ballots, effective_updates, inputs.news,
                     now=now, maximum_age=timedelta(days=14) if horizon == "ROS" else timedelta(days=7),
                     expected_horizon=horizon)
@@ -355,8 +375,9 @@ class WaiverExpertPreparation:
                 if len(self.panels.get((horizon, position), ())) < MINIMUM_SIZE:
                     audit_path = Path("data/exports/waiver") / self.league_key / "expert_selection_unavailable.json"
                     atomic_write_json(audit_path, self.evidence)
-                    raise CoverageIncomplete(f"{horizon} {position} has fewer than {MINIMUM_SIZE} historically "
-                        f"qualified published experts; audit: {audit_path}")
+                    self.evidence.setdefault('limitations', []).append(
+                        f"{horizon} {position} has fewer than {MINIMUM_SIZE} qualified published experts; "
+                        f"affected player ranks unavailable; other panels retained; audit: {audit_path}")
         history_stamp = {"name": "Waiver historical weekly accuracy", "captured_at": now.isoformat(),
                          "payload_hash": history_evidence["payload_hash"], "maximum_age_seconds": 86400}
         paid = sum(not call.fresh_cache_hit for call in self.calls)
@@ -372,6 +393,17 @@ class WaiverExpertPreparation:
         horizon_scope = "ROS" if self.current_week is None or self.current_week >= 2 else "WEEKLY"
         union = {m.expert_id: m for (horizon, _), members in self.panels.items()
                  if horizon == horizon_scope for m in members}
+        # The shared adapter uses this union to retain fresh ballot identities,
+        # not to choose position weights. Include eligible reserve contributors
+        # so per-player fallback is not filtered out before aggregation.
+        for key, panel in self.evidence.get('panels', {}).items():
+            if not key.startswith(horizon_scope + ':'):
+                continue
+            for row in panel['candidates']:
+                if row['reason'] in {'historical_accuracy_selection', 'below_selection_cutoff',
+                                     'source_concentration_limit', 'eligible'}:
+                    union.setdefault(row['expert_id'], ExpertPoolMember(row['expert_id'],
+                        row['expert_name'], row['source_name'], 0.0))
         total = sum(self.scores[m.expert_id]["score"] for m in union.values())
         members = tuple(replace(m, weight=self.scores[m.expert_id]["score"] / total)
                         for m in union.values())
@@ -382,7 +414,11 @@ class WaiverExpertPreparation:
     def aggregate_ros(self, market, ballots, weights, *, horizon):
         position_weights = {p: {m.expert_id: m.weight for m in members}
                             for (h, p), members in self.panels.items() if h == "ROS"}
-        selected = strict_selected_ranks(market, ballots, position_weights, horizon=horizon)
+        fallback, sources = self._available_weights('ROS')
+        selected = strict_selected_ranks(market, ballots, position_weights, horizon=horizon,
+                                        fallback_weights=fallback, sources=sources)
+        self.evidence['ros_player_contributors'] = {
+            row.player_id: list(row.contributions) for row in selected}
         self.evidence["ros_player_exclusions"] = sorted(
             {row.player_id for row in market} - {row.player_id for row in selected})
         return selected
@@ -393,7 +429,11 @@ class WaiverExpertPreparation:
         # Shared preparation retags canonical weekly observations WEEKLY-PROXY;
         # this is still the active-week ballot, never a ROS ranking.
         horizon = market[0].horizon if market else "WEEKLY"
-        selected = strict_selected_ranks(market, ballots, weights, horizon=horizon)
+        fallback, sources = self._available_weights('WEEKLY')
+        selected = strict_selected_ranks(market, ballots, weights, horizon=horizon,
+                                        fallback_weights=fallback, sources=sources)
+        self.evidence['weekly_player_contributors'] = {
+            row.player_id: list(row.contributions) for row in selected}
         market_by_id = {row.player_id: row for row in market}
         self.evidence["weekly_player_exclusions"] = sorted(set(market_by_id) - {r.player_id for r in selected})
         return tuple(replace(market_by_id[row.player_id], position_rank=row.final_position_rank,
@@ -401,3 +441,17 @@ class WaiverExpertPreparation:
                              rank_min=min(rank for _, rank, _ in row.contributions),
                              rank_max=max(rank for _, rank, _ in row.contributions), rank_std=row.dispersion,
                              board_source="historical_selected_experts") for row in selected)
+
+    def _available_weights(self, horizon):
+        weights, sources = {}, {}
+        for key, panel in self.evidence.get('panels', {}).items():
+            if not key.startswith(horizon + ':'):
+                continue
+            position = panel['position']
+            for row in panel['candidates']:
+                if row['reason'] not in {'historical_accuracy_selection', 'below_selection_cutoff',
+                                         'source_concentration_limit', 'eligible'}:
+                    continue
+                weights.setdefault(position, {})[row['expert_id']] = row['score']
+                sources[(position, row['expert_id'])] = row['source_name']
+        return weights, sources

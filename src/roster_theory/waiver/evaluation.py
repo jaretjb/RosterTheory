@@ -993,6 +993,13 @@ def _one_qb_format(roster_positions: Sequence[str]) -> bool:
     return normalized.count("QB") == 1 and "SUPER_FLEX" not in normalized
 
 
+def qb_streaming_coverage_usable(holding: QuarterbackHoldingEvidence) -> bool:
+    """Omissions are local; never treat an empty weekly pool as an observed zero."""
+    return not holding.applicable or not holding.streaming_omission_ids or bool(holding.weekly_streaming_baselines) and all(
+        row.candidate_ids for row in holding.weekly_streaming_baselines
+    )
+
+
 def _not_applicable_qb_holding(
     *,
     reason: str,
@@ -1082,18 +1089,23 @@ def _quarterback_holding_evidence(
     )
     streamer_ids: list[str] = []
     omission_ids: list[str] = []
+    available_by_week: dict[int, list[str]] = {week.week: [] for week in context.weeks}
     for player_id in unowned_qb_ids:
-        value = value_map.get(player_id)
-        complete = value is not None and value_coverage_is_usable(value.coverage_status)
+        complete = True
         for week in context.weeks:
             projection = projection_by_key.get((player_id, week.week))
             cell = matrix.cell(player_id, week.week)
-            complete = complete and projection is not None and cell is not None and cell.points is not None
-            if projection is not None:
-                complete = complete and projection_is_usable(
+            usable = (projection is not None and cell is not None and cell.points is not None
+                and projection_is_usable(
                     projection, current_week=context.current_week, allow_estimate=True,
-                )
-        (streamer_ids if complete else omission_ids).append(player_id)
+                ))
+            if usable and cell.availability == 'ACTIVE':
+                available_by_week[week.week].append(player_id)
+            complete = complete and usable
+        if any(player_id in ids for ids in available_by_week.values()):
+            streamer_ids.append(player_id)
+        if not complete:
+            omission_ids.append(player_id)
 
     weekly_baselines: list[WeeklyStreamingBaseline] = []
     baseline_by_week: dict[int, float] = {}
@@ -1102,7 +1114,7 @@ def _quarterback_holding_evidence(
             sorted(
                 (
                     (float(matrix.cell(player_id, week.week).points), player_id)
-                    for player_id in streamer_ids
+                    for player_id in available_by_week[week.week]
                 ),
                 key=lambda row: (-row[0], row[1]),
             )
@@ -2028,8 +2040,9 @@ def evaluate_waiver(
     )
     if holding_omissions:
         warnings.append(
-            "QB streaming baseline omitted incomplete candidates: "
-            + ", ".join(holding_omissions)
+            f"QB streaming baseline uses available weekly forecasts; {len(holding_omissions)} "
+            "candidates have missing weeks (full IDs retained in holding evidence): "
+            + ", ".join(holding_omissions[:8])
         )
     if any(candidate.holding.applicable for candidate in ordered):
         warnings.append(

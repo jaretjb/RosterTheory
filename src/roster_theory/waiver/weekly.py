@@ -21,7 +21,7 @@ from roster_theory.inseason.evaluation import (
 )
 from roster_theory.waiver.policy import evaluation_options_for_policy
 from roster_theory.providers.sleeper_membership import reserve_eligibility
-from roster_theory.waiver.evaluation import value_coverage_is_usable, _one_qb_format
+from roster_theory.waiver.evaluation import value_coverage_is_usable, _one_qb_format, qb_streaming_coverage_usable
 from roster_theory.waiver.plans import hypothetical_claim
 from roster_theory.waiver.priority import league_replacement_ranks
 from roster_theory.waiver.snapshot import ACQUIRABLE_STATES, _capacity
@@ -477,7 +477,7 @@ Every limit and omitted candidate survives in the saved result.
                         checks.append('CHANGED_ROSTER_EVIDENCE_UNAVAILABLE')
                         break
                     if (e.add_position == 'QB' and c.holding.applicable
-                            and (c.holding.streaming_omission_ids or (
+                            and (not qb_streaming_coverage_usable(c.holding) or (
                                 c.holding.net_hold_value < policy.qb_net_hold_value_floor
                                 and not (c.holding.injury_insurance_value >= policy.qb_insurance_advantage_floor
                                     and c.holding.bench_slot_opportunity_cost <= policy.qb_maximum_bench_slot_opportunity_cost)))):
