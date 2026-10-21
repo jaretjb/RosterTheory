@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from roster_theory.core.decision_coverage import lineup_dependency_positions
+from roster_theory.waiver.coverage import CoverageRepair, required_coverage
 
 import json
 from dataclasses import asdict, dataclass, replace
@@ -417,6 +418,7 @@ class DropCandidateEvaluation:
     projection_inputs_complete: bool = True
     fixed_specialist_gap_independent: bool = False
     current_week_projection_complete: bool = False
+    coverage_repair: CoverageRepair | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1838,6 +1840,8 @@ def evaluate_waiver(
                     else ()
                 ),
                 current_week_delta=current_row.delta,
+                coverage_repair=required_coverage(snapshot, context, matrix, value_map,
+                    supported_roster | specialist_fallback_roster, add_player.player_id, drop_id),
                 holding=holding,
                 contingency=contingency,
                 emerging_upside=emerging_upside,

@@ -346,6 +346,13 @@ close calls, later bye vacancies and the need to make room when an IR player
 returns. Its materiality settings use controlled fixtures rather than measured
 win probabilities.
 
+Confirmed QB and kicker vacancies use a required-coverage path with protected
+drops. Actual owned-lineup gains stay separate from assumed waiver replacements
+and ROS tradeoffs. A kicker's known bye can use fresh target rankings and
+league-scored production without inventing an incumbent rank or complete point
+forecast. Failed-claim branches exclude unavailable targets and preserve moves
+that already succeeded, including specialist replacements.
+
 Use `--objective ros` for the season-oriented single-pair report. A private
 `--plan-policy PATH` can override the separately versioned, league-scoped planning
 limits. `--availability PATH` supplies a documented, expiring current-week

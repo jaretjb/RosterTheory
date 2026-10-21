@@ -309,6 +309,15 @@ Every limit and omitted candidate survives in the saved result.
                                - sum(value_map[pid].selected_value for pid in drops), 3)
         market_delta = round(sum(value_map[pid].market_value for pid in adds)
                              - sum(value_map[pid].market_value for pid in drops), 3)
+        repair_steps = [step for step in steps if step.kind == 'ADD' and any(
+            c.coverage_repair is not None and c.coverage_repair.safe_drop
+            for c in by_add[step.player_id].candidates if c.drop_player_id == step.drop_player_id)]
+        # Charge optional moves normally. A coverage repair must not provide
+        # a blanket exemption for an unrelated second acquisition.
+        repair_selected_loss = sum(min(0, value_map[s.player_id].selected_value
+            - (value_map[s.drop_player_id].selected_value if s.drop_player_id else 0)) for s in repair_steps)
+        repair_market_loss = sum(min(0, value_map[s.player_id].market_value
+            - (value_map[s.drop_player_id].market_value if s.drop_player_id else 0)) for s in repair_steps)
         gap_weeks = tuple((after.week, after.required - after.filled) for before, after in
                          zip(before_weeks, after_weeks) if after.filled < before.filled)
         if current.filled < baseline.filled:
@@ -321,9 +330,9 @@ Every limit and omitted candidate survives in the saved result.
             reasons.append('CURRENT_POINT_LOSS')
         if season_delta < -planning_policy.maximum_season_loss:
             reasons.append('SEASON_LOSS')
-        if selected_delta < -planning_policy.maximum_selected_value_loss:
+        if selected_delta-repair_selected_loss < -planning_policy.maximum_selected_value_loss:
             reasons.append('ROS_OWNERSHIP_LOSS')
-        if market_delta < -planning_policy.maximum_market_value_loss:
+        if market_delta-repair_market_loss < -planning_policy.maximum_market_value_loss:
             reasons.append('CONSENSUS_ROS_LOSS')
         if outgoing_qb_gap(drops, active):
             reasons.append('OUTGOING_QB_COVERAGE')
@@ -477,6 +486,7 @@ Every limit and omitted candidate survives in the saved result.
                         checks.append('CHANGED_ROSTER_EVIDENCE_UNAVAILABLE')
                         break
                     if (e.add_position == 'QB' and c.holding.applicable
+                            and not (c.coverage_repair and c.coverage_repair.safe_drop)
                             and (not qb_streaming_coverage_usable(c.holding) or (
                                 c.holding.net_hold_value < policy.qb_net_hold_value_floor
                                 and not (c.holding.injury_insurance_value >= policy.qb_insurance_advantage_floor
@@ -577,7 +587,7 @@ Every limit and omitted candidate survives in the saved result.
                 branch = replace(branch, teams=tuple(bt if t.roster_id == team.roster_id else t for t in branch.teams),
                     roster_capacity=tuple(_capacity(branch.league, bt, branch.players) if c.roster_id == team.roster_id else c for c in branch.roster_capacity))
             else:
-                if SKILL.intersection(players[step.player_id].positions):
+                if SKILL.union({'K','DST','DEF'}).intersection(players[step.player_id].positions):
                     failed = replace(branch, acquisitions=tuple(replace(a, state='LOCKED',
                         evidence=(*a.evidence,'Conditional failed claim; excluded from this branch'))
                         if a.player_id == step.player_id else a for a in branch.acquisitions))
@@ -586,6 +596,7 @@ Every limit and omitted candidate survives in the saved result.
                         drop_legality=drop_legality, news_fresh=news_fresh, input_hash=input_hash,
                         exact_pair=exact_pair, include_failure_branches=False)
                     failure_branches.append({'failed_request':index, 'failed_player_id':step.player_id,
+                        'excluded_player_ids': (step.player_id,),
                         'successful_prerequisites':tuple(prerequisites), 'replacement_plan':alternate.selected,
                         'coverage':alternate.coverage})
                 branch = hypothetical_claim(branch, step.player_id, step.drop_player_id)

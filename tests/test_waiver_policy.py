@@ -960,6 +960,8 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         target_season_rank=8,
         policy_path=POLICY_PATH,
         future_projection_status="complete",
+        incumbent_bye=False,
+        missing_forecasts=False,
     ):
         snapshot = waiver_snapshot()
         policy = load_waiver_policy(policy_path)
@@ -1034,6 +1036,13 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
             if row.player_id in {incumbent_id, add_id} and row.week > 1 else row
             for row in projection_rows
         )
+        if missing_forecasts:
+            projection_rows = tuple(replace(row,
+                coverage_status='scoring_incomplete_v1:missing_statistic=xpm')
+                if row.player_id in {incumbent_id, add_id} else row for row in projection_rows)
+        if incumbent_bye:
+            projection_rows = tuple(replace(row, league_points=0.0, coverage_status='verified_bye_zero')
+                if row.player_id == incumbent_id and row.week == 1 else row for row in projection_rows)
         value_rows = (
             *values(),
             PlayerValueInput(
@@ -1041,7 +1050,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 0.0,
                 0.0,
                 24.0,
-                current_week_position_rank=10,
+                current_week_position_rank=None if incumbent_bye else 10,
                 rest_of_season_position_rank=10,
                 season_points=incumbent_season_points,
                 season_sample_size=8,
