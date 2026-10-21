@@ -333,8 +333,8 @@
         "roster_exclusions": []
       },
       "waiver_search": {
-        "semantic_hash": "96b377dedfe1198125891b1cad853fdab99cebb8da1f4b2ea907e84cf9575386",
-        "bytes": 1585611,
+        "semantic_hash": "c8fecebabed6436437785ce6889270664144ac1d45baa4d3689f57346bf93a74",
+        "bytes": 1585639,
         "schema_fields": [
           "schema_version",
           "evaluation_schema_version",
@@ -562,7 +562,7 @@
                 {
                   "actual": true,
                   "comparison": "==",
-                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "explanation": "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
                   "name": "complete_required_evidence",
                   "passed": true,
                   "threshold": true
@@ -668,7 +668,7 @@
                 {
                   "actual": true,
                   "comparison": "==",
-                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "explanation": "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
                   "name": "complete_required_evidence",
                   "passed": true,
                   "threshold": true
@@ -774,7 +774,7 @@
                 {
                   "actual": true,
                   "comparison": "==",
-                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "explanation": "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
                   "name": "complete_required_evidence",
                   "passed": true,
                   "threshold": true
@@ -880,7 +880,7 @@
                 {
                   "actual": true,
                   "comparison": "==",
-                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "explanation": "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
                   "name": "complete_required_evidence",
                   "passed": true,
                   "threshold": true
@@ -1319,8 +1319,8 @@
         "roster_exclusions": []
       },
       "waiver_search": {
-        "semantic_hash": "33b34de43d76ed3ea4e3b5caae70452073ce4fb50076a01d3a5da32526c2d14a",
-        "bytes": 1600541,
+        "semantic_hash": "f27369e93425a4692ae7203db1ec600f995c9cedd1dd138802277cb1cc2659d5",
+        "bytes": 1600569,
         "schema_fields": [
           "schema_version",
           "evaluation_schema_version",
@@ -1386,7 +1386,7 @@
                 {
                   "actual": true,
                   "comparison": "==",
-                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "explanation": "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
                   "name": "complete_required_evidence",
                   "passed": true,
                   "threshold": true
@@ -1492,7 +1492,7 @@
                 {
                   "actual": true,
                   "comparison": "==",
-                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "explanation": "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
                   "name": "complete_required_evidence",
                   "passed": true,
                   "threshold": true
@@ -1760,7 +1760,7 @@
                 {
                   "actual": true,
                   "comparison": "==",
-                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "explanation": "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
                   "name": "complete_required_evidence",
                   "passed": true,
                   "threshold": true
@@ -1866,7 +1866,7 @@
                 {
                   "actual": true,
                   "comparison": "==",
-                  "explanation": "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+                  "explanation": "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
                   "name": "complete_required_evidence",
                   "passed": true,
                   "threshold": true
