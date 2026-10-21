@@ -367,6 +367,15 @@ The saved audit records each contributor's history, update dates, publication,
 weights, and exclusion reasons. A contributor advertised by FantasyPros but
 missing from the embedded ballots is checked with an individual expert request
 before selection. Missing or unhonored expert filters remain explicit.
+Missing evidence is scoped to the affected player, position, horizon, or week.
+Unavailable preferred experts are replaced by the next qualified published
+contributors; a missing player ballot can use the next qualified contributors
+who ranked that player, with historical weights and source limits preserved.
+Actual contributors and omissions remain in the audit. Unranked directory-only
+quarterbacks do not invalidate a usable weekly streaming pool. An unknown
+weekly pool or unsupported acquisition remains explicitly limited; missing ranks,
+recovery dates and forecasts are never invented.
+
 Historical accuracy is read from
 `data/manual/fantasypros/inseason_accuracy_FIRSTYEAR_LASTYEAR.csv`; an unavailable
 or invalid file triggers a cached, budgeted historical API refresh. Responses

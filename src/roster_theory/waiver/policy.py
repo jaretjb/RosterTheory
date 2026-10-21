@@ -17,6 +17,7 @@ from roster_theory.waiver.evaluation import (
     WaiverDecisionGate,
     WaiverEvaluation,
     WaiverEvaluationOptions,
+    qb_streaming_coverage_usable,
 )
 from roster_theory.waiver.snapshot import ACQUIRABLE_STATES, AcquisitionState
 from roster_theory.waiver.priority import weekly_rank_eligible
@@ -1020,7 +1021,7 @@ def _assess_composite_waiver_value_candidate(
     evidence_complete = (
         evaluation.value_inputs_complete
         and evaluation.projection_inputs_complete
-        and (not holding.applicable or not holding.streaming_omission_ids)
+        and qb_streaming_coverage_usable(holding)
     )
     hold_passed = not holding.applicable or (
         holding.net_hold_value >= policy.qb_net_hold_value_floor
@@ -1033,7 +1034,7 @@ def _assess_composite_waiver_value_candidate(
     gates = (
         _gate(
             "complete_required_evidence", evidence_complete, "==", True, evidence_complete,
-            "Required values, projections, and any one-QB streamer pool must be complete",
+            "The add/drop evidence and available weekly QB baselines must be usable; unrelated omissions do not veto the move",
         ),
         _gate(
             "current_week_delta", selected.current_week_delta, ">=",
@@ -1234,7 +1235,7 @@ def _assess_candidate(
         evaluation.material_news_fresh
         and evaluation.value_inputs_complete
         and evaluation.projection_inputs_complete
-        and (not holding.applicable or not holding.streaming_omission_ids)
+        and qb_streaming_coverage_usable(holding)
     )
     gates = (
         _gate(
@@ -1243,7 +1244,7 @@ def _assess_candidate(
             "==",
             True,
             evidence_complete,
-            "Ranks, projections, material-news freshness, and any one-QB streamer pool must be complete",
+            "The add/drop ranks, projections, news freshness, and available weekly QB baselines must be usable",
         ),
         _gate(
             "player_currently_active",

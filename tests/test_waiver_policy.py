@@ -240,6 +240,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         policy_path=POLICY_PATH,
         add_name="Candidate Quarterback",
         drop_name_override=None,
+        missing_streamer_weeks=(),
     ):
         snapshot = waiver_snapshot(add_name=add_name)
         if drop_name_override is not None:
@@ -313,6 +314,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
                 **point_overrides,
             }.items()
             for week_index, week in enumerate(week_rows)
+            if (player_id, week.week) not in missing_streamer_weeks
         )
         if value_rows is None:
             value_rows = tuple(
@@ -770,7 +772,7 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         self.assertEqual(holding.discretionary_start_weeks, ())
         self.assertEqual(holding.discretionary_start_value, 0.0)
 
-    def test_incomplete_streamer_is_visible_and_blocks_affirmative_hold(self):
+    def test_streaming_forecast_does_not_require_ownership_rank(self):
         value_rows = (
             *values(),
             PlayerValueInput(
@@ -794,11 +796,42 @@ class WaiverDecisionPolicyTests(unittest.TestCase):
         )
         holding = result.candidates[0].holding
         self.assertNotIn(result.decision_label, {"ADD NOW", "CLAIM", "ACQUIRE"})
-        self.assertEqual(holding.streaming_candidate_ids, ())
-        self.assertEqual(holding.streaming_omission_ids, ("streamer_1",))
-        self.assertTrue(
-            any("streamer_1" in warning for warning in result.warnings)
-        )
+        self.assertEqual(holding.streaming_candidate_ids, ("streamer_1",))
+        self.assertEqual(holding.streaming_omission_ids, ())
+
+    def test_missing_directory_qbs_do_not_veto_usable_streaming_pool(self):
+        from roster_theory.waiver.evaluation import qb_streaming_coverage_usable
+        result = self.evaluate_qb_hold(add_points=25.0, starter_points=20.0,
+                                       streamer_points=(17.0, 15.0))
+        holding = result.candidates[0].holding
+        omitted = replace(holding, streaming_omission_ids=('unranked_backup', 'injured_qb'))
+        self.assertTrue(qb_streaming_coverage_usable(omitted))
+        candidate = replace(result.candidates[0], holding=omitted)
+        reassessed = apply_waiver_policy(replace(result, candidates=(candidate,)),
+                                        load_waiver_policy(POLICY_PATH))
+        before = next(g for g in result.decision.gates if g.name == 'complete_required_evidence')
+        after = next(g for g in reassessed.decision.gates if g.name == 'complete_required_evidence')
+        self.assertTrue(before.passed)
+        self.assertTrue(after.passed)
+        empty_week = replace(holding.weekly_streaming_baselines[0], candidate_ids=(),
+                             selected_player_id=None, selected_points=0.0)
+        self.assertFalse(qb_streaming_coverage_usable(replace(holding,
+            streaming_omission_ids=('missing_forecast',),
+            weekly_streaming_baselines=(empty_week, *holding.weekly_streaming_baselines[1:]))))
+
+    def test_streamers_are_admitted_per_week_and_directory_only_qbs_are_local(self):
+        from roster_theory.waiver.evaluation import qb_streaming_coverage_usable
+        result = self.evaluate_qb_hold(add_points=25.0, starter_points=20.0,
+            streamer_points=(17.0, 15.0, 99.0),
+            missing_streamer_weeks=(('streamer_1', 3), ('streamer_3', 1),
+                                    ('streamer_3', 2), ('streamer_3', 3)))
+        holding = result.candidates[0].holding
+        self.assertEqual(holding.streaming_candidate_ids, ('streamer_1', 'streamer_2'))
+        self.assertEqual(holding.streaming_omission_ids, ('streamer_1', 'streamer_3'))
+        self.assertEqual(holding.weekly_streaming_baselines[0].candidate_ids,
+                         ('streamer_1', 'streamer_2'))
+        self.assertEqual(holding.weekly_streaming_baselines[2].candidate_ids, ('streamer_2',))
+        self.assertTrue(qb_streaming_coverage_usable(holding))
 
     def test_multi_qb_format_does_not_apply_one_qb_holding_policy(self):
         result = self.evaluate_qb_hold(

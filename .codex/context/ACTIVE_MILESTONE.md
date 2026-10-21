@@ -1,5 +1,17 @@
 # Active milestone
 
+## WA-032 amendment — Scoped completeness and available expert fallback
+
+Authorized by the user's October 20 request to repair recurring completeness
+failures. Keep missing QB streamer forecasts local to each player/week; do not
+veto a supported add because directory-only QBs lack forecasts. Use the next
+qualified available expert ballots per player with historical weighting and
+source limits. A shortage in one horizon/position must not discard other panels.
+Preserve missing/injured-player disclosures, genuine dependency failures,
+league-specific scoring, deterministic evidence, freshness and read-only behavior.
+Add focused and planner regressions, run full release checks, replay the saved
+league case, update the installed command and deliver a separate PR without merging.
+
 ## WA-032 - Exact weekly roster plans (implemented and validated; PR handoff)
 
 Authorized by the user's October 13 request to implement the reviewed Waiver

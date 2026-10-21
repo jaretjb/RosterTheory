@@ -58,10 +58,11 @@ def ranking(position, horizon, experts=("1",)):
 
 
 class FakeProvider:
-    def __init__(self, *, unavailable=(), wrong_filter=False, ros_omits=()):
+    def __init__(self, *, unavailable=(), wrong_filter=False, ros_omits=(), unavailable_positions=()):
         self.calls = []
         self.unavailable, self.wrong_filter = unavailable, wrong_filter
         self.ros_omits = ros_omits
+        self.unavailable_positions = unavailable_positions
 
     def get(self, endpoint, params):
         self.calls.append((endpoint, params))
@@ -71,7 +72,7 @@ class FakeProvider:
                 for i in range(1, 5) if not (params.get("ranking_type") == "ros" and str(i) in self.ros_omits)]}
         i = params["filters"].split(":")[0]
         raw = ranking(params["position"], "ROS" if "type" in params else "WEEKLY", (i,))
-        if i in self.unavailable:
+        if i in self.unavailable or params['position'] in self.unavailable_positions:
             raw["fallback_for"] = "ROS"
         if self.wrong_filter:
             raw["expert_names"]["999"] = "Unexpected expert"
@@ -147,6 +148,19 @@ class HistoricalSelectionTests(unittest.TestCase):
             strict_selected_ranks((market("a", 1),), (ballot("a", 1, 1), ballot("a", 1, 2)),
                                   {"TE": {"1": 1}}, horizon="ROS")
 
+    def test_missing_player_uses_next_available_experts_without_market_substitution(self):
+        rows = strict_selected_ranks((market('injured', 99), market('healthy', 1)),
+            (ballot('injured', 1, 40), ballot('injured', 3, 42), ballot('injured', 4, 44),
+             ballot('healthy', 1, 1), ballot('healthy', 2, 2), ballot('healthy', 3, 3)),
+            {'TE': {'1': .4, '2': .35, '3': .25}}, horizon='ROS',
+            fallback_weights={'TE': {'1': .9, '2': .8, '3': .7, '4': .6}})
+        injured = next(row for row in rows if row.player_id == 'injured')
+        self.assertEqual({e for e, _, _ in injured.contributions}, {'1', '3', '4'})
+        self.assertGreater(injured.raw_position_rank, 40)
+        self.assertEqual(injured.market_position_rank, 99)
+        self.assertEqual(injured.shrinkage_to_ecr, 0)
+        self.assertEqual(len(rows), 2)
+
     def test_canonical_weekly_proxy_keeps_weighted_rank_and_separate_market(self):
         selector = WaiverExpertPreparation("fixture")
         from roster_theory.application.value_preparation import ExpertPoolMember
@@ -192,6 +206,13 @@ class PreparationTests(unittest.TestCase):
             self.assertNotEqual(resolution.members[0].weight, resolution.members[1].weight)
             self.assertEqual(resolution.evidence["member_weight_scope"],
                              "union_identity_list; rank weights are recorded per panel")
+            # A qualified reserve ballot must survive the shared adapter's
+            # identity filtering even when absent from every preferred panel.
+            reserve = dict(selector.evidence['panels']['ROS:TE']['candidates'][0])
+            reserve.update(expert_id='4', expert_name='Expert 4', source_name='Source 4',
+                           reason='below_selection_cutoff', score=selector.scores['4']['score'])
+            selector.evidence['panels']['ROS:TE']['candidates'].append(reserve)
+            self.assertIn('4', {m.expert_id for m in selector(prepared, NOW).members})
             # The same immutable sources are reusable without any provider calls.
             cached = FakeProvider()
             _, second = self.prepare(root, cached)
@@ -208,8 +229,21 @@ class PreparationTests(unittest.TestCase):
 
     def test_ignored_single_expert_filter_cannot_be_used_as_individual_ballot(self):
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(CoverageIncomplete, "fewer than 2"):
-                self.prepare(Path(directory), FakeProvider(wrong_filter=True))
+            selector, prepared = self.prepare(Path(directory), FakeProvider(wrong_filter=True))
+            self.assertTrue(selector.evidence['limitations'])
+            self.assertEqual(selector.evidence['panels']['ROS:TE']['status'], 'UNAVAILABLE')
+            self.assertEqual(selector.aggregate_ros(prepared.ros_rankings[0].observations,
+                prepared.ros_rankings[0].contributor_observations, {}, horizon='ROS'), ())
+
+    def test_one_unavailable_position_does_not_discard_other_panels(self):
+        with tempfile.TemporaryDirectory() as directory:
+            selector, prepared = self.prepare(Path(directory),
+                FakeProvider(unavailable_positions=('TE',)))
+            self.assertEqual(selector.evidence['panels']['ROS:TE']['status'], 'UNAVAILABLE')
+            self.assertEqual(selector.evidence['panels']['ROS:QB']['status'], 'READY')
+            qb = next(d for d in prepared.ros_rankings if d.observations[0].position == 'QB')
+            self.assertEqual(len(selector.aggregate_ros(qb.observations,
+                qb.contributor_observations, {}, horizon='ROS')), 3)
 
     def test_missing_ros_directory_identity_is_reconciled_without_borrowing_weekly_votes(self):
         with tempfile.TemporaryDirectory() as directory:

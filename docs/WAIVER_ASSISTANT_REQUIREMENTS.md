@@ -112,6 +112,17 @@ publication, missing-player and exclusion evidence. Partial historical
 populations remain disclosed; a clipped public leaderboard must not define
 the full competition field size.
 
+Available-evidence completeness is scoped to the actual comparison. Select the
+next qualified published contributors when preferred experts are unavailable;
+for missing player ballots, use the next qualified available contributors for
+that player, preserving historical weights and source concentration. Record the
+actual contributors. A position/horizon shortage or an injured/unranked player's
+omission must not discard unrelated panels or players. Do not invent a rank,
+recovery date, or observed zero. QB streamer baselines use usable weekly
+forecasts independently of ownership ranks and other weeks' omissions. Keep
+all exclusions auditable; an entirely unknown weekly pool remains a specific
+limitation rather than a complete forecast.
+
 ## 5. Evaluation requirements
 
 For every add/drop alternative, calculate and preserve:
