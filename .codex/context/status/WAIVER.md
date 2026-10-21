@@ -10,10 +10,9 @@ ballots with historical weights and source limits. Position-specific panel
 shortages are local to Waiver and do not change Draft/Trade preparation defaults.
 Full suite: 1,092 tests pass; Ruff, repository/package privacy and clean install
 pass. Fresh read-only validation confirms the reported QB's completeness gate
-passes; remaining WATCH is a value-policy disagreement, not missing-directory
-evidence. Detail: `docs/COMPLETED_WAIVER_SCOPED_COMPLETENESS.md`.
+passes; required coverage policy is implemented separately in WA-033. Detail: `docs/COMPLETED_WAIVER_SCOPED_COMPLETENESS.md`.
 
-WA-032 provides bounded weekly plans with actual roster coverage, IR preparation, exact adds/drops and failed-claim branches. See docs/COMPLETED_WAIVER_ASSISTANT_WA_032.md. Coverage-repair policy follows the user-authorized merge of PR #86.
+WA-032 provides bounded weekly plans with actual roster coverage, IR preparation, exact adds/drops and failed-claim branches. See docs/COMPLETED_WAIVER_ASSISTANT_WA_032.md. PR #86 is merged. WA-033 adds confirmed QB/kicker coverage repair with safe drops, actual owned-lineup gains, explicit forecast limits and conditional specialist fallbacks. Optional moves retain ordinary value gates. All 1,098 tests and release gates pass. Detail: docs/COMPLETED_WAIVER_REQUIRED_COVERAGE.md.
 
 WA-031 historical expert selection remains horizon/position-specific, with
 coverage penalties and contributor audits. Older annual populations remain

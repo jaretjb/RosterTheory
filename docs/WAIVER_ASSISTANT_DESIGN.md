@@ -51,6 +51,15 @@ planning settings, bounds, source assumptions, alternatives and deterministic
 hashes. Replay records the selected objective and full planning/scenario inputs.
 No shared Draft/Trade policy or new hosting/storage framework is introduced.
 
+WA-033 adds `waiver.coverage` for confirmed QB/kicker starter vacancies.
+Exact evaluations retain actual owned coverage separately from replacement
+floors. A distinct coverage decision path preserves drop, freshness, downside
+and contingent-upside gates; ordinary optional moves retain existing value
+limits. Missing weekly incumbent kicker ranks during a bye do not require an
+invented rank. Specialist comparisons can use fresh observed scoring and target
+rank evidence. Failed-claim recursion includes specialists and records the
+excluded player while revalidating against the changed acquisition pool.
+
 ## Initial interfaces
 
 - `waiver refresh <league>`: data-only snapshot and completeness report.

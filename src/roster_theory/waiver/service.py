@@ -883,6 +883,12 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
         for row in selected.lineup.weeks
         if row.before_replacements or row.after_replacements
     )
+    if selected.coverage_repair is not None:
+        repair = selected.coverage_repair
+        lines.insert(3, 'Required starter coverage: ' + repair.reason + (
+            f'; actual owned-lineup gain {repair.owned_points_gain:+.2f} points this week'
+            if repair.owned_points_gain is not None else
+            '; weekly ranks and league-scored production used; complete point forecast unavailable'))
     if replacement_weeks:
         lines.insert(
             3,

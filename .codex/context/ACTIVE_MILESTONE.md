@@ -1,5 +1,15 @@
 # Active milestone
 
+## WA-033 — Required coverage and conditional claim alternatives
+
+Authorized by the user after merging PR #86 on October 20. Implement required
+QB and specialist bye coverage using actual owned lineups, bounded safe drop
+cost, explicit ranking/forecast limitations, and revalidated failed-claim pools.
+Preserve optional-depth policy, expert authority, league scoring, freshness and
+read-only behavior. Use WA-032 requirements sections 3-6 and 8 and its named
+design sections; add regression tests and a separate PR without merging.
+
+
 ## WA-032 amendment — Scoped completeness and available expert fallback
 
 Authorized by the user's October 20 request to repair recurring completeness

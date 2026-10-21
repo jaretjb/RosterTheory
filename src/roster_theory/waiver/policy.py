@@ -1180,11 +1180,64 @@ def _assess_composite_waiver_value_candidate(
     )
 
 
+def _assess_required_coverage(evaluation, selected, policy):
+    repair = selected.coverage_repair
+    if repair is None or not repair.safe_drop:
+        return None
+    specialist = repair.position == 'K'
+    stamp = selected.ownership.performance_add_as_of
+    fresh_production = stamp is not None and timedelta(0) <= evaluation.evaluated_at-stamp <= timedelta(hours=72)
+    evidence = evaluation.value_inputs_complete and evaluation.material_news_fresh and (
+        fresh_production if specialist else selected.projection_inputs_complete)
+    safety = specialist or (
+        selected.lineup.depth_delta >= -policy.maximum_depth_loss
+        and selected.risk.offense_downside_loss_delta <= policy.maximum_downside_increase)
+    gates = (
+        _gate('required_owned_coverage', True, '==', True, True, repair.reason),
+        _gate('coverage_evidence_usable', evidence, '==', True, evidence,
+              'Required coverage uses supported add evidence and a confirmed vacancy'),
+        _gate('coverage_drop_safe', repair.safe_drop, '==', True, repair.safe_drop,
+              'The drop cannot sacrifice protected starting-quality holdings or create another vacancy'),
+        _gate('coverage_depth_and_risk', safety, '==', True, safety,
+              'Coverage repair preserves league-local depth and downside safeguards'),
+        _gate('protected_upside_incremental_value', selected.contingency.incremental_gate_passed,
+              '==', True, selected.contingency.incremental_gate_passed,
+              'Protected contingent upside remains required'),
+        _gate('player_currently_active', evaluation.add_currently_active, '==', True,
+              evaluation.add_currently_active, 'The replacement must be currently available'),
+    )
+    if not all(g.passed for g in gates):
+        return None
+    priority = repair.owned_points_gain
+    detail = None
+    if specialist:
+        production_weight = policy.kicker_season_points_weight * (
+            repair.production_samples / (repair.production_samples + policy.specialist_prior_games))
+        priority = ((1-production_weight)*repair.specialist_priority
+                    + production_weight*repair.production_score)
+        detail = {'method':'REQUIRED_KICKER_COVERAGE', 'basis':'RANK_PERFORMANCE',
+            'performance_complete':True, 'performance_fresh':True, 'projection_stream_pass':False,
+            'incumbent_unavailable':True, 'score':priority, 'production_weight':production_weight,
+            'forecast_limitation':'Complete custom-scoring forecast unavailable; no incumbent rank invented'}
+    label = 'ADD NOW' if evaluation.acquisition_state == 'FREE_AGENT' else (
+        'CLAIM' if evaluation.acquisition_state == 'WAIVERS' else 'ACQUIRE')
+    return WaiverDecisionAssessment(label=label, decision_path='REQUIRED_STARTER_COVERAGE',
+        policy_version=policy.version, policy_hash=policy.policy_hash,
+        calibration_mode=policy.calibration_mode, priority_score=round(priority,6),
+        elite_dst_exception=False, gates=gates, specialist_evidence=detail,
+        reversal_conditions=('Starter vacancy is resolved', 'Replacement availability or evidence changes',
+                             'Drop creates a starter gap or sacrifices a protected holding')), (
+        'Required coverage repair; ROS ownership and assumed-streamer comparisons remain separate tradeoffs')
+
+
 def _assess_candidate(
     evaluation: WaiverEvaluation,
     selected: DropCandidateEvaluation,
     policy: WaiverDecisionPolicy,
 ) -> tuple[WaiverDecisionAssessment, str]:
+    repair = _assess_required_coverage(evaluation, selected, policy)
+    if repair is not None:
+        return repair
     if evaluation.add_position in {"K", "DST"}:
         return _assess_special_team_candidate(evaluation, selected, policy)
     if policy.priority_enabled and selected.waiver_value.add is not None:

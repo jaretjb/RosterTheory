@@ -197,6 +197,21 @@ The target-admission cap remains separate from the incumbent rank comparison:
 defense ranks through the full 32-team population retain their differences.
 Kicker, skill-player, and cross-position roster policy remain separate.
 
+Required QB and kicker coverage has a separate decision path. A confirmed
+vacancy is compared with the actual owned lineup; an assumed waiver acquisition
+is not an owned starter. Preserve ROS and replacement-floor disagreements as
+separate tradeoffs. A QB coverage exception requires a non-starting, below
+starting-quality drop and no additional near-term coverage gap, plus ordinary
+evidence, depth, downside and contingent-upside safeguards. Only that move's ROS
+cost is exempted; unrelated optional acquisitions retain their normal limits.
+An unavailable kicker's missing weekly rank must not prevent a bye replacement
+using a usable target rank, fresh league-scored production and explicit forecast
+limitations. Never invent an incumbent rank or complete point forecast. Rank
+these kicker replacements using the league's existing production weight.
+Failed-claim branches exclude the failed target from both acquisitions and
+replacement baselines while retaining successful prerequisites; this includes
+specialists. Optional depth and healthy starter upgrades retain ordinary policy.
+
 ## 6. Decision language
 
 The initial decision labels are:
