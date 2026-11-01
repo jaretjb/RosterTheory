@@ -110,7 +110,7 @@ class TargetWorkflowTests(unittest.TestCase):
             self.assertIn("strict verdict", formatted)
             self.assertIn("Football policy: UNVALIDATED", formatted)
             self.assertIn("opponent", formatted)
-            self.assertIn("trade-finder-execution-v1", formatted)
+            self.assertIn("trade-finder-execution-v2", formatted)
             self.assertEqual(target_workflow_report(search)["evidence_hash"], search.evidence_hash)
             self.assertEqual(
                 target_workflow_report(search)["performance"]["coverage"]["evaluated"],

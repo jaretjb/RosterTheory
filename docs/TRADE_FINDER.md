@@ -13,8 +13,8 @@ roster-theory trade search home_league --opponent 3
 roster-theory trade search home_league --opponent "Team name" --time-budget-seconds 180
 ```
 
-League search defaults to a 120-second search budget. Single-opponent search
-defaults to 300 seconds. `--opponent` accepts a roster ID or an exact,
+League and single-opponent searches default to a 30-second search budget.
+Explicit league execution settings are honored. `--opponent` accepts a roster ID or an exact,
 case-sensitive displayed team name, including its spaces. Roster IDs take
 precedence. Self, unknown and ambiguous opponents are rejected with valid
 choices. Scope is resolved before roster diagnosis and target discovery.
@@ -33,6 +33,29 @@ checkpoint and report writing can make total command time longer than the
 budget. Only completed evaluations are published.
 
 ## Read the results
+
+The v2 default first screens price and ownership-value mismatches, then checks
+joint weekly roster use for a bounded pool. It ranks promising shapes and
+opponents together before the final drill-down. All nine shapes remain in
+construction; a fixed shape order no longer consumes the evaluation budget.
+Only shortlisted packages receive full replacement, depth, risk and incoming
+use checks. Automatic replacement choices are cheaply ranked before a bounded
+number of complete move sets receive the unchanged final gates. These bounds
+may miss better moves; they never relax the checks on a published offer.
+
+`screened_out`, `screen_checked` and `shortlisted` are saved per opponent/shape
+in JSON and CSV. `SHORTLIST_LIMIT` means additional candidates were deferred,
+not proved inferior. Stage timings separate setup, construction, screening and
+final evaluation. Legacy v1 profiles retain the original search for replay;
+existing explicit settings are not silently migrated. The requested league's
+local execution profile can be upgraded independently of football thresholds.
+
+Entered evaluation and comparison apply the same final offer assessment when
+a current chart and league finder policy exist. Reports identify the chart
+provider, date, format, limitations, sent/received values, premium and failures.
+Intrinsic verdicts remain separate. A missing or stale chart cannot produce a
+recommended offer. `--trade-market-import` selects an authorized local chart;
+units from different providers are never blended or compared directly.
 
 The finder returns up to ten supported ideas. It can return fewer when the
 completed evaluations do not support ten. The result labels mean:
@@ -107,11 +130,14 @@ The optional top-level `execution_profile` in an existing league-local
 ```json
 {
   "execution_profile": {
-    "version": "trade-finder-execution-v1",
-    "league_seconds": 120.0,
-    "opponent_seconds": 300.0,
+    "version": "trade-finder-execution-v2",
+    "league_seconds": 30.0,
+    "opponent_seconds": 30.0,
     "max_ideas": 10,
-    "repairs_per_counter": 3
+    "repairs_per_counter": 3,
+    "screening_pool_size": 96,
+    "shortlist_size": 24,
+    "secondary_shortlist_size": 4
   }
 }
 ```

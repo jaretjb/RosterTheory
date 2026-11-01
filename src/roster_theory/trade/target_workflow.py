@@ -89,6 +89,7 @@ CSV_FIELDS = (
     "enumerated", "price_pruned", "roster_pruned", "eligible", "evaluated", "unevaluated",
     "unconstructed", "repair_pruned", "prune_reasons", "starter_weeks",
     "asset_lineup_delta", "asset_depth_delta",
+    "screened_out", "screen_checked", "shortlisted",
 )
 
 
@@ -196,6 +197,8 @@ def _csv_rows(result: TargetWorkflowResult) -> tuple[dict[str, Any], ...]:
                 "package_size": coverage.package_size, "status": coverage.status,
                 "enumerated": coverage.enumerated, "price_pruned": coverage.price_pruned,
                 "roster_pruned": coverage.roster_pruned, "eligible": coverage.eligible,
+                "screened_out": coverage.screened_out, "screen_checked": coverage.screen_checked,
+                "shortlisted": coverage.shortlisted,
                 "evaluated": coverage.evaluated, "unevaluated": coverage.unevaluated,
                 "unconstructed": coverage.unconstructed, "repair_pruned": coverage.repair_pruned,
                 "prune_reasons": json.dumps(coverage.prune_reasons)})
@@ -804,11 +807,22 @@ def _format_finder(result: TargetWorkflowResult) -> str:
              f"Scope: {packages.scope.mode.lower()} | {len(packages.ideas)} ideas | {len(packages.evaluated_decisions)} completed evaluations",
              f"Search: {packages.timing['search_seconds']:.1f}s / {packages.execution_profile['time_budget_seconds']:g}s | {packages.termination.lower().replace('_', ' ')}"]
     lines.append(f"Football policy: {result.policy_status}; execution {packages.execution_profile['version']}")
+    if result.trade_market.board is not None:
+        board = result.trade_market.board
+        lines.append(f"Chart: {board.provider}; as of {board.as_of.isoformat()}; {board.format}; {board.scoring_variant}.")
+        lines.extend('Pricing note: ' + warning for warning in result.trade_market.warnings)
+    if packages.execution_profile['version'] == 'trade-finder-execution-v2':
+        lines.append(f"Screening: {sum(c.screened_out for c in packages.shape_coverage)} excluded; "
+                     f"{sum(c.screen_checked for c in packages.shape_coverage)} joint roster checks; "
+                     f"{sum(c.shortlisted for c in packages.shape_coverage)} shortlisted for detailed analysis.")
+        lines.append("Stages: " + '; '.join(f"{key} {value:.1f}s" for key, value in packages.timing['stage_seconds'].items()))
     for idea in packages.ideas:
         d = idea.decision
         lines.extend(("", f"{labels[idea.status]} with {teams[d.opponent_roster_id]}",
-            f"Send {player_list(d.sent_player_ids)} → Receive {player_list(d.received_player_ids)}",
+            f"Send {player_list(d.sent_player_ids)} -> Receive {player_list(d.received_player_ids)}",
             f"ROS lineup: you {d.user_weighted_lineup_delta:+.2f}, opponent {d.partner_weighted_lineup_delta:+.2f} | chart {d.market_fairness.status.lower()} | strict verdict {d.package_verdict}"))
+        lines.append(f"Chart prices: send {d.market_fairness.sent_value:.2f}, receive {d.market_fairness.received_value:.2f}; "
+                     f"consolidation premium {d.market_fairness.consolidation_premium_value or 0:.2f}.")
         if idea.failed_checks:
             gates = {g.name: g for g in d.decision_axes.gates} if d.decision_axes else {}
             labels_for_gates = {"partner_market_delta": "Opponent consensus value",
@@ -827,7 +841,7 @@ def _format_finder(result: TargetWorkflowResult) -> str:
             lines.append(f"Repair search: {idea.repair_search_status.lower().replace('_', ' ')}; {len(idea.repairs)} checked")
         for repair in idea.repairs:
             verdict = repair.package_verdict or "not evaluated"
-            lines.append(f"Checked repair: send {player_list(repair.sent_player_ids)} → receive {player_list(repair.received_player_ids)}; {labels.get(repair.status, repair.status.lower())}; strict {verdict}")
+            lines.append(f"Checked repair: send {player_list(repair.sent_player_ids)} -> receive {player_list(repair.received_player_ids)}; {labels.get(repair.status, repair.status.lower())}; strict {verdict}")
             if repair.failed_checks:
                 lines.append("  Remaining checks: " + ", ".join(repair.failed_checks))
     if not packages.ideas:

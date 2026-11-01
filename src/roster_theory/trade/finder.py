@@ -22,6 +22,7 @@ from roster_theory.trade.finder_roster import (
     ROSTER_POLICY_VERSION, IncomingUse, RosterGuard, incoming_use, qb_bundle_gain,
 )
 from roster_theory.trade.snapshot import assert_current
+from roster_theory.trade.screening import screen_candidates
 from roster_theory.trade.target_optimizer import (
     TargetPackageSearchResult, TargetPackageOpportunity, TargetPackageStatus,
     EvaluatedPackageDecision, _Candidate, _context, _eligible_players, _price_map,
@@ -81,6 +82,9 @@ class FinderCoverage:
     roster_pruned: int = 0
     repair_pruned: int = 0
     prune_reasons: tuple[tuple[str, int], ...] = ()
+    screened_out: int = 0
+    screen_checked: int = 0
+    shortlisted: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -241,6 +245,38 @@ def one_edit_packages(sent, received, outgoing, incoming):
                 yield pair
 
 
+def assess_trade_offer(snapshot, result, *, row, fair, diagnoses, config, options,
+                       context, matrix, guard=None):
+    """One final offer contract for finder, entered trades and comparisons."""
+    if guard is None:
+        bases = {t.roster_id: comparison_roster(snapshot, matrix,
+            set(t.player_ids) - set(t.reserve_ids)) for t in snapshot.teams
+            if t.roster_id in {snapshot.user_roster_id, row.opponent_roster_id}}
+        guard = RosterGuard(snapshot, matrix, bases)
+    consolidation = analyze_consolidation(snapshot, result, context=context, matrix=matrix,
+        options=options, minimum_starter_upgrade=config.minimum_consolidation_starter_upgrade,
+        minimum_partner_lineup_use=config.minimum_partner_asset_lineup_use,
+        minimum_partner_depth_use=config.minimum_partner_asset_depth_use
+    ) if len(row.sent_player_ids) > 1 and len(row.received_player_ids) == 1 else None
+    decision = _exact_decision(candidate=row, evaluation=result, fairness=fair,
+        consolidation=consolidation, diagnoses=diagnoses,
+        player_by_id={p.player_id: p for p in snapshot.players}, config=config, options=options)
+    roster_failures = guard.final_failures(result)
+    usage = ()
+    if decision.complete_and_legal and decision.intrinsic_outcome == "WIN" and not roster_failures:
+        usage = incoming_use(snapshot, context, matrix, result, options, config)
+        roster_failures = tuple(f"incoming_use:{u.roster_id}:{u.player_id}" for u in usage if not u.useful)
+    if decision.partner_weighted_lineup_delta < config.partner_lineup_floor:
+        roster_failures = (*roster_failures, "partner_lineup_floor")
+    if roster_failures:
+        decision = replace(decision, accepted=False, reason="FINDER_ROSTER_CHECK")
+    status = idea_status(decision, minimum_gain=config.minimum_user_lineup_gain,
+                         roster_checks_passed=not roster_failures,
+                         partner_lineup_floor=config.partner_lineup_floor)
+    failures = tuple(dict.fromkeys((*failed_checks(decision, config.minimum_user_lineup_gain), *roster_failures)))
+    return decision, status, failures, usage
+
+
 def find_trade_packages(snapshot, *, projections, selected_board, market_ecr_board,
                         trade_market, target_result, config, options, scope: FinderScope,
                         execution_policy: FinderExecutionPolicy = FinderExecutionPolicy(),
@@ -276,6 +312,9 @@ def find_trade_packages(snapshot, *, projections, selected_board, market_ecr_boa
 def _find(snapshot, projections, selected, market_ecr, market, targets, config, options,
           scope, policy, execution, max_exact, max_large_exact, max_results, metrics):
     started = perf_counter()
+    staged = policy.version == "trade-finder-execution-v2"
+    if staged:
+        options = replace(options, secondary_shortlist_size=policy.secondary_shortlist_size)
     stages = {}
     groups = {(rid, f"{a}-for-{b}"): FinderCoverage(rid, f"{a}-for-{b}",
               execution_cap=max_exact if b == 1 and a <= 2 else max_large_exact)
@@ -369,28 +408,10 @@ def _find(snapshot, projections, selected, market_ecr, market, targets, config, 
             selected_board=selected, market_board=market_ecr, options=options, projection_matrix=matrix)
         fair = fairness(row.sent_player_ids, row.received_player_ids,
                         config.fair_market_band_ratio, config.fair_market_band_floor)
-        consolidation = analyze_consolidation(snapshot, result, context=context, matrix=matrix,
-            options=options, minimum_starter_upgrade=config.minimum_consolidation_starter_upgrade,
-            minimum_partner_lineup_use=config.minimum_partner_asset_lineup_use,
-            minimum_partner_depth_use=config.minimum_partner_asset_depth_use
-        ) if len(row.sent_player_ids) > 1 and len(row.received_player_ids) == 1 else None
-        decision = _exact_decision(candidate=row, evaluation=result, fairness=fair,
-            consolidation=consolidation, diagnoses=diagnoses, player_by_id=player_by_id,
-            config=config, options=options)
-        roster_failures = guard.final_failures(result)
-        usage = ()
-        if decision.complete_and_legal and decision.intrinsic_outcome == "WIN" and not roster_failures:
-            usage = incoming_use(snapshot, context, matrix, result, options, config)
-            roster_failures = tuple(f"incoming_use:{u.roster_id}:{u.player_id}" for u in usage if not u.useful)
-        if decision.partner_weighted_lineup_delta < config.partner_lineup_floor:
-            roster_failures = (*roster_failures, "partner_lineup_floor")
-        if roster_failures:
-            decision = replace(decision, accepted=False, reason="FINDER_ROSTER_CHECK")
+        decision, status, failures, usage = assess_trade_offer(snapshot, result, row=row,
+            fair=fair, diagnoses=diagnoses, config=config, options=options,
+            context=context, matrix=matrix, guard=guard)
         checkpoint()
-        status = idea_status(decision, minimum_gain=config.minimum_user_lineup_gain,
-                             roster_checks_passed=not roster_failures,
-                             partner_lineup_floor=config.partner_lineup_floor)
-        failures = tuple(dict.fromkeys((*failed_checks(decision, config.minimum_user_lineup_gain), *roster_failures)))
         package_checks.append(PackageRosterCheck(row.opponent_roster_id, row.sent_player_ids,
             row.received_player_ids, result.evidence_hash, failures, usage))
         evaluations[key] = (decision, result, status, failures)
@@ -402,7 +423,7 @@ def _find(snapshot, projections, selected, market_ecr, market, targets, config, 
             opportunities.append(TargetPackageOpportunity(
                 row.lane, row.primary_target_player_id, row.generated_by_target_ids,
                 row.opponent_roster_id, row.package_size, row.sent_player_ids, row.received_player_ids,
-                decision.intrinsic_outcome, fair, consolidation, ("BASELINE",),
+                decision.intrinsic_outcome, fair, decision.consolidation, ("BASELINE",),
                 decision.user_weighted_lineup_delta, float(decision.user_selected_delta),
                 decision.user_market_ecr_delta, decision.cross_model_agreement,
                 decision.user_depth_delta, decision.user_downside_delta,
@@ -415,6 +436,13 @@ def _find(snapshot, projections, selected, market_ecr, market, targets, config, 
         repair_status[origin] = 'IN_PROGRESS'
         checkpoint()
         group_key = (row.opponent_roster_id, row.package_size)
+        if staged and not row.fair_within_band:
+            coverage = groups[group_key]
+            groups[group_key] = replace(coverage, repair_pruned=coverage.repair_pruned + 1)
+            repairs.setdefault(origin, []).append(CounterRepair(row.sent_player_ids,
+                row.received_player_ids, "SCREEN_REJECTED", None, ("chart_fairness",), ""))
+            repair_status[origin] = "CHECKED"
+            return
         failures = guard.exchange_failures(row.opponent_roster_id, row.sent_player_ids, row.received_player_ids)
         if failures:
             reject_roster(row.opponent_roster_id, row.sent_player_ids, row.received_player_ids, failures, "REPAIR")
@@ -521,15 +549,42 @@ def _find(snapshot, projections, selected, market_ecr, market, targets, config, 
                 not c.fair_within_band,
                 -c.estimated_user_lineup_gain, -c.estimated_partner_lineup_gain,
                 c.fair_market_distance, c.sent_player_ids, c.received_player_ids)))
-        active = deque(key for key in groups if queues[key])
+        if staged:
+            screening_started = perf_counter()
+            screened = screen_candidates([row for queue in queues.values() for row in queue],
+                snapshot=snapshot, context=context, matrix=matrix, bases=bases, scores=scores,
+                config=config, options=options, policy=policy, selected=selected, market_ecr=market_ecr)
+            for row, reason in screened.rejected:
+                key = (row.opponent_roster_id, row.package_size)
+                c = groups[key]
+                reasons = dict(c.prune_reasons)
+                reasons['screen:' + reason] = reasons.get('screen:' + reason, 0) + 1
+                groups[key] = replace(c, screened_out=c.screened_out + 1,
+                                      prune_reasons=tuple(sorted(reasons.items())))
+            for row in screened.checked:
+                key = (row.opponent_roster_id, row.package_size)
+                groups[key] = replace(groups[key], screen_checked=groups[key].screen_checked + 1)
+            for row in screened.candidates:
+                key = (row.opponent_roster_id, row.package_size)
+                groups[key] = replace(groups[key], shortlisted=groups[key].shortlisted + 1)
+            stages['screening'] = perf_counter() - screening_started
+            work = deque(screened.candidates)
+            if sum(c.screened_out for c in groups.values()) + len(work) < sum(c.eligible for c in groups.values()):
+                termination = 'SHORTLIST_LIMIT'
+        else:
+            active = deque(key for key in groups if queues[key])
         turns = 0
-        while active:
+        while (work if staged else active):
             checkpoint()
-            key = active.popleft()
+            if staged:
+                row = work.popleft()
+                key = (row.opponent_roster_id, row.package_size)
+            else:
+                key = active.popleft()
+                row = queues[key].popleft()
             coverage = groups[key]
             if coverage.execution_cap is not None and coverage.attempted + coverage.repair_attempted >= coverage.execution_cap:
                 continue
-            row = queues[key].popleft()
             groups[key] = replace(coverage, attempted=coverage.attempted + 1)
             try:
                 decision, evaluation, status, failures = evaluate(row)
@@ -548,11 +603,11 @@ def _find(snapshot, projections, selected, market_ecr, market, targets, config, 
                         neighbors.append((not fair.within_band, abs(fair.user_price_delta), sent, received))
                     for _, _, sent, received in sorted(neighbors)[:policy.repairs_per_counter]:
                         repair_queue.append((evaluation.evidence_hash, candidate(row.opponent_roster_id, sent, received)))
-            if queues[key]:
+            if not staged and queues[key]:
                 active.append(key)
             turns += 1
             # Primary opponents/shapes receive a full round before repair work.
-            if repair_queue and (turns % max(1, len(scope.opponent_roster_ids)) == 0 or not active):
+            if not staged and repair_queue and (turns % max(1, len(scope.opponent_roster_ids)) == 0 or not active):
                 origin, repair = repair_queue.popleft()
                 process_repair(origin, repair)
         while repair_queue:
@@ -562,11 +617,11 @@ def _find(snapshot, projections, selected, market_ecr, market, targets, config, 
     except SearchDeadline:
         termination = "TIME_BUDGET"
     stages["exact"] = max(0, perf_counter() - started - sum(stages.values()))
-    coverage = tuple(replace(c, unevaluated=c.eligible - c.evaluated,
+    coverage = tuple(replace(c, unevaluated=c.eligible - c.evaluated - c.screened_out,
         unconstructed=max(0, c.enumerated - c.price_pruned - c.roster_pruned - c.eligible),
-        status="EXHAUSTED" if c.construction_complete and c.evaluated + c.errors == c.eligible
+        status="EXHAUSTED" if c.construction_complete and c.evaluated + c.errors + c.screened_out == c.eligible
         else "EXACT_CAP" if c.execution_cap is not None and c.attempted + c.repair_attempted >= c.execution_cap
-        else "TIME_BUDGET" if termination == "TIME_BUDGET" else "UNEVALUATED") for c in groups.values())
+        else "TIME_BUDGET" if termination == "TIME_BUDGET" else "SHORTLIST_LIMIT" if staged else "UNEVALUATED") for c in groups.values())
     if any(c.status == "EXACT_CAP" for c in coverage) and termination != "TIME_BUDGET":
         termination = "EXACT_CAP"
     pending_origins = {origin for origin, _ in repair_queue}

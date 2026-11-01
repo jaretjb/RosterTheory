@@ -302,6 +302,8 @@ def run_package_comparison(
     budget_path: str | Path = "data/cache/trade/fantasypros/daily_budget.json",
     policy_path: str | Path | None = None,
     fantasypros_client: FantasyProsClient | None = None,
+    target_policy_path: str | Path | None = None,
+    market_import_path: str | Path | None = None,
 ) -> CompareRunResult:
     if not packages:
         raise ValueError("Comparison requires at least one package")
@@ -340,6 +342,12 @@ def run_package_comparison(
         )
         for package in packages
     )
+    from roster_theory.trade.offer import attach_offer_assessment
+    offer_inputs = {}
+    evaluations = tuple(evaluate_at(as_of, attach_offer_assessment, row, refresh, options,
+        config_path=config_path, target_policy_path=target_policy_path,
+        market_import_path=market_import_path, matrix=projection_matrix, shared=offer_inputs)
+        for row in evaluations)
     label_order = {"TARGET": 0, "ACCEPTABLE": 1, "COUNTER": 2, "DECLINE": 3}
     evaluations = tuple(
         sorted(
@@ -365,6 +373,8 @@ def run_package_comparison(
     )
     manifest = finish_trade_run(target, refresh, as_of=as_of,
         inputs={'operation': 'compare', 'packages': packages,
+                'trade_market': offer_inputs.get('market'), 'offer_policy': offer_inputs.get('policy'),
+                'offer_assessments': {stable_hash(row.package): row.offer_assessment for row in evaluations},
                 'result_hashes': [row.evidence_hash for row in evaluations]}, policy=options,
         readiness={'inputs_complete': all(row.decision.confidence != 'INCOMPLETE' for row in evaluations),
                    'search_complete': None, 'candidate_confidence': [row.decision.confidence for row in evaluations],
@@ -464,4 +474,12 @@ def format_package_comparison(result: CompareRunResult) -> str:
             f"{index}. {evaluation.decision_label}: send {sent}; receive {received}; "
             f"lineup {evaluation.team_impacts[0].weighted_delta:+.2f}"
         )
+        if evaluation.offer_assessment is not None:
+            assessment = evaluation.offer_assessment
+            fair = assessment.get('market_fairness')
+            lines.append(f"   Final offer: {assessment['status']}; chart " + (
+                f"{fair['status']}, send {fair['sent_value']:.2f}, receive {fair['received_value']:.2f}"
+                if fair else 'UNAVAILABLE'))
+            if assessment.get('failed_checks'):
+                lines.append('   Remaining checks: ' + ', '.join(assessment['failed_checks']))
     return "\n".join(lines)

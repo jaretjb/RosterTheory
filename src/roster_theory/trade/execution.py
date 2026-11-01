@@ -16,19 +16,26 @@ class SearchDeadline(Exception):
 
 @dataclass(frozen=True, slots=True)
 class FinderExecutionPolicy:
-    version: str = "trade-finder-execution-v1"
-    league_seconds: float = 120.0
-    opponent_seconds: float = 300.0
+    version: str = "trade-finder-execution-v2"
+    league_seconds: float = 30.0
+    opponent_seconds: float = 30.0
     max_ideas: int = 10
     repairs_per_counter: int = 3
+    screening_pool_size: int = 96
+    shortlist_size: int = 24
+    secondary_shortlist_size: int = 4
 
     def __post_init__(self) -> None:
-        if self.version != "trade-finder-execution-v1":
+        if self.version not in {"trade-finder-execution-v1", "trade-finder-execution-v2"}:
             raise ValueError("Unsupported Trade finder execution version")
         if any(not isfinite(v) or v <= 0 for v in (self.league_seconds, self.opponent_seconds)):
             raise ValueError("Trade search time budgets must be finite and positive")
         if not 1 <= self.max_ideas <= 10 or not 0 <= self.repairs_per_counter <= 3:
             raise ValueError("Trade finder allows 1-10 ideas and 0-3 one-edit repairs")
+        if any(type(v) is not int or v <= 0 for v in (
+            self.screening_pool_size, self.shortlist_size, self.secondary_shortlist_size
+        )) or self.shortlist_size > self.screening_pool_size:
+            raise ValueError("Execution shortlist sizes must be positive integers; shortlist cannot exceed screening pool")
 
 
 @dataclass

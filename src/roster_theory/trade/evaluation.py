@@ -216,6 +216,7 @@ class EvaluationOptions:
     partner_market_floor: float = -5.0
     max_depth_loss: float = 25.0
     max_downside_increase: float = 5.0
+    secondary_shortlist_size: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -242,6 +243,7 @@ class TradeEvaluation:
     source_times: tuple[tuple[str, str], ...]
     warnings: tuple[str, ...]
     evidence_hash: str
+    offer_assessment: dict | None = None
 
 
 def _normalized_name(value: str) -> str:
@@ -548,7 +550,7 @@ def _secondary_move(
             f"Explicit {kind.lower()} override is not eligible for roster {roster_id}: "
             + ", ".join(ineligible_overrides)
         )
-    if not lineup_available:
+    if not lineup_available or len(overrides) == required:
         if len(overrides) != required:
             raise CoverageIncomplete(
                 f"Rank-only unequal packages require exactly {required} explicit "
@@ -565,16 +567,45 @@ def _secondary_move(
                 f"{kind.lower()} moves"
             )
         individually_scored: list[SecondaryCandidate] = []
+        screening_limit = options.secondary_shortlist_size
+        if screening_limit is not None:
+            if type(screening_limit) is not int or screening_limit <= 0:
+                raise ValueError("secondary_shortlist_size must be a positive integer")
+            # Rank replacement candidates without scenarios or depth calculations.
+            # Full existing gates still decide every shortlisted final move set.
+            cheap_scores = {}
+            def cheap_key(ids):
+                checkpoint()
+                if ids not in cheap_scores:
+                    after = (roster - set(ids)) if dropping else (roster | set(ids))
+                    move = SecondaryMove(roster_id, kind, ids, (), ())
+                    own = _ownership_impact(roster_id, sent, received, move, selected_board, market_board)
+                    value = (own.selected_package_delta or 0) + (own.selected_secondary_delta or 0)
+                    market_value = own.market_package_delta + own.market_secondary_delta
+                    impossible = (value < options.user_selected_floor if roster_id == snapshot.user_roster_id
+                                  else market_value < options.partner_market_floor)
+                    protected = dropping and any(pid in received or (
+                        str(player_by_id[pid].injury_status or "").upper() in
+                        {"Q", "QUESTIONABLE", "D", "DOUBTFUL", "OUT", "IR", "PUP", "SUSP", "SUSPENDED"}
+                        and max(market_values[pid].reconciled_vorp,
+                                selected_values[pid].reconciled_vorp if pid in selected_values else 0) > 0
+                    ) for pid in ids)
+                    score = _weighted_lineup_score(snapshot, matrix, comparison_roster(snapshot, matrix, after), options)
+                    cheap_scores[ids] = (bool(impossible or protected), -score, -value, ids)
+                return cheap_scores[ids]
+            ranked_players = tuple(sorted(automatic_candidates, key=lambda pid: cheap_key((pid,))))
+        else:
+            ranked_players = None
         for player_id in automatic_candidates:
             checkpoint()
             if not dropping and any((cell := matrix.cell(player_id, week.week)) is None or cell.points is None
                                     for week in snapshot.weeks):
                 exclusions[player_id] = "PROJECTION_EVIDENCE_UNAVAILABLE"
                 continue
-            individually_scored.append(score_candidate((player_id,)))
-        ranked_players = tuple(
-            row.player_ids[0] for row in sorted(individually_scored, key=candidate_key)
-        )
+            if screening_limit is None:
+                individually_scored.append(score_candidate((player_id,)))
+        if ranked_players is None:
+            ranked_players = tuple(row.player_ids[0] for row in sorted(individually_scored, key=candidate_key))
         bounded_pool = tuple(
             dict.fromkeys((*overrides, *ranked_players[:MAX_SECONDARY_PLAYER_POOL]))
         )
@@ -596,6 +627,9 @@ def _secondary_move(
         search_truncated = (
             choose_count > 0 and (len(ranked_players) > MAX_SECONDARY_PLAYER_POOL or combination_truncated)
         )
+        if screening_limit is not None and len(candidate_sets) > screening_limit:
+            candidate_sets = tuple(sorted(candidate_sets, key=cheap_key)[:screening_limit])
+            search_truncated = True
 
     if not candidate_sets:
         raise RosterIllegal("No eligible player combination exists for the required secondary moves")

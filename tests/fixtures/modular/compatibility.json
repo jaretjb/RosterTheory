@@ -3229,6 +3229,28 @@
       "choices": null,
       "default": "data/cache/trade/fantasypros/daily_budget.json",
       "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--target-policy"
+      ],
+      "destination": "target_policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--trade-market-import"
+      ],
+      "destination": "trade_market_import",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
     }
   ],
   "trade diagnose": [
@@ -4032,6 +4054,28 @@
       "nargs": null,
       "choices": null,
       "default": "data/cache/trade/fantasypros/daily_budget.json",
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--target-policy"
+      ],
+      "destination": "target_policy",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
+      "action": "_StoreAction"
+    },
+    {
+      "flags": [
+        "--trade-market-import"
+      ],
+      "destination": "trade_market_import",
+      "required": false,
+      "nargs": null,
+      "choices": null,
+      "default": null,
       "action": "_StoreAction"
     }
   ],
