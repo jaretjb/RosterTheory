@@ -26,6 +26,8 @@ def main():
     parser.add_argument("evidence", type=Path)
     parser.add_argument("--opponent")
     parser.add_argument("--seconds", type=float)
+    parser.add_argument("--profile", type=Path, help="Save a cProfile of search only, excluding restoration")
+    parser.add_argument("--legacy", action="store_true", help="Compare the original v1 scheduler")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     started = perf_counter()
@@ -44,10 +46,20 @@ def main():
     scope = resolve_scope(snapshot, args.opponent)
     preparation = perf_counter() - started
     from datetime import datetime
+    import cProfile
+    profiler = cProfile.Profile() if args.profile else None
+    if profiler:
+        profiler.enable()
     result = evaluate_at(datetime.fromisoformat(manifest["as_of"]), find_trade_packages, snapshot,
         projections=projections, selected_board=selected, market_ecr_board=market_ecr,
         trade_market=market, target_result=targets, config=config, options=options,
-        scope=scope, execution_policy=FinderExecutionPolicy(), time_budget_seconds=args.seconds)
+        scope=scope, execution_policy=FinderExecutionPolicy(
+            version='trade-finder-execution-v1' if args.legacy else 'trade-finder-execution-v2'),
+        time_budget_seconds=args.seconds)
+    if profiler:
+        profiler.disable()
+        args.profile.parent.mkdir(parents=True, exist_ok=True)
+        profiler.dump_stats(str(args.profile))
     payload = {"status": "OFFLINE / NON-ACTIONABLE", "source_manifest_hash": manifest["manifest_hash"],
                "restoration_seconds": round(preparation, 3), "result": asdict(result)}
     args.output.parent.mkdir(parents=True, exist_ok=True)

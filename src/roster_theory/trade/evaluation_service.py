@@ -92,6 +92,8 @@ def evaluate_entered_trade(
     policy_path: str | Path | None = None,
     config_path: str | Path | None = None,
     fantasypros_client: FantasyProsClient | None = None,
+    target_policy_path: str | Path | None = None,
+    market_import_path: str | Path | None = None,
 ) -> EnteredEvaluationResult:
     resolved_policy = resolve_league_policy_path(
         league_key,
@@ -142,6 +144,11 @@ def evaluate_entered_trade(
         market_board=board_refresh.market,
         options=normalized_options,
     )
+    from roster_theory.trade.offer import attach_offer_assessment
+    offer_inputs = {}
+    evaluation = evaluate_at(as_of, attach_offer_assessment, evaluation, board_refresh,
+        normalized_options, config_path=config_path, target_policy_path=target_policy_path,
+        market_import_path=market_import_path, shared=offer_inputs)
     target = Path(
         output_path
         or board_refresh.output_path.with_name(
@@ -149,7 +156,9 @@ def evaluate_entered_trade(
         )
     )
     manifest = finish_trade_run(target, board_refresh, as_of=as_of,
-        inputs={'operation': 'exact', 'package': package, 'result_hash': evaluation.evidence_hash}, policy=normalized_options,
+        inputs={'operation': 'exact', 'package': package, 'result_hash': evaluation.evidence_hash,
+                'trade_market': offer_inputs.get('market'), 'offer_policy': offer_inputs.get('policy'),
+                'offer_assessments': {stable_hash(evaluation.package): evaluation.offer_assessment}}, policy=normalized_options,
         readiness={'inputs_complete': evaluation.decision is not None and evaluation.decision.confidence not in {'INCOMPLETE', 'CONDITIONAL', 'SCOPED_PROVISIONAL_MARKET'},
                    'search_complete': None, 'candidate_confidence': evaluation.decision.confidence if evaluation.decision else 'UNAVAILABLE',
                    'informational_warnings': evaluation.warnings})
@@ -261,7 +270,7 @@ def format_trade_evaluation(evaluation: TradeEvaluation) -> str:
         for source, captured_times in sorted(source_groups.items())
     )
     decision_banner = (
-        f"DECISION: {evaluation.decision.label} - {evaluation.decision.posture} - "
+        f"INTRINSIC DECISION: {evaluation.decision.label} - {evaluation.decision.posture} - "
         f"{evaluation.decision.policy_version}"
         if evaluation.decision is not None
         else "NO DECISION LABEL — required evidence is unavailable"
@@ -279,9 +288,22 @@ def format_trade_evaluation(evaluation: TradeEvaluation) -> str:
         lines.extend((
             f"Shared package axes: intrinsic {axes.intrinsic_outcome}; partner {axes.partner_status}; "
             f"legality {axes.legality_status}; confidence {axes.confidence}.",
-            "Pricing: ECR ownership values only; direct trade-chart fairness is not evaluated here. "
-            "An acceptable package is not a confirmed market-priced offer.",
         ))
+    if evaluation.offer_assessment is not None:
+        offer = evaluation.offer_assessment
+        lines.append(f"Final offer assessment: {offer['status']}; intrinsic verdict remains {evaluation.decision_label}.")
+        fair = offer.get('market_fairness')
+        if fair:
+            pricing = offer.get('pricing', {})
+            lines.append(f"Chart: {pricing.get('provider', fair['mode'])}, {pricing.get('as_of', 'date unavailable')}; "
+                         f"{fair['status']}; send {fair['sent_value']:.2f}, receive {fair['received_value']:.2f}; "
+                         f"consolidation premium {fair['consolidation_premium_value'] or 0:.2f}.")
+            lines.extend(f"Pricing note: {warning}" for warning in pricing.get('warnings', ()))
+        if offer.get('failed_checks'):
+            lines.append('Remaining offer checks: ' + ', '.join(offer['failed_checks']))
+    else:
+        lines.append("Pricing: ECR ownership values only; direct trade-chart fairness is not evaluated here. "
+                     "An acceptable package is not a confirmed market-priced offer.")
     for impact in evaluation.team_impacts:
         lines.append(
             f"Roster {impact.roster_id}: starter {impact.weighted_delta:+.2f}, "

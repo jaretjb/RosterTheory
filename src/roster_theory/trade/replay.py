@@ -1,6 +1,8 @@
 """Provider-free reproduction from verified Trade run manifests."""
 from datetime import datetime
 import json
+from dataclasses import asdict, replace
+from types import SimpleNamespace
 
 from roster_theory.core.models import Projection
 from roster_theory.core.provenance import canonical_json, stable_hash
@@ -25,15 +27,33 @@ def replay_trade_manifest(path):
         selected_board=restore_record(ValueBoard, inputs['selected_board']),
         market_board=restore_record(ValueBoard, inputs['market_board']))
     operation = inputs['operation']
+    def assess_recorded(evaluation, index):
+        if 'offer_assessments' not in inputs:
+            return evaluation
+        recorded = inputs['offer_assessments'][stable_hash(evaluation.package)]
+        if inputs.get('offer_policy') is not None and inputs.get('trade_market') is not None:
+            from roster_theory.trade.offer import attach_offer_assessment
+            refresh = SimpleNamespace(refresh=SimpleNamespace(snapshot=snapshot),
+                weekly_projections=common['projections'], selected_final=common['selected_board'],
+                market=common['market_board'])
+            return attach_offer_assessment(evaluation, refresh, restore_record(EvaluationOptions, policy),
+                shared={'policy': restore_record(_TargetPolicyBundle, inputs['offer_policy']),
+                        'market': restore_record(TradeMarketEvidence, inputs['trade_market'])})
+        if recorded is None or recorded.get('status') != 'UNAVAILABLE':
+            raise ValueError('An approved offer cannot replay without its pricing and policy inputs')
+        result = replace(evaluation, offer_assessment=recorded, evidence_hash='')
+        return replace(result, evidence_hash=stable_hash(asdict(result)))
     with evaluation_as_of(datetime.fromisoformat(manifest['as_of'])):
         if operation == 'exact':
             result = evaluate_trade(snapshot, restore_record(TradePackage, inputs['package']),
                 **common, options=restore_record(EvaluationOptions, policy))
+            result = assess_recorded(result, 0)
             expected, actual = inputs['result_hash'], result.evidence_hash
         elif operation == 'compare':
             result = tuple(evaluate_trade(snapshot, build_entered_package(snapshot,
                 send=row.get('send', ()), receive=row.get('receive', ())),
                 **common, options=restore_record(EvaluationOptions, policy)) for row in inputs['packages'])
+            result = tuple(assess_recorded(row, index) for index, row in enumerate(result))
             expected = sorted(inputs['result_hashes'])
             actual = sorted(row.evidence_hash for row in result)
         elif operation == 'search':

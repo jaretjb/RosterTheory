@@ -58,8 +58,8 @@
         ]
       },
       "trade_exact": {
-        "semantic_hash": "b824dd0858e7cc0599caa76b787a927a95a3379ccc88a5272fc6ba78573ccaf4",
-        "bytes": 26284,
+        "semantic_hash": "a28f31b6176683dcd0197852805f761db0133d195036d748eabd5d2adfdc7674",
+        "bytes": 26308,
         "schema_fields": [
           "schema_version",
           "product",
@@ -82,7 +82,8 @@
           "summary",
           "source_times",
           "warnings",
-          "evidence_hash"
+          "evidence_hash",
+          "offer_assessment"
         ],
         "decision": {
           "confidence": "PROVISIONAL_MARKET",
@@ -156,8 +157,8 @@
         "warnings": []
       },
       "trade_unequal": {
-        "semantic_hash": "0cd300cbc70c37c3c38089d34825a7f94a6ab197c053f2bbdceb835c04abce96",
-        "bytes": 30662,
+        "semantic_hash": "21bbe8be5c4ba882c5f834eacc5d10e764a300b455e2b616cfc4f3540b15ad14",
+        "bytes": 30686,
         "schema_fields": [
           "schema_version",
           "product",
@@ -180,7 +181,8 @@
           "summary",
           "source_times",
           "warnings",
-          "evidence_hash"
+          "evidence_hash",
+          "offer_assessment"
         ],
         "decision": {
           "confidence": "PROVISIONAL_MARKET",
@@ -1044,8 +1046,8 @@
         ]
       },
       "trade_exact": {
-        "semantic_hash": "3bda5d50ce4e4ef98004fce298564dfc7d43b4f85d306f8c23b5ae6c46f68078",
-        "bytes": 26504,
+        "semantic_hash": "cd14924682efa4ff2de245ff707dac5bdd56ff1becc1d37800edeed5809521dd",
+        "bytes": 26528,
         "schema_fields": [
           "schema_version",
           "product",
@@ -1068,7 +1070,8 @@
           "summary",
           "source_times",
           "warnings",
-          "evidence_hash"
+          "evidence_hash",
+          "offer_assessment"
         ],
         "decision": {
           "confidence": "PROVISIONAL_MARKET",
@@ -1142,8 +1145,8 @@
         "warnings": []
       },
       "trade_unequal": {
-        "semantic_hash": "e949724238fffa6dc961549b4081e2a0133f8de394783ab62a6729c623c321a7",
-        "bytes": 30904,
+        "semantic_hash": "b9bfceff758926a5d1a8aa92ae6bad50a165781537c8904c81fdea5849757a0a",
+        "bytes": 30928,
         "schema_fields": [
           "schema_version",
           "product",
@@ -1166,7 +1169,8 @@
           "summary",
           "source_times",
           "warnings",
-          "evidence_hash"
+          "evidence_hash",
+          "offer_assessment"
         ],
         "decision": {
           "confidence": "PROVISIONAL_MARKET",

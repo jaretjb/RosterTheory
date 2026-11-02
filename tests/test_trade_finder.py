@@ -43,7 +43,8 @@ def run(case, **kwargs):
         market_ecr_board=ecr, trade_market=market, target_result=replace(targets, targets=()),
         config=optimizer_config(), options=permissive_options(),
         scope=kwargs.pop("scope", resolve_scope(snapshot, None)),
-        execution_policy=FinderExecutionPolicy(league_seconds=60, repairs_per_counter=0), **kwargs)
+        execution_policy=FinderExecutionPolicy(version="trade-finder-execution-v1",
+            league_seconds=60, opponent_seconds=300, repairs_per_counter=0), **kwargs)
 
 
 class TradeFinderTests(unittest.TestCase):
@@ -166,7 +167,8 @@ class TradeFinderTests(unittest.TestCase):
             result = find_trade_packages(snapshot, projections=projections, selected_board=selected,
                 market_ecr_board=ecr, trade_market=market, target_result=targets,
                 config=optimizer_config(), options=replace(permissive_options(), partner_market_floor=10000),
-                scope=resolve_scope(snapshot, "2"), execution_policy=FinderExecutionPolicy(repairs_per_counter=2),
+                scope=resolve_scope(snapshot, "2"), execution_policy=FinderExecutionPolicy(
+                    version="trade-finder-execution-v1", repairs_per_counter=2),
                 max_exact=3, max_large_exact=3)
         self.assertGreater(result.repair_evaluated, 0)
         self.assertEqual(len(calls), len(set(calls)))

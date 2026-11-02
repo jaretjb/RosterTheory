@@ -1,5 +1,25 @@
 # Active milestone
 
+## TA-1317 — Staged, price-aware Trade search (implemented and validated)
+
+Authorized by the user's November 1 request to implement the reviewed search
+improvements. Default to about 30 seconds without a user-supplied objective.
+Screen and globally prioritize promising packages across shapes and opponents
+before expensive replacement/risk evaluation. Preserve exact final checks,
+expert authority, league-local football thresholds, fresh single-source chart
+pricing and explicit limitations. Reuse safe calculations and expose stage
+timings, screening counts and unfinished coverage. Make entered comparisons
+show chart fairness separately from intrinsic approval. Profile and replay the
+requested saved league run offline, test synthetic pricing/scheduling/roster
+cases, run full release checks, update the installed command and deliver a
+separate PR without merging or Sleeper writes. Use TA-1317 in the Trade task
+list, requirements sections 8-9 and design section 11; update only Trade status.
+
+Validation: all 1,106 tests and release checks pass. The requested saved search
+finishes in 16.735 seconds, with four negotiation candidates and no strict
+recommended offers. The tested wheel is installed. Detailed evidence is in
+`docs/COMPLETED_TRADE_ASSISTANT_TA_1317.md`; separate PR review, without merging.
+
 ## WA-033 — Required coverage and conditional claim alternatives
 
 Authorized by the user after merging PR #86 on October 20. Implement required

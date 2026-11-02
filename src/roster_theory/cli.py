@@ -736,6 +736,8 @@ def command_trade_evaluate(args: argparse.Namespace) -> None:
                 config_path=_config_path(args),
                 send=args.send,
                 receive=args.receive,
+                target_policy_path=getattr(args, 'target_policy', None),
+                market_import_path=getattr(args, 'trade_market_import', None),
                 options=EvaluationOptions(
                     playoff_weight=args.playoff_weight,
                     allow_partial_schedule=args.allow_partial,
@@ -760,7 +762,8 @@ def command_trade_evaluate(args: argparse.Namespace) -> None:
         evaluation = result.evaluation
         _print_human_report(args, format_trade_evaluation(evaluation), _product_frame(
             "Trade evaluation", evaluation.league_key, evaluation.horizon,
-            evaluation.summary, warnings=evaluation.warnings,
+            (f"Final offer: {evaluation.offer_assessment['status']}; intrinsic verdict {evaluation.decision_label}. "
+             + evaluation.summary if evaluation.offer_assessment else evaluation.summary), warnings=evaluation.warnings,
             complete=evaluation.decision is not None and evaluation.decision.confidence != 'INCOMPLETE',
             paths=(result.output_path,),
             limitations=("Expert ranks apply only to their declared horizon.",),
@@ -862,8 +865,8 @@ def _command_trade_target_workflow(args: argparse.Namespace, *, search: bool) ->
                 cache_dir=args.fantasypros_cache,
                 budget_path=args.budget,
                 decision_policy_path=args.policy,
-                target_policy_path=args.target_policy,
-                market_import_path=args.trade_market_import,
+                target_policy_path=getattr(args, 'target_policy', None),
+                market_import_path=getattr(args, 'trade_market_import', None),
                 performance_history_path=args.performance_history,
                 proxy_only=args.ecr_proxy,
                 small_pool=args.small_pool,
@@ -926,6 +929,8 @@ def command_trade_compare(args: argparse.Namespace) -> None:
                 args.league,
                 config_path=_config_path(args),
                 packages=packages,
+                target_policy_path=args.target_policy,
+                market_import_path=args.trade_market_import,
                 options=EvaluationOptions(risk_posture=args.risk_posture.upper()),
                 output_path=args.output,
                 expert_pool_path=args.expert_pool,
@@ -2093,7 +2098,7 @@ def _add_target_workflow_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--small-pool", type=int)
     parser.add_argument("--opponent", help="Search one roster ID or exact, unambiguous team name")
-    parser.add_argument("--time-budget-seconds", type=float, help="Override finder time budget (league 120s; opponent 300s)")
+    parser.add_argument("--time-budget-seconds", type=float, help="Override finder time budget (default 30s, or explicit league settings)")
     parser.add_argument("--large-pool", type=int)
     parser.add_argument("--max-exact", type=int)
     parser.add_argument("--max-large-exact", type=int)
@@ -2694,6 +2699,8 @@ def build_parser() -> argparse.ArgumentParser:
         default="data/cache/trade/fantasypros/daily_budget.json",
     )
     trade_evaluate.set_defaults(func=command_trade_evaluate)
+    trade_evaluate.add_argument("--target-policy", help="League-scoped finder policy for final offer checks")
+    trade_evaluate.add_argument("--trade-market-import", help="Authorized local trade chart for final offer checks")
 
     trade_diagnose = trade_commands.add_parser(
         "diagnose",
@@ -2780,6 +2787,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--budget", default="data/cache/trade/fantasypros/daily_budget.json"
     )
     trade_compare.set_defaults(func=command_trade_compare)
+    trade_compare.add_argument("--target-policy", help="League-scoped finder policy for final offer checks")
+    trade_compare.add_argument("--trade-market-import", help="Authorized local trade chart for final offer checks")
 
     fp_board = subparsers.add_parser(
         "fantasypros-board", help="Build a league-scored weighted board directly from FantasyPros"

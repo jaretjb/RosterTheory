@@ -1,34 +1,27 @@
 # Trade Assistant current status
 
-Updated: October 8, 2026 (America/Los_Angeles)
+Updated: November 1, 2026 (America/Los_Angeles)
 
-TA-1316 is implemented and validated in
-[PR #83](https://github.com/jaretjb/RosterTheory/pull/83), open for review.
-The wheel is installed locally. The finder protects starter coverage before
-waiver additions, rejects increased excess depth, measures conditional
-incoming use, and scores QB bundles jointly. Counteroffers pass user/roster
-checks and existing partner policy. Strict verdicts, expert weights and
-numerical thresholds are unchanged. JSON/CSV preserve pruning counts, samples
-and completed incoming-use checks. Detail:
-`docs/COMPLETED_TRADE_ASSISTANT_TA_1316.md`.
+TA-1317 is implemented and validated for separate PR review.
+The installed v2 finder defaults to a 30-second search budget. It screens price
+and joint roster use, globally mixes promising shapes/opponents, and reserves
+full replacement/risk checks for a bounded shortlist. Entered evaluation,
+comparison and finder share final offer checks; intrinsic approval cannot hide
+unchecked chart pricing. Provider/date/format, raw values, deferred coverage
+and stage timings remain visible. The requested saved case takes 16.735 seconds
+and returns four negotiation candidates, with no strict recommended offers.
+This offline evidence is non-actionable and does not establish calibration.
 
-All 1,051 tests pass. The requested saved league case returns four supported
-ideas in 120.036 seconds (one strict, three negotiation), excludes both invalid
-two-QB packages, and records 21 exact evaluations and 11,031 roster rejections.
-This offline case is non-actionable; coverage remains time-limited. Configured
-football thresholds match its source. Ruff, compilation, distribution privacy,
-clean installation, installed-command, context and staged-tree privacy checks
-pass.
+All 1,106 tests, Ruff, compilation, context/privacy/package and isolated-install
+checks pass. The tested wheel is installed. Only the requested league's ignored
+execution profile was migrated; football thresholds and expert weights remain
+unchanged. Detail: `docs/COMPLETED_TRADE_ASSISTANT_TA_1317.md`.
 
-Prior TA-1315's timed finder is merged in
-[PR #82](https://github.com/jaretjb/RosterTheory/pull/82). League search defaults
-to 120 seconds; an opponent ID or unambiguous team name selects 300 seconds.
-All nine shapes, up to ten supported ideas, strict verdicts, bounded repairs,
-deadline accounting and historical replay remain supported. Original evidence:
-`docs/COMPLETED_TRADE_ASSISTANT_TA_1315.md`.
-
-TA-1314 connects preparation to completed league-scored outcomes with source
-and pregame timing. Detail:
-`docs/COMPLETED_TRADE_ASSISTANT_TA_1314.md`. Empirical calibration remains
-unpromoted until its dated sample requirements pass. No league's policy or
-result may be transferred to another league. Trade remains read-only.
+Prior TA-1316 ([PR #83](https://github.com/jaretjb/RosterTheory/pull/83)) added
+starter coverage, useful incoming assets and QB bundle guards. TA-1315
+([PR #82](https://github.com/jaretjb/RosterTheory/pull/82)) established timed
+search and replay. Their detailed evidence remains in their named completed
+milestones. TA-1314 connected completed league-scored outcomes to genuine
+pregame captures. Empirical calibration remains unpromoted pending sufficient
+dated evidence. No league's policy or result transfers to another league.
+Trade remains read-only.

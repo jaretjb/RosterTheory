@@ -666,6 +666,20 @@ alternative package because offense-wide downside falls.”
 
 ## 11. League-wide search
 
+The TA-1317 v2 execution profile defaults to 30 seconds for either scope.
+After construction it screens chart fairness and impossible equal-count value
+losses, then checks joint lineup use for a bounded, diverse pool. A global
+shortlist mixes promising opponents and shapes before exact evaluation; full
+replacement, depth, risk and incoming-use checks apply only at final drill-down.
+Replacement alternatives are first ranked without risk/depth work, then bounded
+final move sets receive every existing gate. JSON/CSV retain screening counts,
+deferred work and stage timings. Explicit v1 profiles retain the legacy search
+described below for replay; old saved results are not relabeled as v2.
+Entered evaluation and comparison use the shared final offer assessment with
+fresh cached or explicitly imported chart evidence and league finder policy.
+Chart provider/date/format and raw prices remain separate from intrinsic value;
+missing chart/policy preserves intrinsic analysis without final offer approval.
+
 Fresh `trade search` constructs baseline roster upgrades independently of
 target-card labels and display caps. Its exact evaluator retains the user's
 intrinsic-value, risk, depth, legality, partner and market gates. No execution

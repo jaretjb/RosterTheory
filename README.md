@@ -298,10 +298,14 @@ an added third quarterback in a one-QB league. QB swaps, superflex and multi-QB
 formats use their actual slot capacity. Competing quarterbacks are estimated
 as a bundle; failed roster checks remain visible in saved diagnostics.
 
-League search defaults to 120 seconds; `--opponent` selects one
-roster ID or exact, unambiguous team name for a 300-second deeper search.
+Search defaults to a 30-second budget; `--opponent` selects one roster ID or
+exact, unambiguous team name. Explicit league execution settings and
+`--time-budget-seconds` can select a longer search.
 Provider preparation is measured separately. The search deadline is checked
 during computation, so total command time can exceed the search budget.
+The default staged search screens chart prices and joint roster use, ranks
+promising packages across opponents and shapes, and reserves expensive
+replacement and risk analysis for a bounded shortlist. No objective is required.
 Completed evaluations are saved; unfinished work remains unevaluated, with
 coverage by opponent and shape.
 League mode uses full rosters for one-for-one trades and configured player
@@ -324,6 +328,13 @@ not production defaults.
 authorized local chart. ECR-proxy and prior-week chart results remain diagnostics
 and do not fill the ranked ideas list. `--snapshot PATH` replays saved evidence
 offline.
+
+Entered evaluation and package comparison now show a separate final offer
+assessment using the same chart, roster, partner and usefulness checks as the
+finder. An intrinsic `ACCEPTABLE` verdict alone does not approve an offer.
+Both commands accept `--trade-market-import PATH` and `--target-policy PATH`.
+Without a fresh supported chart or finder policy, intrinsic analysis remains
+available while final offer approval is unavailable.
 
 The lower-level `inputs prepare`, `trade refresh`, and `trade values` commands remain
 available for diagnostics and reproducible operations; they are not normal
