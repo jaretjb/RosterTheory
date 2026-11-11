@@ -1,5 +1,20 @@
 # Active milestone
 
+## WA-035 — Independent weekly skill streamers (#80, implemented and validated)
+
+Activated by the user's explicit request to implement #80. Evaluate current-week
+skill starters independently of ROS ranks and future projections. Use fresh
+weekly expert ranks, usable league-scored forecasts, actual roster placement and
+legal drops. Surface starting-lineup gains, protected holdings, bench opportunity
+cost and missing evidence. Preserve ROS acquisition policy and ordered claim
+validation. Use WA-035, requirements sections 4-6 and design Architecture,
+Data flow and Fail-closed boundaries. Test and deliver a separate PR.
+
+Validation passes all 1,130 unit tests, Ruff, compilation, repository and
+distribution privacy gates, and clean wheel installation. The 21 new regressions
+cover weekly-only preparation, lineup comparisons, reporting and offline replay.
+See `docs/COMPLETED_WAIVER_WEEKLY_STREAMERS.md`. This branch builds on PR #89.
+
 ## WA-034 — Normalize weekly FantasyPros kicker projections (implemented and validated)
 
 Activated at the user's explicit November 10 request to activate and fix the

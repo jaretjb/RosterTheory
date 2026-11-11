@@ -1,5 +1,17 @@
 # Waiver Assistant task backlog
 
+## WA-035 — Independent weekly skill streamers (#80)
+
+Status: implemented and validated, authorized by the user's request to activate
+and implement #80. Evidence is in `docs/COMPLETED_WAIVER_WEEKLY_STREAMERS.md`.
+Use requirements sections 4-6 and design Architecture, Data flow and Fail-closed
+boundaries. Evaluate fresh current-week skill ranks and usable league-scored
+forecasts against the actual lineup, including flex and superflex. Audit legal
+drops, protected retention, bench opportunity cost and absent current-week
+evidence. ROS-unranked and future-forecast-missing players can be mentioned as
+weekly starters. Cover inactive players, backup QBs, multiple eligible positions
+and no legal drop. Preserve long-term acquisition and combined-claim checks.
+
 ## WA-034 — Normalize weekly FantasyPros kicker projections
 
 Status: implemented and validated. The remaining provider forecast work is tracked in

@@ -551,7 +551,10 @@ def build_waiver_inputs(
         and row.market_overall_rank <= 10
         and row.player_id in players
     } - skill_ids - special_ids
+    weekly_skill_ids = {pid for pid in current_position_rank if pid in players
+                        and SUPPORTED_POSITIONS.intersection(players[pid].positions)}
     covered_ids = skill_ids | special_ids | notable_visibility_ids
+    forecast_ids = covered_ids | weekly_skill_ids | active_supported_ids
     sleeper = SleeperClient()
     performance_sources: list[dict[str, Any]] = []
     performance, completed_weeks = _performance_evidence(
@@ -647,7 +650,7 @@ def build_waiver_inputs(
     projections = tuple(
         row
         for row in board.weekly_projections
-        if row.player_id in covered_ids | active_supported_ids
+        if row.player_id in forecast_ids
     )
     contingencies = load_contingency_inputs(
         contingency_file,
@@ -657,7 +660,7 @@ def build_waiver_inputs(
     )
     revalidate_snapshot(
         waiver_state, client=sleeper,
-        relevant_player_ids=covered_ids | active_supported_ids,
+        relevant_player_ids=forecast_ids,
     )
     matchup_observed_at = datetime.now(timezone.utc)
     matchups = sleeper.league_matchups(
@@ -693,6 +696,7 @@ def build_waiver_inputs(
         weeks=snapshot.weeks,
         projections=projections,
         values=values,
+        weekly_position_ranks=current_position_rank,
         news_fresh={},
         source_evidence=(*board.source_evidence, *performance_sources, {
             'name': 'FantasyPros Waiver Wire',

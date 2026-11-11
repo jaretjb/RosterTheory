@@ -30,6 +30,14 @@ remain in the promoted Waiver interface.
 
 ## Data flow
 
+WA-035 adds `waiver.streamers` for current-week skill comparisons. The input
+bundle retains selected-expert weekly ranks independently of ownership values
+and keeps weekly forecasts for those ranked players. Search uses a current-week
+projection matrix and the existing exact lineup optimizer. Streamer results and
+exclusions are hashed and replayable. Future or ROS omissions stay visible
+through retention warnings and cannot turn a weekly mention into an approved
+season claim. The primary weekly plan retains its full evidence requirements.
+
 `Sleeper GET -> normalized league/rosters/transactions -> immutable waiver
 snapshot -> horizon-matched value inputs -> add/drop candidates -> exact
 single-roster evaluation -> Waiver gates -> compact report + evidence`

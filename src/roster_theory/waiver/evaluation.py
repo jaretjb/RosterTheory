@@ -166,6 +166,7 @@ class WaiverEvaluationInputs:
     news_coverage: Mapping[str, Any] | None = None
     drop_legality_evidence: Mapping[str, Any] | None = None
     drop_legality_context: Mapping[str, Any] | None = None
+    weekly_position_ranks: tuple[tuple[str, int], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -2164,13 +2165,14 @@ def save_waiver_evaluation_inputs(
     source_evidence: Sequence[Mapping[str, Any]] = (),
     news_coverage: Mapping[str, Any] | None = None,
     drop_legality_context: Mapping[str, Any] | None = None,
+    weekly_position_ranks: Mapping[str, int] | None = None,
 ) -> Path:
     if captured_at.tzinfo is None:
         raise ValueError("Waiver evaluation-input timestamp must be timezone-aware")
     if not availability_source.strip():
         raise ValueError("Waiver evaluation inputs require availability provenance")
     unsigned = {
-        "schema_version": 10,
+        "schema_version": 11,
         "product": "WAIVER ASSISTANT",
         "league_key": league_key,
         "captured_at": captured_at.astimezone(timezone.utc),
@@ -2189,6 +2191,9 @@ def save_waiver_evaluation_inputs(
             )
         ),
         "values": tuple(sorted(values, key=lambda row: row.player_id)),
+        "weekly_position_ranks": dict(sorted((weekly_position_ranks if weekly_position_ranks is not None else
+            {v.player_id: v.current_week_position_rank for v in values
+             if v.current_week_position_rank is not None}).items())),
         "news_fresh": dict(sorted(news_fresh.items())),
         "contingencies": tuple(
             sorted(
@@ -2218,7 +2223,7 @@ def load_waiver_evaluation_inputs(path: str | Path) -> WaiverEvaluationInputs:
 def parse_waiver_evaluation_inputs(value: Mapping[str, Any]) -> WaiverEvaluationInputs:
     """Verify and normalize exactly the input bytes admitted to this run."""
     schema_version = int(value.get("schema_version") or 0)
-    if schema_version not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}:
+    if schema_version not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}:
         raise ValueError("Unsupported Waiver evaluation-input schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Evaluation inputs must be Waiver-scoped")
@@ -2386,6 +2391,12 @@ def parse_waiver_evaluation_inputs(value: Mapping[str, Any]) -> WaiverEvaluation
         if value.get("emergence_evidence") is not None
         else None
     )
+    weekly_ranks = value.get("weekly_position_ranks", {})
+    if not isinstance(weekly_ranks, dict) or any(
+        not isinstance(pid, str) or not pid or isinstance(rank, bool)
+        or not isinstance(rank, int) or rank < 1 for pid, rank in weekly_ranks.items()
+    ):
+        raise ValueError("Weekly expert position ranks require player IDs and positive integers")
     unsigned = {
         key: child for key, child in value.items() if key != "input_hash"
     }
@@ -2434,6 +2445,7 @@ def parse_waiver_evaluation_inputs(value: Mapping[str, Any]) -> WaiverEvaluation
         news_coverage=value.get('news_coverage'),
         drop_legality_evidence=value.get('drop_legality_evidence'),
         drop_legality_context=value.get('drop_legality_context'),
+        weekly_position_ranks=tuple(sorted(weekly_ranks.items())),
     )
 
 

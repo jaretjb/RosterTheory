@@ -796,7 +796,7 @@ class WaiverEvaluationInputAndCliTests(unittest.TestCase):
                 emergence_evidence=emergence_evidence(),
             )
             loaded = load_waiver_evaluation_inputs(path)
-            self.assertEqual(loaded.schema_version, 10)
+            self.assertEqual(loaded.schema_version, 11)
             self.assertEqual(loaded.values[0].season_sample_size, 2)
             self.assertEqual(loaded.values[0].recent_sample_size, 1)
             self.assertEqual(loaded.values[0].performance_as_of, CAPTURED)

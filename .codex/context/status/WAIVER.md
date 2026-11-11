@@ -2,20 +2,24 @@
 
 Updated: November 10, 2026 (America/Los_Angeles)
 
+WA-035 implements #80 through independent current-week skill comparisons.
+Weekly ranks and forecasts survive missing ROS ownership or future forecasts.
+Reports include actual lineup gains, legal drops and retention uncertainty,
+alongside the primary weekly plan. Details and regression coverage are in
+`docs/COMPLETED_WAIVER_WEEKLY_STREAMERS.md`.
+All 1,130 tests and package/privacy checks pass, including 21 new regressions.
+
 WA-034 normalizes weekly FantasyPros kicker totals. Exact distance scoring
 still needs provider splits; Waiver retains its rank and scored-results path.
+PR #89 merged before WA-035 was retargeted to main.
 
-WA-032 scoped-completeness amendment repairs directory-wide QB vetoes in both
-single-pair policy and changed-roster planning. Baselines use available active
-weekly forecasts independently of ownership ranks and other weeks' gaps; all
-omissions remain audited. Qualified reserve experts can supply missing player
-ballots with historical weights and source limits. Position-specific panel
-shortages are local to Waiver and do not change Draft/Trade preparation defaults.
-Full suite: 1,092 tests pass; Ruff, repository/package privacy and clean install
-pass. Fresh read-only validation confirms the reported QB's completeness gate
-passes; required coverage policy is implemented separately in WA-033. Detail: `docs/COMPLETED_WAIVER_SCOPED_COMPLETENESS.md`.
-
-WA-032 provides bounded weekly plans with actual roster coverage, IR preparation, exact adds/drops and failed-claim branches. See docs/COMPLETED_WAIVER_ASSISTANT_WA_032.md. PR #86 is merged. WA-033 adds confirmed QB/kicker coverage repair with safe drops, actual owned-lineup gains, explicit forecast limits and conditional specialist fallbacks. Optional moves retain ordinary value gates. All 1,098 tests and release gates pass. Detail: docs/COMPLETED_WAIVER_REQUIRED_COVERAGE.md.
+WA-032 provides bounded plans, IR preparation and failed-claim branches. Its
+scoped-completeness amendment protects missing players while admitting
+independent comparisons and qualified expert fallback. See
+`docs/COMPLETED_WAIVER_SCOPED_COMPLETENESS.md` and
+`docs/COMPLETED_WAIVER_ASSISTANT_WA_032.md`. WA-033 adds confirmed QB/kicker
+coverage repairs and conditional specialist fallbacks. Optional moves retain
+ordinary value gates. See `docs/COMPLETED_WAIVER_REQUIRED_COVERAGE.md`.
 
 WA-031 historical expert selection remains horizon/position-specific, with
 coverage penalties and contributor audits. Older annual populations remain
@@ -23,6 +27,6 @@ partial/DEGRADED; ROS uses weekly accuracy as a declared proxy. WA-030/029
 freshness, dependency readiness and caching remain. No empirical cross-league
 calibration or global-optimum claim is made.
 
-Separate issues track specialist parity (#78), provider forecasts (#79), and
-weekly-only evaluation (#80). Draft 2026 remains closed; product policies stay
+Separate issues track specialist parity (#78) and provider forecasts (#79).
+Draft 2026 remains closed; product policies stay
 separate. No Sleeper write or tracked private calibration occurred.
