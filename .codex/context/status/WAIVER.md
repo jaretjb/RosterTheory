@@ -11,7 +11,7 @@ All 1,130 tests and package/privacy checks pass, including 21 new regressions.
 
 WA-034 normalizes weekly FantasyPros kicker totals. Exact distance scoring
 still needs provider splits; Waiver retains its rank and scored-results path.
-PR #89 is the base for WA-035.
+PR #89 merged before WA-035 was retargeted to main.
 
 WA-032 provides bounded plans, IR preparation and failed-claim branches. Its
 scoped-completeness amendment protects missing players while admitting

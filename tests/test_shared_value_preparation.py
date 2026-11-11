@@ -156,6 +156,17 @@ class SharedValuePreparationTests(unittest.TestCase):
             times = sorted(results.get(timeout=2) for _ in workers)
             self.assertGreaterEqual(times[1] - times[0], 0.49)
 
+    def test_process_lock_preserves_empty_and_existing_lock_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lock_path = Path(directory) / "budget.lock"
+            with _process_lock(lock_path):
+                self.assertEqual(lock_path.stat().st_size, 0)
+
+            lock_path.write_bytes(b"\0")
+            with _process_lock(lock_path):
+                pass
+            self.assertEqual(lock_path.read_bytes(), b"\0")
+
     def test_retry_requires_an_additional_budget_reservation(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "budget.json"

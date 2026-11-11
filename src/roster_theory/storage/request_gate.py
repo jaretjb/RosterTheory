@@ -17,9 +17,8 @@ from roster_theory.providers.cache import DailyRequestBudget, atomic_write_json
 def _process_lock(path: Path, *, timeout_seconds: float = 30.0) -> Iterator[None]:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a+b") as handle:
-        if handle.seek(0, os.SEEK_END) == 0:
-            handle.write(b"\0")
-            handle.flush()
+        # Windows can lock past EOF. Writing a marker before taking the lock
+        # can race with another process that already holds the first byte.
         start = time.monotonic()
         while True:
             try:

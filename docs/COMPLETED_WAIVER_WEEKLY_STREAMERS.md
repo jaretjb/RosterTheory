@@ -49,3 +49,8 @@ Validation passes all 1,130 unit tests, including 21 new weekly regressions.
 Ruff, compilation, repository privacy, distribution contents and clean wheel
 installation pass. The wheel matches all 139 production Python source files.
 Both synthetic league baselines retain their existing season claim decisions.
+
+PR #90's Windows Python 3.11 run exposed a race when simultaneous requests
+opened a fresh pacing lock file. The lock now acquires the same byte range
+without writing a marker. Regression coverage checks fresh empty lock files
+and existing marker files alongside the process spacing and recovery tests.
