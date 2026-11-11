@@ -1,6 +1,9 @@
 # Waiver Assistant current status
 
-Updated: October 20, 2026 (America/Los_Angeles)
+Updated: November 10, 2026 (America/Los_Angeles)
+
+WA-034 normalizes weekly FantasyPros kicker totals. Exact distance scoring
+still needs provider splits; Waiver retains its rank and scored-results path.
 
 WA-032 scoped-completeness amendment repairs directory-wide QB vetoes in both
 single-pair policy and changed-roster planning. Baselines use available active

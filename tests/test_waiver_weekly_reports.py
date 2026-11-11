@@ -12,7 +12,7 @@ from roster_theory.waiver.evaluation import WaiverEvaluationOptions
 from roster_theory.waiver.plans import validate_claim_branch
 from roster_theory.waiver.policy import load_waiver_policy
 from roster_theory.waiver.search import waiver_readiness, weekly_skill_streamers
-from roster_theory.waiver.service import format_waiver_search, _special_team_lines
+from roster_theory.waiver.service import format_waiver_evaluation, format_waiver_search, _special_team_lines
 from roster_theory.waiver.ww_evidence import _provider_update_fresh
 from tests.test_waiver_evaluation import weeks
 from tests.test_waiver_joint_plans import fixed_specialist_gap_fixture
@@ -148,6 +148,19 @@ class WeeklyWaiverReportTests(unittest.TestCase):
         evaluation = replace(evaluation, add_position='K', candidates=(
             replace(evaluation.candidates[0], same_position=False, drop_position='RB'),))
         self.assertEqual(_special_team_lines((evaluation,), {}, 'K'), [])
+
+    def test_entered_kicker_report_labels_unavailable_weekly_projection(self):
+        evaluation = self.weekly_watch()
+        candidate = replace(evaluation.candidates[0], current_week_projection_complete=False,
+                            current_week_delta=0)
+        result = SimpleNamespace(evaluation=replace(evaluation, add_position='K', candidates=(candidate,)),
+                                 refresh=SimpleNamespace(snapshot=complete_search_snapshot()),
+                                 output_path='synthetic.json')
+        report = format_waiver_evaluation(result)
+        self.assertIn('current week unavailable (league-scored kicker forecast)', report)
+        result.evaluation = replace(result.evaluation, candidates=(
+            replace(candidate, current_week_projection_complete=True, current_week_delta=1.5),))
+        self.assertIn('current week +1.50', format_waiver_evaluation(result))
 
     def test_human_report_shows_streamer_and_removes_numbered_conflicts_and_jargon(self):
         result = search()

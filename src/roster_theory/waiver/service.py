@@ -783,6 +783,11 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
         else None
     )
     emerging_value = selected.emerging_upside
+    current_week = (
+        "unavailable (league-scored kicker forecast)"
+        if evaluation.add_position == "K" and not selected.current_week_projection_complete
+        else f"{selected.current_week_delta:+.2f}"
+    )
     lines = [
         f"WAIVER ASSISTANT - {evaluation.league_key} - Weeks "
         f"{evaluation.horizon[0]}-{evaluation.horizon[-1]}",
@@ -791,7 +796,7 @@ def format_waiver_evaluation(result: EnteredWaiverEvaluationResult) -> str:
         f"Add: {names.get(evaluation.add_player_id, evaluation.add_player_id)} "
         f"({evaluation.acquisition_state}); drop: {drop_name}",
         f"Lineup {selected.lineup.weighted_delta:+.2f}; current week "
-        f"{selected.current_week_delta:+.2f}; depth {selected.lineup.depth_delta:+.2f}; "
+        f"{current_week}; depth {selected.lineup.depth_delta:+.2f}; "
         f"playoffs {selected.lineup.playoff_delta:+.2f}",
         f"Selected ownership {selected.ownership.selected_delta:+.2f}; market "
         f"{selected.ownership.market_delta:+.2f}; raw projection "

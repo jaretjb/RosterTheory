@@ -1,5 +1,16 @@
 # Waiver Assistant task backlog
 
+## WA-034 — Normalize weekly FantasyPros kicker projections
+
+Status: implemented and validated. The remaining provider forecast work is tracked in
+[#79](https://github.com/jaretjb/RosterTheory/issues/79).
+
+Use published field goals made, field-goal attempts and extra points made
+under applicable Sleeper rules. Report missing distance splits and missed
+extra points when those rules apply. Keep rankings and scored results available
+for specialist comparisons. Use requirements section 4 and the design's
+Fail-closed boundaries.
+
 ## WA-032 — Exact weekly roster plans
 
 Status: implemented and validated; separate PR handoff. Authorized October 13,
