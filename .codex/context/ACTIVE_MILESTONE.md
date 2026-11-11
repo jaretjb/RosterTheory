@@ -1,5 +1,23 @@
 # Active milestone
 
+## WA-034 — Normalize weekly FantasyPros kicker projections (implemented and validated)
+
+Activated at the user's explicit November 10 request to activate and fix the
+kicker issue, with approval to proceed. Normalize the kicking totals FantasyPros
+publishes and preserve exact league scoring wherever the inputs support it. Keep
+unavailable distance splits and missed extra points explicit and retain the
+existing rank and scored-results paths. Use WA-034, Waiver requirements section 4
+and the design's Fail-closed boundaries. Validate on a separate branch.
+
+The adapter scores the published totals wherever the league rules support
+them. Entered Waiver comparisons show an unavailable weekly kicker forecast
+instead of a zero-point change when required inputs are missing. An offline
+provider replay verified that supported values are recovered and unsupported
+categories remain explicit. The replay inputs remain outside Git.
+
+Validation: 1,109 unit tests, Ruff, distribution privacy and clean installation
+pass. The tested wheel is installed in the local CLI. Deliver by separate PR.
+
 ## TA-1317 — Staged, price-aware Trade search (implemented and validated)
 
 Authorized by the user's November 1 request to implement the reviewed search

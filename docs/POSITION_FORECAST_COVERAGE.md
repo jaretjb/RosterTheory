@@ -53,8 +53,15 @@ strict: their purpose is to account for events that happened.
   usable estimates. Actual remaining estimate limitations keep their existing
   conditional labels; this does not turn missing core evidence into a forecast.
 
-The FantasyPros weekly and season scoring contracts advance to v3; manual
-preseason scoring advances to v2. Raw caches are reusable and are rescored.
+The FantasyPros weekly scoring contract v4 maps weekly kicker `fg` and `xpt`
+to made field goals and made extra points. When field-goal misses are absent,
+valid attempts and makes can supply them. FantasyPros' standard point total
+does not supply distance splits or missed extra points. If a league scores
+those categories, its kicker forecast requires those inputs. Waiver can still
+use weekly ranks and scored results through the existing specialist path.
+
+FantasyPros preseason scoring uses v3 and manual preseason scoring uses v2.
+Raw caches are reusable and are rescored.
 New derived evidence carries the new contract/hash; saved runs retain their
 original build checks. Added scored-evidence fields default to strict legacy
 behavior when absent. No saved incomplete result is silently promoted.

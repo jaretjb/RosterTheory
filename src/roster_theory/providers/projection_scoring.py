@@ -17,7 +17,7 @@ from roster_theory.core.scoring_contract import (
 from roster_theory.providers.sleeper_scoring_rules import INDIVIDUALS, SLEEPER_LINEAR_RULES
 
 
-SCORING_CONTRACT_VERSION = "fantasypros-weekly-v3"
+SCORING_CONTRACT_VERSION = "fantasypros-weekly-v4"
 DRAFT_SCORING_CONTRACT_VERSION = "fantasypros-draft-season-v3"
 WEEKLY_ESTIMATE_POLICY_VERSION = "core-stats-conditional-v1"
 WEEKLY_RULES = SLEEPER_LINEAR_RULES
@@ -49,6 +49,7 @@ _ALIASES = {
     "sack": ("def_sack",),
     "safe": ("def_safety",),
 }
+_WEEKLY_KICKER_ALIASES = {"fgm": ("fg",), "xpm": ("xpt",)}
 
 
 def statistic_number(raw: object) -> float | None:
@@ -62,6 +63,41 @@ def statistic_number(raw: object) -> float | None:
     return value if isfinite(value) else None
 
 
+def _provider_observation(
+    statistic: str, stats: Mapping[str, object], keys: tuple[str, ...], *,
+    nonnegative: bool = False,
+) -> StatObservation | None:
+    present = [(key, statistic_number(stats[key])) for key in keys if key in stats]
+    if not present:
+        return None
+    fields = ", ".join(key for key, _ in present)
+    if any(value is None for _, value in present):
+        return StatObservation(statistic, None, "INVALID",
+                               "Non-numeric/nonfinite provider statistic: " + fields)
+    if len({value for _, value in present}) != 1:
+        return StatObservation(statistic, None, "INVALID", "Conflicting provider aliases: " + fields)
+    value = present[0][1]
+    if nonnegative and value is not None and value < 0:
+        return StatObservation(statistic, None, "INVALID", "Negative provider count: " + fields)
+    return StatObservation(statistic, value, "OBSERVED", "Provider field: " + fields)
+
+
+def _weekly_kicker_misses(stats: Mapping[str, object]) -> StatObservation | None:
+    attempts = _provider_observation("fga", stats, ("fga",), nonnegative=True)
+    makes = _provider_observation("fgm", stats, ("fgm", "fg"), nonnegative=True)
+    if attempts is None or makes is None:
+        return None
+    attempted, made = attempts.value, makes.value
+    if attempted is None:
+        return StatObservation("fgmiss", None, "INVALID", attempts.evidence)
+    if made is None:
+        return StatObservation("fgmiss", None, "INVALID", makes.evidence)
+    if attempted < made:
+        return StatObservation("fgmiss", None, "INVALID", "Field goals made exceed attempts")
+    return StatObservation("fgmiss", attempted - made, "OBSERVED",
+                           "Derived from FantasyPros field-goal attempts minus makes")
+
+
 def _score_projection_row(
     row: Mapping[str, object], assessment: RuleAssessment, source_schema: str,
 ) -> ScoredEvidence:
@@ -72,6 +108,8 @@ def _score_projection_row(
         position = "DST"
     if position not in (*INDIVIDUALS, "DST"):
         position = None
+    weekly_kicker = (position == "K" and assessment.scope.horizon == "WEEKLY"
+                     and source_schema == SCORING_CONTRACT_VERSION)
     observations = []
     for statistic in sorted({rule.statistic for rule, _ in assessment.active_rules}):
         aliases = (statistic, *_ALIASES.get(statistic, ()))
@@ -81,18 +119,16 @@ def _score_projection_row(
             # FantasyPros labels the preseason projection column FL (Fumbles
             # Lost); its week-zero API example scores `fumbles` as lost fumbles.
             aliases = (*aliases, "fumbles")
-        present = [(key, statistic_number(stats[key])) for key in aliases if key in stats]
-        if not present:
-            continue
-        if any(value is None for _, value in present):
-            observations.append(StatObservation(statistic, None, "INVALID",
-                "Non-numeric/nonfinite provider statistic: " + ", ".join(key for key, _ in present)))
-        elif len({value for _, value in present}) != 1:
-            observations.append(StatObservation(statistic, None, "INVALID",
-                "Conflicting provider aliases: " + ", ".join(key for key, _ in present)))
-        else:
-            observations.append(StatObservation(statistic, present[0][1], "OBSERVED",
-                "Provider field: " + ", ".join(key for key, _ in present)))
+        if weekly_kicker:
+            aliases = (*aliases, *_WEEKLY_KICKER_ALIASES.get(statistic, ()))
+        observation = _provider_observation(
+            statistic, stats, aliases,
+            nonnegative=weekly_kicker and statistic in {"fgm", "fgmiss", "xpm"},
+        )
+        if observation is None and weekly_kicker and statistic == "fgmiss":
+            observation = _weekly_kicker_misses(stats)
+        if observation is not None:
+            observations.append(observation)
     scope = assessment.scope
     evidence = StatEvidence(1, "FantasyPros", source_schema, scope.season,
                             scope.horizon, scope.week, position, tuple(observations))
@@ -100,7 +136,7 @@ def _score_projection_row(
 
 
 def score_projection_row(row: Mapping[str, object], assessment: RuleAssessment) -> ScoredEvidence:
-    """Score existing weekly/ROS projections without changing their source schema."""
+    """Score FantasyPros projections under the applicable league rules."""
     return _score_projection_row(row, assessment, SCORING_CONTRACT_VERSION)
 
 

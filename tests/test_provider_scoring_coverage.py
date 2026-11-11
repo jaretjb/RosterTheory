@@ -164,6 +164,39 @@ class ProviderScoringCoverageTests(unittest.TestCase):
         self.assertEqual((kicker.league_points, kicker.coverage_status), (15, "complete"))
         self.assertEqual((defense.league_points, defense.coverage_status), (6, "complete"))
 
+    def test_weekly_kicker_aggregates_score_when_league_rules_support_them(self):
+        stats = {"fg": 2, "fga": 2.5, "xpt": 3, "points": 9}
+        kicker = projection(stats, {"fgm": 3, "fgmiss": -1, "xpm": 1}, "K")
+        self.assertEqual((kicker.league_points, kicker.coverage_status), (8.5, "complete"))
+        self.assertEqual(dict(kicker.raw_stats), stats)
+
+        distance_rules = {"fgm_0_19": 3, "fgm_20_29": 3, "fgm_30_39": 3,
+                          "fgm_40_49": 4, "fgm_50p": 5, "fgmiss": -1, "xpm": 1, "xpmiss": -1}
+        kicker = projection(stats, distance_rules, "K")
+        self.assertEqual(kicker.league_points, 2.5)
+        self.assertEqual(kicker.coverage_status,
+                         "scoring_incomplete_v1:missing_statistic=fgm_0_19;missing_statistic=fgm_20_29;"
+                         "missing_statistic=fgm_30_39;missing_statistic=fgm_40_49;"
+                         "missing_statistic=fgm_50p;missing_statistic=xpmiss")
+        self.assertFalse(projection_is_usable(kicker, current_week=4, allow_estimate=True))
+
+    def test_weekly_kicker_misses_need_usable_makes_and_attempts(self):
+        scoring = {"fgmiss": -1}
+        for stats in ({"fg": 2}, {"fga": 2.5}):
+            with self.subTest(stats=stats):
+                self.assertIn("missing_statistic=fgmiss", projection(stats, scoring, "K").coverage_status)
+        for stats in ({"fg": 2, "fga": 1.5}, {"fg": 2, "fga": None},
+                      {"fg": 2, "fga": 2.5, "fgm": 1.5}, {"fg": -1, "fga": 2}):
+            with self.subTest(stats=stats):
+                kicker = projection(stats, scoring, "K")
+                self.assertIn("invalid_statistic=fgmiss", kicker.coverage_status)
+                self.assertEqual(kicker.league_points, 0)
+        for stats, expected in (({"fgm": 2, "fga": 2.5}, -.5),
+                                ({"fg": 2, "fga": 2}, 0), ({"fgmiss": .25}, -.25)):
+            with self.subTest(stats=stats):
+                kicker = projection(stats, scoring, "K")
+                self.assertEqual((kicker.league_points, kicker.coverage_status), (expected, "complete"))
+
     def test_missing_zero_and_invalid_statistics_across_positions(self):
         for position, key in (("QB", "pass_td"), ("WR", "rec"),
                               ("K", "fgm_50p"), ("DST", "pts_allow_0")):
