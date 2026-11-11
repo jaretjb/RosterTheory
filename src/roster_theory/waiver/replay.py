@@ -40,6 +40,7 @@ def replay_waiver_manifest(path):
         input_bundle_hash=inputs.input_hash, availability_source=inputs.availability_source, now=as_of)
     if request['operation'] == 'search':
         result = search_waiver_candidates(snapshot, **common, policy=policy,
+            weekly_position_ranks=dict(inputs.weekly_position_ranks) if inputs.schema_version >= 11 else None,
             enable_pruning=request['enable_pruning'], exact_candidate_budget=request['exact_candidate_budget'],
             planning_policy=WeeklyPlanPolicy(**request['planning_policy']) if request.get('planning_policy') else None,
             availability=tuple(request.get('availability', ())))

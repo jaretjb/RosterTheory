@@ -478,7 +478,12 @@ Every limit and omitted candidate survives in the saved result.
                     branch = replace(branch, teams=tuple(bt if t.roster_id == team.roster_id else t for t in branch.teams),
                         roster_capacity=tuple(_capacity(branch.league, bt, branch.players) if c.roster_id == team.roster_id else c for c in branch.roster_capacity))
                 else:
-                    e = exact_pair(branch, step.player_id, step.drop_player_id)
+                    try:
+                        e = exact_pair(branch, step.player_id, step.drop_player_id)
+                    except (CoverageIncomplete, RosterIllegal) as exc:
+                        evidence_failures.append(str(exc))
+                        checks.append('CHANGED_ROSTER_EVIDENCE_UNAVAILABLE')
+                        break
                     c = next((c for c in e.candidates if c.drop_player_id == step.drop_player_id), None)
                     if (c is None or not e.value_inputs_complete or not e.material_news_fresh
                             or not c.projection_inputs_complete or not e.add_currently_active

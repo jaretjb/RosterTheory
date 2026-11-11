@@ -109,7 +109,7 @@ class WeeklyPlanTests(unittest.TestCase):
             availability_source='synthetic',input_bundle_hash='synthetic',now=NOW,
             planning_policy=WeeklyPlanPolicy(s.league_key))
         self.assertIsNotNone(q.weekly_plan)
-        self.assertEqual(q.schema_version,13)
+        self.assertEqual(q.schema_version,14)
         self.assertTrue({'fa_k','fa_dst'} <= {step.player_id for step in q.weekly_plan.selected.steps})
 
     def test_open_spot_does_not_hide_incumbent_specialist_swaps(self):

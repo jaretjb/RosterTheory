@@ -47,6 +47,9 @@ from roster_theory.waiver.snapshot import (
     assert_current,
 )
 from roster_theory.waiver.weekly import WeeklyRosterPlan, build_weekly_plan
+from roster_theory.waiver.streamers import (
+    WeeklySkillStreamer, WeeklyStreamerOmission, evaluate_weekly_streamers,
+)
 
 
 SUPPORTED_POSITIONS = frozenset({"QB", "RB", "WR", "TE", "K", "DST", "DEF"})
@@ -109,18 +112,6 @@ class WaiverClaimRecommendation:
     mutually_exclusive_priorities: tuple[int, ...]
     waiver_value: float | None
     performance_adjustment: float
-
-
-@dataclass(frozen=True, slots=True)
-class WeeklySkillStreamer:
-    add_player_id: str
-    drop_player_id: str | None
-    position: str
-    projected_points: float
-    current_week_lineup_gain: float
-    displaced_starter_ids: tuple[str, ...]
-    ros_decision_label: str
-    ros_tradeoff: str
 
 
 def weekly_skill_streamers(
@@ -224,6 +215,8 @@ class WaiverSearch:
     claim_branch_checks: tuple[ClaimBranchCheck, ...] = ()
     weekly_streamers: tuple[WeeklySkillStreamer, ...] = ()
     weekly_plan: WeeklyRosterPlan | None = None
+    weekly_streamer_omissions: tuple[WeeklyStreamerOmission, ...] = ()
+    weekly_plan_limitation: str | None = None
 
 
 def _evaluation_sort_key(evaluation: WaiverEvaluation) -> tuple[object, ...]:
@@ -870,6 +863,7 @@ def search_waiver_candidates(
     metrics: dict[str, object] | None = None,
     planning_policy=None,
     availability=(),
+    weekly_position_ranks: Mapping[str, int] | None = None,
 ) -> WaiverSearch:
     started = perf_counter()
     assert_current(snapshot, now=now)
@@ -916,6 +910,15 @@ def search_waiver_candidates(
         availability_source=availability_source,
     )
     validation_finished = perf_counter()
+    weekly_ranks = (dict(weekly_position_ranks) if weekly_position_ranks is not None else
+                    {v.player_id: v.current_week_position_rank for v in values
+                     if v.current_week_position_rank is not None})
+    if any(not isinstance(pid, str) or not pid or isinstance(rank, bool)
+           or not isinstance(rank, int) or rank < 1 for pid, rank in weekly_ranks.items()):
+        raise CoverageIncomplete("Weekly expert position ranks require player IDs and positive integers")
+    unknown_weekly_ids = set(weekly_ranks) - {p.player_id for p in snapshot.players}
+    if unknown_weekly_ids:
+        raise CoverageIncomplete("Weekly expert ranks have unmatched player IDs: " + ", ".join(sorted(unknown_weekly_ids)))
     acquisition_by_id = {row.player_id: row for row in snapshot.acquisitions}
     priority_by_id = (
         build_waiver_priority_scores(
@@ -1111,7 +1114,13 @@ def search_waiver_candidates(
         waiver_wire_evidence=waiver_wire_evidence,
         emergence_evidence=emergence_evidence,
     )
-    weekly_streamers = weekly_skill_streamers(ranked, snapshot=snapshot)
+    weekly_streamers, weekly_streamer_omissions = evaluate_weekly_streamers(
+        snapshot, weeks=ordered_weeks, projections=projections, values=values,
+        weekly_position_ranks=weekly_ranks, drop_legality=drop_legality, news_fresh=news_fresh,
+        evaluations=ranked,
+        contingencies=contingencies,
+        availability=availability,
+    )
     candidate_hash = stable_hash(
         {
             "eligible_candidate_ids": eligible_ids,
@@ -1122,6 +1131,9 @@ def search_waiver_candidates(
             "claim_plan": claim_plan,
             "claim_branch_checks": claim_branch_checks,
             "weekly_streamers": weekly_streamers,
+            "weekly_streamer_omissions": weekly_streamer_omissions,
+            "weekly_position_ranks": weekly_ranks,
+            "weekly_availability": availability,
             "pruning_version": PRUNING_VERSION,
             "contingencies": contingencies,
             "budget_excluded_player_ids": budget_excluded,
@@ -1132,6 +1144,7 @@ def search_waiver_candidates(
     )
     value_input_hash = stable_hash(
         {
+            "weekly_position_ranks": weekly_ranks,
             "weeks": ordered_weeks,
             "projections": projections,
             "values": values,
@@ -1201,7 +1214,7 @@ def search_waiver_candidates(
             "labels depending on those positions remain blocked"
         )
     base = WaiverSearch(
-        schema_version=12,
+        schema_version=14,
         evaluation_schema_version=17,
         product="WAIVER ASSISTANT",
         operation="BUDGET-LIMITED WAIVER SEARCH" if budget_excluded else "COMPLETE WAIVER SEARCH",
@@ -1250,21 +1263,27 @@ def search_waiver_candidates(
         budget_excluded_player_ids=tuple(budget_excluded),
         claim_branch_checks=claim_branch_checks,
         weekly_streamers=weekly_streamers,
+        weekly_streamer_omissions=weekly_streamer_omissions,
     )
     if planning_policy is not None:
-        plan = build_weekly_plan(snapshot, weeks=ordered_weeks, projections=projections,
-            values=values, evaluations=ranked, policy=policy, planning_policy=planning_policy,
-            drop_legality=drop_legality, news_fresh=news_fresh, input_hash=input_bundle_hash,
-            availability=availability, exact_pair=evaluate_branch_pair)
-        first = next((step for step in plan.selected.steps if step.kind == 'ADD'), None)
-        base = replace(base, schema_version=13, weekly_plan=plan,
-            best_add_player_id=first.player_id if first else None,
-            best_drop_player_id=first.drop_player_id if first else None,
-            best_decision_label='ACQUIRE' if first else None,
-            recommended_action='PLAN' if plan.selected.steps else 'NO ACTION',
-            ranking_basis='Actual weekly coverage, material point improvement, expert ROS ownership, '
-                'remaining-lineup points, depth and risk; bounded changed-roster plans; '
-                'legacy single-pair rankings retained separately in exact_evaluations and claim_plan')
+        try:
+            plan = build_weekly_plan(snapshot, weeks=ordered_weeks, projections=projections,
+                values=values, evaluations=ranked, policy=policy, planning_policy=planning_policy,
+                drop_legality=drop_legality, news_fresh=news_fresh, input_hash=input_bundle_hash,
+                availability=availability, exact_pair=evaluate_branch_pair)
+        except CoverageIncomplete as exc:
+            base = replace(base, weekly_plan_limitation=str(exc),
+                           warnings=(*base.warnings, "Weekly plan unavailable: " + str(exc)))
+        else:
+            first = next((step for step in plan.selected.steps if step.kind == 'ADD'), None)
+            base = replace(base, weekly_plan=plan,
+                best_add_player_id=first.player_id if first else None,
+                best_drop_player_id=first.drop_player_id if first else None,
+                best_decision_label='ACQUIRE' if first else None,
+                recommended_action='PLAN' if plan.selected.steps else 'NO ACTION',
+                ranking_basis='Actual weekly coverage, material point improvement, expert ROS ownership, '
+                    'remaining-lineup points, depth and risk; bounded changed-roster plans; '
+                    'legacy single-pair rankings retained separately in exact_evaluations and claim_plan')
     assert_current(snapshot, now=now)
     result = replace(base, evidence_hash=stable_hash(asdict(base)))
     if metrics is not None:
@@ -1324,7 +1343,8 @@ def waiver_readiness(search):
     best = next((row for row in search.exact_evaluations
                  if row.add_player_id == getattr(search, 'best_add_player_id', None)), None)
     return {
-        'inputs_complete': (True if getattr(search, 'weekly_plan', None) is not None else
+        'inputs_complete': (False if getattr(search, 'weekly_plan_limitation', None) else
+                           True if getattr(search, 'weekly_plan', None) is not None else
                            waiver_evaluation_ready(best) if best is not None
                             else bool(search.exact_evaluations) or not missing),
         'input_gaps': missing,
@@ -1344,7 +1364,7 @@ def save_waiver_search(search: WaiverSearch, path: str | Path) -> Path:
 
 def load_waiver_search(path: str | Path) -> dict[str, object]:
     value = json.loads(Path(path).read_text(encoding="utf-8"))
-    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}:
+    if int(value.get("schema_version") or 0) not in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}:
         raise ValueError("Unsupported Waiver search-evidence schema")
     if str(value.get("product") or "") != "WAIVER ASSISTANT":
         raise ValueError("Search evidence must be Waiver-scoped")

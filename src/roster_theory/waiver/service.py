@@ -83,7 +83,8 @@ def _news_freshness(inputs, now):
     coverage = inputs.news_coverage
     if coverage and coverage.get('scope') == 'FINITE_GLOBAL_FEED':
         fresh = is_fresh(datetime.fromisoformat(coverage['captured_at']), timedelta(hours=1), now=now)
-        return {row.player_id: fresh for row in inputs.values}
+        player_ids = {row.player_id for row in inputs.values} | dict(getattr(inputs, 'weekly_position_ranks', ())).keys()
+        return {pid: fresh for pid in player_ids}
     return dict(inputs.news_fresh)
 
 
@@ -411,6 +412,7 @@ def search_waivers(
         weeks=inputs.weeks,
         projections=inputs.projections,
         values=inputs.values,
+        weekly_position_ranks=dict(inputs.weekly_position_ranks) if inputs.schema_version >= 11 else None,
         drop_legality=dict(inputs.drop_legality),
         news_fresh=_news_freshness(inputs, evaluation_time),
         contingencies=inputs.contingencies,
@@ -582,6 +584,31 @@ def _special_team_lines(
     return lines
 
 
+def _weekly_streamer_lines(search, names, snapshot):
+    streamers = search.weekly_streamers
+    if not streamers and search.schema_version < 14:
+        streamers = weekly_skill_streamers(search.exact_evaluations, snapshot=snapshot)
+    if not streamers:
+        return []
+    lines = ["WEEKLY SKILL STREAMERS - would enter this week's starting lineup",
+             "Each option is an independent add/drop comparison. Combined claims require revalidation."]
+    for row in streamers:
+        drop = names.get(row.drop_player_id, row.drop_player_id) if row.drop_player_id else "open slot"
+        cost = ""
+        if row.drop_projected_points is not None:
+            cost += f"; drop projects {row.drop_projected_points:.2f} points this week"
+        if row.drop_rest_of_season_rank is not None:
+            cost += f"; drop ROS position rank {row.drop_rest_of_season_rank}"
+        rank = f"; weekly position rank {row.weekly_position_rank}" if row.weekly_position_rank is not None else ""
+        displaced = ("; starts in place of " + ", ".join(names.get(pid, pid) for pid in row.displaced_starter_ids)
+                     if row.displaced_starter_ids else "")
+        estimate = " (estimate)" if row.projection_coverage.casefold() != "complete" else ""
+        lines.append(f"- {names.get(row.add_player_id, row.add_player_id)} ({row.position}): "
+                     f"{row.projected_points:.2f} pts{estimate}{rank}; lineup +{row.current_week_lineup_gain:.2f}{displaced}; "
+                     f"evaluated with drop {drop}{cost}. {row.ros_tradeoff}.")
+    return lines
+
+
 def format_waiver_search(result: WaiverSearchResult) -> str:
     search = result.search
     names = {
@@ -590,6 +617,9 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
     if search.weekly_plan is not None:
         notes = _waiver_evidence_notes(search, names)
         lines = [format_weekly_plan(search.weekly_plan, names)]
+        streamers = _weekly_streamer_lines(search, names, result.refresh.snapshot)
+        if streamers:
+            lines.extend(('', *streamers))
         if notes:
             lines.extend(('', 'EVIDENCE NOTES', *notes))
         lines.extend(('', 'BEFORE YOU ACT',
@@ -662,15 +692,9 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
     if search.budget_excluded_player_ids:
         lines = [f"BUDGET LIMITED: {len(search.exact_evaluations)}/{len(search.eligible_candidate_ids)} adds evaluated; best overall move is unproved.",
                  "Not evaluated: " + ", ".join(names.get(pid, pid) for pid in search.budget_excluded_player_ids), *lines]
-    streamers = search.weekly_streamers or weekly_skill_streamers(
-        search.exact_evaluations, snapshot=result.refresh.snapshot)
+    streamers = _weekly_streamer_lines(search, names, result.refresh.snapshot)
     if streamers:
-        lines.extend(("", "WEEKLY SKILL STREAMERS - would enter this week's starting lineup"))
-        for row in streamers:
-            drop = names.get(row.drop_player_id, row.drop_player_id) if row.drop_player_id else "open slot"
-            lines.append(f"- {names.get(row.add_player_id, row.add_player_id)} ({row.position}): "
-                         f"{row.projected_points:.2f} pts; lineup +{row.current_week_lineup_gain:.2f}; "
-                         f"evaluated with drop {drop}. {row.ros_tradeoff}.")
+        lines.extend(("", *streamers))
 
     dst_lines = _special_team_lines(search.exact_evaluations, names, "DST")
     if dst_lines:
@@ -693,6 +717,14 @@ def format_waiver_search(result: WaiverSearchResult) -> str:
 
 def _waiver_evidence_notes(search, names):
     notes = []
+    if search.weekly_plan_limitation:
+        notes.append("Weekly roster plan is unavailable because " + search.weekly_plan_limitation + ".")
+    weekly_gaps = [r for r in search.weekly_streamer_omissions
+                   if r.reason != 'NO_CURRENT_WEEK_STARTER_IMPROVEMENT']
+    if weekly_gaps:
+        reasons = sorted({r.reason.split(':', 1)[0].lower().replace('_', ' ') for r in weekly_gaps})
+        notes.append(f"Weekly streamer evidence or legal drops unavailable for {len(weekly_gaps)} players "
+                     f"({', '.join(reasons)}). Details are saved in the audit.")
     selection = search.ros_panel_evidence or {}
     if selection.get("schema_version") == "roster-theory.waiver-expert-selection/v2":
         history = selection.get("history") or {}

@@ -125,6 +125,17 @@ limitation rather than a complete forecast.
 
 ## 5. Evaluation requirements
 
+Current-week skill streamer mentions use a dedicated comparison independent of
+ROS ranking and future forecast coverage. Require a current-week selected-expert
+rank, a usable league-scored forecast, fresh news and current non-ownership.
+Compare the add and each proved legal skill drop against the actual owned
+current-week lineup, including flex and superflex eligibility. Mention a player
+only when the player starts and improves that lineup without sacrificing fixed
+starter coverage. Preserve current-week forecast limitations, the drop's weekly
+points and available ROS rank, retention/contingency protection and future
+coverage uncertainty. Keep these singleton mentions available in weekly-plan
+reports and separate from approved season acquisitions and combined claims.
+
 For every add/drop alternative, calculate and preserve:
 
 - selected-expert long-term ownership-value delta;
