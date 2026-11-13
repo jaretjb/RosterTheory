@@ -30,6 +30,12 @@ remain in the promoted Waiver interface.
 
 ## Data flow
 
+WA-036 applies the historical quality cutoff before fetching missing
+individual ballots. Waiver selects up to ten qualified contributors for
+each horizon and position, then applies the same qualification and source
+limits when filling missing player ballots. Reports retain the target,
+available and selected counts plus each expert's historical cutoff result.
+
 WA-035 adds `waiver.streamers` for current-week skill comparisons. The input
 bundle retains selected-expert weekly ranks independently of ownership values
 and keeps weekly forecasts for those ranked players. Search uses a current-week

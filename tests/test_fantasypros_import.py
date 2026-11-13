@@ -67,7 +67,7 @@ class SyntheticDraftClient:
         }
 
 
-def draft_board(client, scoring):
+def draft_board(client, scoring, *, qualified_expert_names=None):
     historical = {
         f"expert{index}": AccuracyRecord(f"Expert {index}", index, {})
         for index in range(1, 6)
@@ -76,10 +76,19 @@ def draft_board(client, scoring):
         client, season=2026, league_id="synthetic-draft-league",
         scoring_settings=scoring, roster_positions=["QB", "RB", "WR", "TE"],
         team_count=1, historical_accuracy=historical,
+        qualified_expert_names=frozenset(historical)
+        if qualified_expert_names is None else qualified_expert_names,
     )
 
 
 class DraftApiScoringTests(unittest.TestCase):
+    def test_direct_board_preserves_a_short_screened_panel(self):
+        result = draft_board(SyntheticDraftClient({}, {}), {},
+                             qualified_expert_names=frozenset({"expert1", "expert3"}))
+        self.assertEqual([row["expert_id"] for row in result.metadata["selected_experts"]], [1, 3])
+        self.assertTrue(result.metadata["historical_quality_screen_applied"])
+        self.assertIn("Expert 2", result.metadata["historical_quality_excluded_experts"])
+
     def test_preseason_fumbles_flow_into_league_scored_points(self):
         ranked = {"RB": [{"player_id": "one", "player_name": "Synthetic Runner",
                           "player_position_id": "RB", "rank_ecr": 1}]}

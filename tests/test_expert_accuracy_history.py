@@ -62,18 +62,18 @@ class ExpertAccuracyHistoryTests(unittest.TestCase):
 
         score = recency_accuracy_scores(rows)["veteran"]
 
-        self.assertTrue(score.eligible)
+        self.assertFalse(score.eligible)
         self.assertAlmostEqual(score.weighted_percentile, 0.30)
         self.assertAlmostEqual(score.score, 0.30)
 
-    def test_two_year_expert_requires_consecutive_top_ten_finishes(self) -> None:
+    def test_two_observed_years_use_the_same_historical_cutoff(self) -> None:
         rows = [
             annual(2024, "Qualifies", 10),
             annual(2025, "Qualifies", 1),
             annual(2023, "Gap", 1),
             annual(2025, "Gap", 1),
-            annual(2024, "Outside", 11),
-            annual(2025, "Outside", 1),
+            annual(2024, "Outside", 10),
+            annual(2025, "Outside", 30),
             annual(2025, "One Year", 1),
         ]
 
@@ -84,7 +84,7 @@ class ExpertAccuracyHistoryTests(unittest.TestCase):
             scores["qualifies"].score,
             scores["qualifies"].weighted_percentile * 0.88,
         )
-        self.assertFalse(scores["gap"].eligible)
+        self.assertTrue(scores["gap"].eligible)
         self.assertFalse(scores["outside"].eligible)
         self.assertFalse(scores["oneyear"].eligible)
 

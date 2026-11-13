@@ -29,6 +29,7 @@ from roster_theory.application.provider_access import (
 )
 from roster_theory.fantasypros_import import build_fantasypros_board
 from roster_theory.expert_accuracy_history import (
+    draft_accuracy_scores,
     fetch_accuracy_history,
     write_accuracy_history,
 )
@@ -962,15 +963,21 @@ def command_trade_compare(args: argparse.Namespace) -> None:
 def command_fantasypros_board(args: argparse.Namespace) -> None:
     snapshot = _load_snapshot(args.league, args.snapshot)
     league = snapshot["current"]["league"]
+    season = int(league["season"])
+    scores = draft_accuracy_scores(
+        Path(args.accuracy).with_name(f"expert_accuracy_annual_{season - 5}_{season - 1}.csv"),
+        season,
+    )
     with interactive_progress("Refreshing Draft board"):
         result = build_fantasypros_board(
             _charged_provider_client(),
-            season=int(league["season"]),
+            season=season,
             league_id=league["league_id"],
             scoring_settings=league.get("scoring_settings", {}),
             roster_positions=league.get("roster_positions", []),
             team_count=int(league.get("total_rosters") or league.get("settings", {}).get("num_teams") or 0),
             historical_accuracy=load_accuracy(args.accuracy),
+            qualified_expert_names=frozenset(name for name, score in scores.items() if score.eligible),
             expert_limit=args.experts,
             sleeper_players=SleeperClient().players(),
             shrink_to_ecr=args.ecr_shrinkage,

@@ -112,6 +112,14 @@ publication, missing-player and exclusion evidence. Partial historical
 populations remain disclosed; a clipped public leaderboard must not define
 the full competition field size.
 
+Select up to ten contributors per horizon and position. Qualify historical
+accuracy separately from the seat limit. Require at least two observed
+seasons and a recency-weighted average overall finish of 20th or better,
+using the observed years within the five-season window. Apply the same
+cutoff to per-player reserves. Use fewer contributors when necessary and
+report target, available and selected counts. Fewer than two usable player
+ballots leave that expert rank unavailable.
+
 Available-evidence completeness is scoped to the actual comparison. Select the
 next qualified published contributors when preferred experts are unavailable;
 for missing player ballots, use the next qualified available contributors for

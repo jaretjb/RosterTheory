@@ -69,6 +69,11 @@ timestamp, and expert/market provenance remain visible.
 
 ## Draft Assistant ranking model
 
+- New automated Draft boards screen historical preseason overall accuracy
+  before skill or specialist selection. The shared qualification rule uses
+  at least two observed seasons in the last five and a recency-weighted
+  average finish of 20th or better. Trade and Waiver apply the same screen
+  to weekly in-season accuracy.
 - Skills membership uses coverage-adjusted overall accuracy; K and DST use their category accuracy.
 - Final 2026 DST selection uses the user's weeks 1-3 streaming order in
   `config/defense_draft_order_2026.csv` for both leagues. Preserve the DST

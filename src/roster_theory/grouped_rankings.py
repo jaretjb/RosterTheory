@@ -11,10 +11,10 @@ from typing import Any, Callable, Iterable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from roster_theory.core.expert_qualification import HISTORY_WEIGHTS, MAXIMUM_WEIGHTED_AVERAGE_RANK
 from roster_theory.expert_accuracy_history import (
-    RECENCY_WEIGHTS,
-    load_accuracy_history,
-    recency_accuracy_scores,
+    RecencyAccuracy,
+    draft_accuracy_scores,
 )
 from roster_theory.fantasypros import FantasyProsClient
 from roster_theory.rankings import normalize_name
@@ -203,14 +203,27 @@ def load_historical_experts(
 def load_recency_historical_experts(
     master_path: str | Path,
     annual_path: str | Path,
+    *,
+    season: int = 2026,
+    issues: list[dict[str, str]] | None = None,
+    scores: Mapping[str, RecencyAccuracy] | None = None,
 ) -> list[HistoricalExpert]:
     """Rank overall experts by the agreed recency score and eligibility gate."""
     master = load_historical_experts(master_path, "OVERALL")
-    scores = recency_accuracy_scores(load_accuracy_history(annual_path))
+    if scores is None:
+        scores = draft_accuracy_scores(annual_path, season)
     candidates: list[tuple[HistoricalExpert, Any]] = []
     for expert in master:
         score = scores.get(normalize_name(expert.name))
         if score is None or not score.eligible:
+            if issues is not None:
+                issues.append({
+                    "status": score.eligibility if score else "insufficient_historical_accuracy",
+                    "api_expert_id": "",
+                    "api_name": expert.name,
+                    "detail": f"Weighted historical finish: {score.weighted_average_rank:.2f}"
+                    if score and score.weighted_average_rank is not None else "No usable historical finish",
+                })
             continue
         candidates.append((expert, score))
     candidates.sort(key=lambda item: (-item[1].score, item[0].name))
@@ -654,6 +667,14 @@ def export_grouped_rankings(
     picker_counts = {
         scope: len(experts) for scope, experts in skill_picker_experts.items()
     }
+    qualification_issues: list[dict[str, str]] = []
+    historical_scores = draft_accuracy_scores(annual_accuracy_path, season)
+    qualified_overall = load_recency_historical_experts(
+        accuracy_path, annual_accuracy_path, scores=historical_scores, issues=qualification_issues,
+    )
+    qualified_names = {name for name, score in historical_scores.items() if score.eligible}
+    for issue in qualification_issues:
+        issues.append({"scope": "draft_history", **issue})
 
     for scope, (category, scoring, positions) in scope_specs.items():
         availability_responses = []
@@ -742,9 +763,10 @@ def export_grouped_rankings(
             for issue in freshness_issues:
                 issues.append({"scope": scope, **issue})
         historical = (
-            load_recency_historical_experts(accuracy_path, annual_accuracy_path)
+            qualified_overall
             if category == "OVERALL"
-            else load_historical_experts(accuracy_path, category)
+            else [expert for expert in load_historical_experts(accuracy_path, category)
+                  if normalize_name(expert.name) in qualified_names]
         )
         scope_limit = expert_limit if category == "OVERALL" else specialist_expert_limit
         selected, selection_issues = select_available_experts(
@@ -1062,10 +1084,11 @@ def export_grouped_rankings(
         "overall_selection": {
             "method": "field_normalized_recency_weighted_percentile",
             "annual_accuracy_path": str(annual_accuracy_path),
-            "weights": {str(year): weight for year, weight in RECENCY_WEIGHTS.items()},
+            "weights": {str(year): weight / 100 for year, weight in
+                        zip(range(season - 5, season), HISTORY_WEIGHTS, strict=True)},
             "minimum_years": 2,
             "one_year_eligible": False,
-            "two_year_gate": "consecutive seasons and top-10 overall in both",
+            "maximum_weighted_average_rank": MAXIMUM_WEIGHTED_AVERAGE_RANK,
             "coverage_factors": {"2": 0.88, "3": 0.92, "4": 0.96, "5": 1.0},
         },
         "expert_picker_counts": picker_counts,

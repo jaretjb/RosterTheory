@@ -727,14 +727,38 @@ def _waiver_evidence_notes(search, names):
                      f"({', '.join(reasons)}). Details are saved in the audit.")
     selection = search.ros_panel_evidence or {}
     if selection.get("schema_version") == "roster-theory.waiver-expert-selection/v2":
+        unmatched = selection.get("unmatched_weekly_player_ids") or ()
+        if unmatched:
+            notes.append(f"{len(unmatched)} weekly ranking entries could not be matched to Sleeper "
+                         "and were excluded. Provider IDs are saved in the audit.")
         history = selection.get("history") or {}
         if not history.get("population_complete", False):
             notes.append("Historical expert coverage is partial; missing years receive a coverage penalty, "
                          "and selection does not establish the best panel across every expert.")
+        maximum_rank = selection.get("maximum_weighted_average_rank")
+        if maximum_rank is not None:
+            notes.append(f"Experts need a recency-weighted average historical finish of "
+                         f"{maximum_rank} or better to qualify.")
         for key, panel in sorted((selection.get("panels") or {}).items()):
             members = ", ".join(f"{row['expert_name']} ({row['weight']:.0%})"
                                 for row in panel.get("members", ()))
-            notes.append(f"{key.replace(':', ' ')} experts: {members or 'unavailable'}.")
+            label = key.replace(':', ' ')
+            target = panel.get("target_size")
+            count = panel.get("selected_count")
+            if target is not None:
+                label += f" ({count}/{target} experts)"
+            else:
+                label += " experts"
+            notes.append(f"{label}: {members or 'unavailable'}.")
+            if target is not None and count is not None and count < target:
+                available = panel.get("available_count", count)
+                shortfall = " after applying source limits" if available > count else ""
+                ballot_label = "ballot" if available == 1 else "ballots"
+                notes.append(f"{key.replace(':', ' ')} selected {count} from {available} qualified "
+                             f"published {ballot_label}{shortfall}.")
+                if panel.get("status") == "UNAVAILABLE":
+                    notes.append(f"{key.replace(':', ' ')} ranks are unavailable. "
+                                 f"At least {selection.get('minimum_size', 2)} ballots are required.")
             updates = {row['expert_id']: row.get('position_update') for row in panel.get('candidates', ())}
             dates = ', '.join(f"{row['expert_name']} {updates.get(row['expert_id']) or 'update unavailable'}"
                               for row in panel.get('members', ()))

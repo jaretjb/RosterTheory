@@ -54,13 +54,13 @@ def load_weekly_accuracy_history(path: str | Path, years: Sequence[int], *, evid
         if (url.hostname not in {"www.fantasypros.com", "fantasypros.com", "api.fantasypros.com"}
                 or not ("/nfl/accuracy/" in url.path or "/rankings/experts" in url.path)
                 or "draft" in url.path):
-            raise CoverageIncomplete("Waiver expert history must declare weekly in-season accuracy")
+            raise CoverageIncomplete("Expert history must declare weekly in-season accuracy")
         rows.append(AnnualExpertAccuracy(year, expert_id, row["expert_name"],
                     row["source_name"], rank, size, row["source_url"],
                     *(int(row.get(f"{p}_rank")) if row.get(f"{p}_rank") else None
                       for p in ("qb", "rb", "wr", "te")), row.get("retrieved_at", "")))
     if {row.year for row in rows} != set(years):
-        raise CoverageIncomplete("Waiver expert history must cover all five completed seasons")
+        raise CoverageIncomplete("Expert history must cover all five completed seasons")
     sizes = {year: {row.field_size for row in rows if row.year == year} for year in years}
     if any(len(values) != 1 for values in sizes.values()):
         raise CoverageIncomplete("Historical expert field sizes conflict within a season")

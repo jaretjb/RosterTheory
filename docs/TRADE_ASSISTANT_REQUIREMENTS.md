@@ -367,6 +367,9 @@ Selection should mirror the disciplined draft workflow:
   available;
 - normalize each finish by that season's field size;
 - apply an explicit recency weighting and coverage adjustment;
+- require at least two observed seasons and a recency-weighted average
+  overall finish of 20th or better across the last five completed seasons,
+  including experts supplied in a configured pool;
 - require availability in the current ranking horizon and a documented
   freshness threshold per expert and position;
 - limit concentration so one site or analyst cannot dominate accidentally;

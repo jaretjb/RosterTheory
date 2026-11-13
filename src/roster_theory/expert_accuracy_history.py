@@ -10,16 +10,13 @@ from typing import Callable, Iterable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from roster_theory.core.expert_qualification import HISTORY_WEIGHTS, qualify_expert
 from roster_theory.rankings import normalize_name
 
 
-RECENCY_WEIGHTS: Mapping[int, float] = {
-    2021: 0.08,
-    2022: 0.15,
-    2023: 0.21,
-    2024: 0.26,
-    2025: 0.30,
-}
+RECENCY_WEIGHTS: Mapping[int, float] = dict(
+    zip(range(2021, 2026), (weight / 100 for weight in HISTORY_WEIGHTS), strict=True)
+)
 ACCURACY_URL = "https://www.fantasypros.com/nfl/accuracy/draft.php?year={year}"
 _ROW_PATTERN = re.compile(
     r'\{"id":(?P<expert_id>\d+),"rank":(?P<rank>\d+),'
@@ -46,6 +43,7 @@ class RecencyAccuracy:
     annual_ranks: tuple[tuple[int, int], ...]
     eligible: bool
     eligibility: str
+    weighted_average_rank: float | None = None
 
 
 def _expert_name(label: str) -> str:
@@ -168,6 +166,16 @@ def load_accuracy_history(path: str | Path) -> list[AnnualAccuracy]:
     ]
 
 
+def draft_accuracy_scores(path: str | Path, season: int) -> dict[str, RecencyAccuracy]:
+    weights = dict(zip(range(season - 5, season), RECENCY_WEIGHTS.values(), strict=True))
+    rows = load_accuracy_history(path)
+    if {row.year for row in rows if row.year in weights} != set(weights):
+        raise ValueError("Draft expert history must cover all five completed seasons")
+    if len({(row.year, row.expert_id) for row in rows}) != len(rows):
+        raise ValueError("Draft expert history repeats an expert in a season")
+    return recency_accuracy_scores(rows, weights=weights)
+
+
 def recency_accuracy_scores(
     rows: Iterable[AnnualAccuracy],
     *,
@@ -184,21 +192,7 @@ def recency_accuracy_scores(
         observations.sort(key=lambda row: row.year)
         years = len(observations)
         annual_ranks = tuple((row.year, row.overall_rank) for row in observations)
-        if years == 1:
-            eligible = False
-            eligibility = "ineligible_one_year"
-        elif years == 2:
-            consecutive = observations[1].year == observations[0].year + 1
-            top_ten = all(row.overall_rank <= 10 for row in observations)
-            eligible = consecutive and top_ten
-            eligibility = (
-                "eligible_two_year_consecutive_top10"
-                if eligible
-                else "ineligible_two_year_gate"
-            )
-        else:
-            eligible = True
-            eligibility = "eligible_three_plus_years"
+        qualification = qualify_expert(annual_ranks, tuple(sorted(weights)))
 
         weight_total = sum(weights[row.year] for row in observations)
         weighted_percentile = (
@@ -212,7 +206,8 @@ def recency_accuracy_scores(
             weighted_percentile=weighted_percentile,
             years=years,
             annual_ranks=annual_ranks,
-            eligible=eligible,
-            eligibility=eligibility,
+            eligible=qualification.issue is None,
+            eligibility=qualification.issue or "eligible",
+            weighted_average_rank=qualification.weighted_average_rank,
         )
     return scores

@@ -180,6 +180,7 @@ def build_fantasypros_board(
     roster_positions: Iterable[str],
     team_count: int,
     historical_accuracy: Mapping[str, AccuracyRecord],
+    qualified_expert_names: frozenset[str],
     expert_limit: int = 10,
     sleeper_players: Mapping[str, Mapping[str, Any]] | None = None,
     shrink_to_ecr: float = 0.25,
@@ -190,8 +191,12 @@ def build_fantasypros_board(
     # Filtering this directory by ranking type suppresses accuracy data in the
     # public sample tier, so request the full expert records and filter locally.
     expert_response = client.ranking_experts(season, include_overall="true")
+    api_experts = expert_response.get("experts", [])
+    screened = [row for row in api_experts
+                if (name := normalize_name(str(row.get("name") or ""))) in qualified_expert_names
+                and name in historical_accuracy]
     selected, weight_source = select_experts(
-        expert_response.get("experts", []), historical_accuracy, limit=expert_limit
+        screened, historical_accuracy, limit=expert_limit, minimum_historical_matches=1,
     )
     if not selected:
         raise ValueError("FantasyPros did not return any experts with usable draft-accuracy data")
@@ -447,6 +452,12 @@ def build_fantasypros_board(
             "api_tier": expert_response.get("tier"),
             "selected_experts": selected_metadata,
             "selected_expert_count": len(selected_metadata),
+            "historical_quality_screen_applied": True,
+            "historical_quality_excluded_experts": sorted(
+                str(row.get("name") or row.get("expert_id"))
+                for row in api_experts if normalize_name(str(row.get("name") or ""))
+                not in qualified_expert_names
+            ),
             "player_count": len(board),
             "players_with_projections": len(projected_board),
             "replacement_baselines": baselines,

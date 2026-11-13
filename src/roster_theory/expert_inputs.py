@@ -24,6 +24,9 @@ from roster_theory.expert_accuracy_history import (
     write_accuracy_history,
 )
 from roster_theory.fantasypros import FantasyProsClient
+from roster_theory.core.expert_qualification import (
+    HISTORY_WEIGHTS, MAXIMUM_WEIGHTED_AVERAGE_RANK, qualify_expert,
+)
 from roster_theory.providers.cache import DailyRequestBudget, atomic_write_json
 from roster_theory.storage.request_gate import pace_request, reserve_requests
 from roster_theory.rankings import ACCURACY_POSITIONS, load_accuracy, normalize_name
@@ -48,7 +51,7 @@ ARTIFACTS = ("draft-accuracy", "inseason-pool", "all")
 SKILL_POSITIONS = ("QB", "RB", "WR", "TE")
 PREFERRED_INSEASON_POOL_SIZE = 3
 MINIMUM_INSEASON_POOL_SIZE = 2
-_RECENCY_SHARES = (0.08, 0.15, 0.21, 0.26, 0.30)
+_RECENCY_SHARES = tuple(weight / 100 for weight in HISTORY_WEIGHTS)
 _DRAFT_DETAIL_PATTERN = re.compile(
     r'\{"id":(?P<expert_id>\d+),"rank":(?P<overall>\d+),'
     r'"expert":(?P<expert>\{.*?\}|"(?:\\.|[^"\\])+")'
@@ -444,8 +447,11 @@ def build_inseason_pool(
     normalized_now = now.astimezone(timezone.utc)
     for score in scores:
         active = current_by_id.get(score.expert_id)
+        historical = qualify_expert(score.annual_ranks, years)
         reason = "selected"
-        if active is None:
+        if historical.issue:
+            reason = historical.issue
+        elif active is None:
             reason = "not_currently_available"
         else:
             updates = dict(active.position_updates)
@@ -489,6 +495,7 @@ def build_inseason_pool(
                 "source_name": active.source_name if active else score.source_name,
                 "status": reason,
                 "historical_score": round(score.score, 8),
+                "weighted_average_rank": historical.weighted_average_rank,
                 "seasons": score.seasons,
                 "annual_ranks": [list(row) for row in score.annual_ranks],
                 "position_updates": dict(active.position_updates) if active else {},
@@ -954,6 +961,7 @@ def refresh_expert_inputs(
             "status": "READY" if len(pool_rows) == pool_size else "DEGRADED",
             "selection_policy": {
                 "recency_weights": _weights(years),
+                "maximum_weighted_average_rank": MAXIMUM_WEIGHTED_AVERAGE_RANK,
                 "preferred_pool_size": pool_size,
                 "minimum_pool_size": minimum_pool_size,
                 "minimum_seasons": 2,

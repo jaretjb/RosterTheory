@@ -69,7 +69,7 @@ class FakeProvider:
         if endpoint.endswith("/experts"):
             return {"season": 2099, "experts": [{"expert_id": i, "name": f"Expert {i}",
                 "source": f"Source {i}", "positions": {p: NOW.isoformat() for p in POSITIONS}}
-                for i in range(1, 5) if not (params.get("ranking_type") == "ros" and str(i) in self.ros_omits)]}
+                for i in range(1, 6) if not (params.get("ranking_type") == "ros" and str(i) in self.ros_omits)]}
         i = params["filters"].split(":")[0]
         raw = ranking(params["position"], "ROS" if "type" in params else "WEEKLY", (i,))
         if i in self.unavailable or params['position'] in self.unavailable_positions:
@@ -96,6 +96,54 @@ class HistoricalSelectionTests(unittest.TestCase):
         self.assertGreater(scores["1"]["score"], scores["2"]["score"])
         self.assertFalse(scores["3"]["eligible"])
 
+    def test_quality_cutoff_is_independent_of_field_size_and_empty_seats(self):
+        experts = tuple(expert(i) for i in range(1, 5))
+        rows = [annual(1, y, 20, field=500) for y in YEARS]
+        rows += [annual(2, y, 30, field=500) for y in YEARS]
+        rows += [annual(3, y, 10) for y in YEARS[-2:]]
+        rows += [annual(4, YEARS[-1], 1)]
+        scores = historical_scores(rows, YEARS)
+        members, evidence = select_position_panel(experts=experts, scores=scores,
+            published_ids={"1", "2", "3", "4"}, position="RB", now=NOW, horizon="WEEKLY")
+        self.assertEqual({m.expert_id for m in members}, {"1", "3"})
+        self.assertEqual((evidence["selected_count"], evidence["available_count"], evidence["target_size"]),
+                         (2, 2, 10))
+        self.assertEqual(scores["1"]["weighted_average_rank"], 20)
+        self.assertEqual(evidence["candidates"][1]["reason"], "historical_rank_above_quality_cutoff")
+        self.assertEqual(evidence["candidates"][3]["reason"], "insufficient_historical_accuracy")
+
+    def test_quality_cutoff_uses_recency_weights_over_observed_years(self):
+        scores = historical_scores(
+            [annual(1, YEARS[-2], 15), annual(1, YEARS[-1], 25),
+             annual(2, YEARS[-2], 25), annual(2, YEARS[-1], 15)], YEARS)
+        self.assertGreater(scores["1"]["weighted_average_rank"], 20)
+        self.assertLess(scores["2"]["weighted_average_rank"], 20)
+        self.assertFalse(scores["1"]["eligible"])
+        self.assertTrue(scores["2"]["eligible"])
+
+    def test_ten_seats_and_qualified_player_reserve(self):
+        experts = tuple(expert(i) for i in range(1, 13))
+        scores = historical_scores(
+            [annual(i, y, i if i < 12 else 30) for i in range(1, 13) for y in YEARS], YEARS)
+        members, evidence = select_position_panel(experts=experts, scores=scores,
+            published_ids={e.expert_id for e in experts}, position="TE", now=NOW, horizon="ROS")
+        self.assertEqual([m.expert_id for m in members], [str(i) for i in range(1, 11)])
+        self.assertEqual(evidence["status"], "READY")
+        selector = WaiverExpertPreparation("fixture")
+        selector.evidence = {"panels": {"ROS:TE": evidence}}
+        selector.panels[("ROS", "TE")] = members
+        rows = selector.aggregate_ros(
+            (market("a", 1), market("b", 2), market("c", 3)),
+            (*[ballot("a", i, 1) for i in range(2, 13)],
+             ballot("b", 1, 2), ballot("b", 12, 2),
+             ballot("c", 1, 3), ballot("c", 11, 3), ballot("c", 12, 3)),
+            {}, horizon="ROS")
+        ranks = {r.player_id: r for r in rows}
+        self.assertEqual(set(ranks), {"a", "c"})
+        self.assertEqual({e for e, _, _ in ranks["a"].contributions}, {str(i) for i in range(2, 12)})
+        self.assertEqual({e for e, _, _ in ranks["c"].contributions}, {"1", "11"})
+        self.assertAlmostEqual(sum(w for _, _, w in ranks["c"].contributions), 1)
+
     def test_position_and_horizon_coverage_are_independent_and_audited(self):
         experts = (expert(1, positions=("TE",)), expert(2), expert(3), expert(4))
         scores = historical_scores([annual(i, y, i) for i in range(1, 5) for y in YEARS], YEARS)
@@ -103,7 +151,7 @@ class HistoricalSelectionTests(unittest.TestCase):
                                      position="TE", now=NOW, horizon="ROS")
         qb, evidence = select_position_panel(experts=experts, scores=scores,
             published_ids={"2", "3", "4"}, position="QB", now=NOW, horizon="ROS", advertised_ids={"1"})
-        self.assertEqual([m.expert_id for m in te], ["1", "2", "3"])
+        self.assertEqual([m.expert_id for m in te], ["1", "2", "3", "4"])
         self.assertEqual([m.expert_id for m in qb], ["2", "3", "4"])
         self.assertEqual(evidence["candidates"][0]["reason"], "missing_position_update")
         self.assertNotAlmostEqual(te[0].weight, te[1].weight)
@@ -179,7 +227,8 @@ class HistoricalSelectionTests(unittest.TestCase):
 class PreparationTests(unittest.TestCase):
     def prepare(self, root, client):
         path = root / "history.csv"
-        write_weekly_accuracy_history(path, [annual(i, y, i, 4) for y in YEARS for i in range(1, 5)])
+        write_weekly_accuracy_history(path,
+            [annual(i, y, i if i < 5 else 30) for y in YEARS for i in range(1, 6)])
         datasets = {h: tuple(normalize_rankings(ranking(p, h), requested_horizon=h,
             board_source="market", captured_at=NOW) for p in POSITIONS) for h in ("WEEKLY", "ROS")}
         inputs = ValueInputs(datasets["WEEKLY"], datasets["ROS"], (), (), (),
@@ -198,7 +247,8 @@ class PreparationTests(unittest.TestCase):
             selector, prepared = self.prepare(root, provider)
             self.assertEqual(len(selector.evidence["panels"]), 8)
             self.assertTrue(selector.evidence["ros_accuracy_is_proxy"])
-            self.assertTrue(all(len(p["members"]) == 3 for p in selector.evidence["panels"].values()))
+            self.assertTrue(all(len(p["members"]) == 4 for p in selector.evidence["panels"].values()))
+            self.assertFalse(any(params.get("filters") == "5" for _, params in provider.calls))
             self.assertEqual(prepared.call_plan.fantasypros_calls, len(provider.calls))
             self.assertGreater(len(provider.calls), 2)
             resolution = selector(prepared, NOW)
@@ -206,13 +256,7 @@ class PreparationTests(unittest.TestCase):
             self.assertNotEqual(resolution.members[0].weight, resolution.members[1].weight)
             self.assertEqual(resolution.evidence["member_weight_scope"],
                              "union_identity_list; rank weights are recorded per panel")
-            # A qualified reserve ballot must survive the shared adapter's
-            # identity filtering even when absent from every preferred panel.
-            reserve = dict(selector.evidence['panels']['ROS:TE']['candidates'][0])
-            reserve.update(expert_id='4', expert_name='Expert 4', source_name='Source 4',
-                           reason='below_selection_cutoff', score=selector.scores['4']['score'])
-            selector.evidence['panels']['ROS:TE']['candidates'].append(reserve)
-            self.assertIn('4', {m.expert_id for m in selector(prepared, NOW).members})
+            self.assertEqual({m.expert_id for m in resolution.members}, {"1", "2", "3", "4"})
             # The same immutable sources are reusable without any provider calls.
             cached = FakeProvider()
             _, second = self.prepare(root, cached)
@@ -221,9 +265,10 @@ class PreparationTests(unittest.TestCase):
 
     def test_unpublished_expert_is_recorded_and_two_member_panel_is_degraded(self):
         with tempfile.TemporaryDirectory() as directory:
-            selector, _ = self.prepare(Path(directory), FakeProvider(unavailable=("2",)))
+            selector, _ = self.prepare(Path(directory), FakeProvider(unavailable=("2", "4")))
             panel = selector.evidence["panels"]["ROS:TE"]
             self.assertEqual(panel["status"], "DEGRADED")
+            self.assertEqual(panel["selected_count"], 2)
             self.assertEqual(next(r for r in panel["candidates"] if r["expert_id"] == "2")["reason"],
                              "wrong_or_partial_ballot_horizon")
 
@@ -240,7 +285,7 @@ class PreparationTests(unittest.TestCase):
             selector, prepared = self.prepare(Path(directory),
                 FakeProvider(unavailable_positions=('TE',)))
             self.assertEqual(selector.evidence['panels']['ROS:TE']['status'], 'UNAVAILABLE')
-            self.assertEqual(selector.evidence['panels']['ROS:QB']['status'], 'READY')
+            self.assertEqual(selector.evidence['panels']['ROS:QB']['selected_count'], 4)
             qb = next(d for d in prepared.ros_rankings if d.observations[0].position == 'QB')
             self.assertEqual(len(selector.aggregate_ros(qb.observations,
                 qb.contributor_observations, {}, horizon='ROS')), 3)

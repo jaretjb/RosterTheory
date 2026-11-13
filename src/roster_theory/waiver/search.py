@@ -1254,7 +1254,9 @@ def search_waiver_candidates(
         strongest_uncertainty=(
             best.strongest_uncertainty
             if best
-            else "No proved FREE_AGENT or WAIVERS supported player is available"
+            else ("Available players lack the required ownership value evidence"
+                  if any(row.reason == "NO_AUTHORITATIVE_VALUE" for row in omissions)
+                  else "No available player passed the evidence and eligibility checks")
         ),
         warnings=tuple(sorted(warnings)),
         sleeper_write_performed=False,
