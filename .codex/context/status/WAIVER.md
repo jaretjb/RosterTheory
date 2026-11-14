@@ -1,11 +1,13 @@
 # Waiver Assistant current status
 
-Updated: November 10, 2026 (America/Los_Angeles)
+Updated: November 13, 2026 (America/Los_Angeles)
 
-WA-035 implements #80 through independent current-week skill comparisons.
-Weekly ranks and forecasts survive missing ROS ownership or future forecasts.
-Reports include actual lineup gains, legal drops and retention uncertainty,
-alongside the primary weekly plan. Details and regression coverage are in
+WA-036 selects up to ten historically qualified experts per weekly or ROS
+position. Draft and Trade share the cutoff using horizon-appropriate history.
+Live validation retained weekly evidence when qualified ROS ballots ran short.
+
+WA-035 implements #80 through independent current-week skill comparisons,
+including lineup gains, legal drops and retention uncertainty. See
 `docs/COMPLETED_WAIVER_WEEKLY_STREAMERS.md`.
 All 1,130 tests and package/privacy checks pass, including 21 new regressions.
 

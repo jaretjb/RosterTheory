@@ -1,5 +1,15 @@
 # Waiver Assistant task backlog
 
+## WA-036 — Qualified Waiver expert panels
+
+Use requirements section 4 and design Data flow. Select up to ten qualified
+weekly and ROS experts per position, including player-specific reserves.
+Require a recency-weighted historical average finish of 20th or better
+and at least two observed seasons. Keep the current weighting and source
+limits. Report panel counts and distinct historical quality exclusions.
+Test the full panel, shorter panels, provider filtering and per-player
+ballot coverage.
+
 ## WA-035 — Independent weekly skill streamers (#80)
 
 Status: implemented and validated, authorized by the user's request to activate

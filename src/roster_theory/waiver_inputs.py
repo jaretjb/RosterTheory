@@ -512,6 +512,12 @@ def build_waiver_inputs(
         **{row.player_id: row for row in snapshot.players},
         **{row.player_id: row for row in waiver_state.players},
     }
+    sleeper_player_ids = {row.player_id for row in waiver_state.players}
+    unmatched_weekly_ids = sorted(set(current_position_rank) - sleeper_player_ids)
+    current_position_rank = {
+        player_id: rank for player_id, rank in current_position_rank.items()
+        if player_id in sleeper_player_ids
+    }
     user_team = next(
         row
         for row in waiver_state.teams
@@ -678,6 +684,7 @@ def build_waiver_inputs(
     ros_panel_evidence = {
         **dict(board.expert_pool_evidence or {}),
         "missing_rostered_player_ids": list(board.missing_rostered_player_ids),
+        "unmatched_weekly_player_ids": unmatched_weekly_ids,
     }
     save_waiver_evaluation_inputs(
         output_path,

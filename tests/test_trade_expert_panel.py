@@ -3,10 +3,24 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from roster_theory.core.errors import CoverageIncomplete
+from roster_theory.core.expert_qualification import qualify_expert
 from roster_theory.trade.expert_panel import select_trade_ros_panel
 
 
 NOW = datetime(2026, 9, 23, 12, tzinfo=timezone.utc)
+YEARS = tuple(range(2021, 2026))
+
+
+def select_panel(value):
+    qualification = {
+        row.expert_id: qualify_expert(
+            zip(YEARS[-2:], (dict(row.prior_weekly_accuracy)["ALL"],
+                             dict(row.latest_weekly_accuracy)["ALL"])),
+            YEARS,
+        )
+        for row in value.current_experts
+    }
+    return select_trade_ros_panel(value, NOW, league_key="league_alpha", qualification=qualification)
 
 
 def expert(expert_id, latest, prior):
@@ -44,56 +58,45 @@ def inputs(experts, *, contributor_ids=None, published_ids=None):
 
 class TradeRosPanelTests(unittest.TestCase):
     def test_unpublished_preferred_expert_is_replaced_by_next_qualified(self):
-        result = select_trade_ros_panel(
+        result = select_panel(
             inputs(tuple(expert(str(i), i, i) for i in range(1, 5)),
                    published_ids=("2", "3", "4")),
-            NOW, league_key="league_alpha",
         )
         self.assertEqual(tuple(row.expert_id for row in result.members), ("2", "3", "4"))
         excluded = next(row for row in result.evidence["candidates"] if row["expert_id"] == "1")
         self.assertEqual(excluded["reason"], "missing_ros_position_contribution")
 
     def test_selects_actual_contributors_and_excludes_poor_experts(self):
-        result = select_trade_ros_panel(
+        result = select_panel(
             inputs(
                 (
                     expert("1", 10, 20),
-                    expert("2", 20, 30),
+                    expert("2", 18, 20),
                     expert("3", 30, 40),
                     expert("4", 110, 120),
                     expert("5", 1, 1),
                 ),
                 contributor_ids=("1", "2", "3", "4"),
             ),
-            NOW,
-            league_key="league_alpha",
         )
-        self.assertEqual(tuple(row.expert_id for row in result.members), ("1", "2", "3"))
-        self.assertEqual(result.evidence["status"], "READY")
+        self.assertEqual(tuple(row.expert_id for row in result.members), ("1", "2"))
+        self.assertEqual(result.evidence["status"], "DEGRADED")
         self.assertTrue(result.evidence["market_ecr_remains_independent"])
         self.assertNotIn("5", tuple(row.expert_id for row in result.members))
         poor = next(
             row for row in result.evidence["candidates"] if row["expert_id"] == "4"
         )
-        self.assertEqual(poor["reason"], "poor_accuracy_both_seasons")
+        self.assertEqual(poor["reason"], "historical_rank_above_quality_cutoff")
 
     def test_two_contributors_are_degraded_and_reweighted(self):
-        result = select_trade_ros_panel(
-            inputs((expert("1", 10, 20), expert("2", 20, 30))),
-            NOW,
-            league_key="league_alpha",
-        )
+        result = select_panel(inputs((expert("1", 10, 20), expert("2", 15, 20))))
         self.assertEqual(len(result.members), 2)
         self.assertEqual(result.evidence["status"], "DEGRADED")
         self.assertAlmostEqual(sum(row.weight for row in result.members), 1.0)
 
     def test_fewer_than_two_contributors_fails_closed(self):
         with self.assertRaisesRegex(CoverageIncomplete, "at least 2"):
-            select_trade_ros_panel(
-                inputs((expert("1", 10, 20),)),
-                NOW,
-                league_key="league_alpha",
-            )
+            select_panel(inputs((expert("1", 10, 20),)))
 
 
 if __name__ == "__main__":

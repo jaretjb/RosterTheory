@@ -13,6 +13,9 @@ from typing import Any, Mapping, Sequence
 from roster_theory.application.value_preparation import ExpertPoolMember, ExpertPoolResolution
 from roster_theory.core.call_plan import PlannedCall
 from roster_theory.core.errors import CoverageIncomplete
+from roster_theory.core.expert_qualification import (
+    HISTORY_WEIGHTS, MAXIMUM_WEIGHTED_AVERAGE_RANK, qualify_expert,
+)
 from roster_theory.core.models import RankObservation
 from roster_theory.core.provenance import stable_hash
 from roster_theory.inseason.boards import SelectedRank
@@ -28,14 +31,13 @@ from roster_theory.storage.request_gate import pace_request, reserve_requests
 from roster_theory.waiver.ww_evidence import _provider_updated_at, _provider_update_is_date
 
 
-HISTORY_SHARES = (0.08, 0.15, 0.21, 0.26, 0.30)
-PREFERRED_SIZE = 3
+PREFERRED_SIZE = 10
 MINIMUM_SIZE = 2
 MAXIMUM_SOURCE_COUNT = 2
 
 
 def historical_scores(rows, years):
-    shares = dict(zip(years, HISTORY_SHARES))
+    shares = dict(zip(years, HISTORY_WEIGHTS))
     grouped = defaultdict(list)
     for row in rows:
         if row.year in shares:
@@ -45,14 +47,21 @@ def historical_scores(rows, years):
         observations.sort(key=lambda row: row.year)
         coverage = 0.80 + 0.20 * len(observations) / 5
         total = sum(shares[row.year] for row in observations)
+        annual_ranks = [(row.year, row.overall_rank) for row in observations]
+        qualification = qualify_expert(annual_ranks, years)
         percentile = sum(shares[row.year] * (1 - (row.overall_rank - 1) /
                          (row.field_size - 1)) for row in observations) / total
+        qualification_issue = qualification.issue
+        if qualification_issue is None and percentile <= 0:
+            qualification_issue = "insufficient_historical_accuracy"
         result[expert_id] = {"score": percentile * coverage,
             "historical_expert_name": observations[-1].expert_name,
             "historical_source_name": observations[-1].source_name,
             "historical_coverage": coverage, "seasons": len(observations),
-            "annual_ranks": [[row.year, row.overall_rank] for row in observations],
-            "eligible": len(observations) >= 2 and percentile > 0}
+            "annual_ranks": [list(row) for row in annual_ranks],
+            "weighted_average_rank": qualification.weighted_average_rank,
+            "qualification_issue": qualification_issue,
+            "eligible": qualification_issue is None}
     return result
 
 
@@ -84,10 +93,13 @@ def select_position_panel(*, experts, scores, published_ids, position, now,
     audit, eligible = [], []
     for expert_id in sorted(set(by_id) | set(advertised_ids) | set(scores)):
         expert, history = by_id.get(expert_id), scores.get(expert_id)
-        reason = "missing_current_expert_directory_identity" if expert is None else (
-            "insufficient_historical_accuracy" if not history or not history["eligible"] else
-            publication_issue(expert, position, now,
-                              timedelta(days=14) if horizon == "ROS" else timedelta(days=7)))
+        if expert is None:
+            reason = "missing_current_expert_directory_identity"
+        elif not history or not history["eligible"]:
+            reason = (history or {}).get("qualification_issue") or "insufficient_historical_accuracy"
+        else:
+            reason = publication_issue(expert, position, now,
+                timedelta(days=14) if horizon == "ROS" else timedelta(days=7))
         if not reason and expert_id not in published_ids:
             reason = (failure_reasons or {}).get(expert_id, "missing_position_ballot")
         elif reason == "missing_position_update" and expert_id in (failure_reasons or {}):
@@ -123,6 +135,8 @@ def select_position_panel(*, experts, scores, published_ids, position, now,
     return members, {"horizon": horizon, "position": position,
                      "status": "READY" if len(members) == PREFERRED_SIZE else
                      "DEGRADED" if len(members) >= MINIMUM_SIZE else "UNAVAILABLE",
+                     "selected_count": len(members), "target_size": PREFERRED_SIZE,
+                     "available_count": len(eligible),
                      "members": [asdict(member) for member in members], "candidates": audit}
 
 
@@ -246,9 +260,10 @@ class WaiverExpertPreparation:
         self.evidence = {"schema_version": "roster-theory.waiver-expert-selection/v2",
             "product": "WAIVER ASSISTANT", "league_key": self.league_key,
             "selected_at": now.isoformat(), "selection_method": "five_season_recency_weighted_accuracy",
-            "accuracy_weights": {str(year): share for year, share in zip(years, HISTORY_SHARES)},
+            "accuracy_weights": {str(year): weight / 100 for year, weight in zip(years, HISTORY_WEIGHTS)},
             "accuracy_authority": "weekly_inseason", "ros_accuracy_is_proxy": True,
             "weighting_method": "historical_percentile_with_coverage_and_source_cap",
+            "maximum_weighted_average_rank": MAXIMUM_WEIGHTED_AVERAGE_RANK,
             "history": history_evidence, "preferred_size": PREFERRED_SIZE,
             "minimum_size": MINIMUM_SIZE, "panels": {}, "sleeper_write_performed": False}
         prepared = {}
@@ -299,12 +314,7 @@ class WaiverExpertPreparation:
                         in {None, "missing_position_update"}),
                     key=lambda e: (-scores[e.expert_id]["score"], e.expert_id))
                 for expert in potential:
-                    provisional, _ = select_position_panel(experts=experts, scores=scores,
-                        published_ids=published, position=position, now=now, horizon=horizon,
-                        advertised_ids=advertised, failure_reasons=failures)
-                    threshold = min((scores[m.expert_id]["score"] for m in provisional), default=-1)
-                    if len(provisional) >= PREFERRED_SIZE and scores[expert.expert_id]["score"] < threshold:
-                        break
+                    # Keep qualified reserve ballots for players omitted by the main panel.
                     if expert.expert_id in published:
                         continue
                     request = {"position": position, "scoring": dataset.scoring,

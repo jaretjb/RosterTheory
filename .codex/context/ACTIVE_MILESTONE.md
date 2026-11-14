@@ -1,5 +1,17 @@
 # Active milestone
 
+## WA-036 — Qualified Waiver expert panels
+
+Authorized by the user's November 13 request for up to ten qualified experts
+per horizon and position, using fewer when the evidence is short. Add an
+independent historical quality cutoff and audit exclusions and panel counts.
+The user's follow-up also authorizes the same historical qualification for
+Draft and Trade. Share the historical screen, retaining preseason accuracy
+for Draft and weekly in-season accuracy for Trade and Waiver. Use WA-036 and
+Waiver requirements section 4 and design Data flow. Preserve product-specific
+panel sizes, weighting, publication checks, and Waiver's per-player fallback.
+Validate offline across all three assistants without reopening the 2026 draft.
+
 ## WA-035 — Independent weekly skill streamers (#80, implemented and validated)
 
 Activated by the user's explicit request to implement #80. Evaluate current-week

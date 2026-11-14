@@ -5,6 +5,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Protocol, Sequence
 
 from roster_theory.core.errors import CoverageIncomplete
+from roster_theory.core.expert_qualification import (
+    MAXIMUM_WEIGHTED_AVERAGE_RANK, HistoricalQualification,
+)
 from roster_theory.providers.inseason_experts import published_contributor_positions
 
 
@@ -85,6 +88,7 @@ def select_trade_ros_panel(
     now: datetime,
     *,
     league_key: str,
+    qualification: Mapping[str, HistoricalQualification],
     preferred_size: int = PREFERRED_PANEL_SIZE,
     minimum_size: int = MINIMUM_PANEL_SIZE,
     maximum_update_age: timedelta = MAXIMUM_UPDATE_AGE,
@@ -109,6 +113,7 @@ def select_trade_ros_panel(
     ):
         covered_positions = contributor_positions[expert_id]
         expert = current_by_id.get(expert_id)
+        historical = qualification.get(expert_id)
         row: dict[str, Any] = {
             "expert_id": expert_id,
             "expert_name": expert.name if expert else None,
@@ -117,6 +122,7 @@ def select_trade_ros_panel(
             "latest_weekly_accuracy_rank": None,
             "prior_weekly_accuracy_rank": None,
             "accuracy_score": None,
+            "weighted_average_rank": historical.weighted_average_rank if historical else None,
             "weight": None,
             "status": "excluded",
             "reason": "",
@@ -125,19 +131,12 @@ def select_trade_ros_panel(
             row["reason"] = "missing_ros_position_contribution"
         elif expert is None:
             row["reason"] = "missing_current_expert_directory_identity"
+        elif historical is None or historical.issue or historical.weighted_average_rank is None:
+            row["reason"] = (historical.issue if historical else None) or "insufficient_historical_accuracy"
         else:
             score = _accuracy_score(expert)
             updates = dict(expert.position_updates)
-            if score is None:
-                row["reason"] = "missing_weekly_accuracy_evidence"
-            elif (
-                score[1] is not None
-                and score[2] is not None
-                and score[1] >= 100
-                and score[2] >= 100
-            ):
-                row["reason"] = "poor_accuracy_both_seasons"
-            elif any(position not in updates for position in SKILL_POSITIONS):
+            if any(position not in updates for position in SKILL_POSITIONS):
                 row["reason"] = "missing_position_update"
             else:
                 try:
@@ -153,7 +152,9 @@ def select_trade_ros_panel(
                     elif any(age > maximum_update_age for age in ages):
                         row["reason"] = "stale_position_update"
                     else:
-                        accuracy, latest, prior = score
+                        accuracy, latest, prior = score or (
+                            historical.weighted_average_rank, None, None,
+                        )
                         row.update(
                             {
                                 "latest_weekly_accuracy_rank": latest,
@@ -215,6 +216,7 @@ def select_trade_ros_panel(
         "selection_method": "actual_ros_contributors_by_weighted_weekly_accuracy_rank",
         "preferred_size": preferred_size,
         "minimum_size": minimum_size,
+        "maximum_weighted_average_rank": MAXIMUM_WEIGHTED_AVERAGE_RANK,
         "maximum_update_age_hours": maximum_update_age.total_seconds() / 3600.0,
         "accuracy_weights": {
             "latest_weekly_accuracy": LATEST_ACCURACY_WEIGHT,

@@ -1084,7 +1084,7 @@ def refresh_value_boards(
     refresh_snapshot: Callable[..., Any],
     retag_snapshot: Callable[[Any, str], Any],
     save_snapshot: Callable[[Any, Path], None],
-    default_expert_pool_resolver: Callable[[ValueInputs, datetime, str], ExpertPoolResolution] | None = None,
+    default_expert_pool_resolver: Callable[[ValueInputs, datetime, str, int], ExpertPoolResolution] | None = None,
     output_root: str | Path = "data/exports/inseason",
     snapshot_filename: str = "snapshot.json",
     evidence_product: str = "IN-SEASON PREPARATION",
@@ -1173,6 +1173,11 @@ def refresh_value_boards(
             for row in dataset.contributor_observations
             if (mapped := _canonical_rank(row, identity_map, retain_unmatched_slot=True)) is not None)
         weekly_selected_rows = weekly_rank_aggregator(weekly_market_rows, weekly_ballots)
+    weekly_only_supported = (
+        allow_partial_expert_panels and snapshot.manifest.current_week >= 2
+        and weekly_rank_aggregator is not None
+        and any(row.position in POSITION_MINIMUMS for row in weekly_selected_rows)
+    )
     if expert_pool_resolver is None and expert_pool_path is None:
         if default_expert_pool_resolver is None:
             raise ValueError("An in-season expert-panel selector is required")
@@ -1180,6 +1185,7 @@ def refresh_value_boards(
             inputs,
             datetime.now(timezone.utc),
             league_key,
+            snapshot.league.season,
         )
         pool = tuple(
             ExpertPoolMember(
@@ -1215,7 +1221,9 @@ def refresh_value_boards(
     else:
         pool_resolution = expert_pool_resolver(inputs, datetime.now(timezone.utc))
         pool = pool_resolution.members
-        if not pool or abs(sum(member.weight for member in pool) - 1.0) > 1e-6:
+        if (not pool and not weekly_only_supported) or (
+            pool and abs(sum(member.weight for member in pool) - 1.0) > 1e-6
+        ):
             raise CoverageIncomplete(
                 "Resolved in-season expert pool must be non-empty and sum to one"
             )
@@ -1269,11 +1277,15 @@ def refresh_value_boards(
     )
     if (allow_partial_expert_panels and snapshot.manifest.current_week >= 2
             and not selected_ros_complete and market_ros_complete
-            and any(count >= 2 for count in contributor_counts.values())):
+            and (any(count >= 2 for count in contributor_counts.values()) or weekly_only_supported)):
+        has_ros_panel = any(count >= 2 for count in contributor_counts.values())
         stage = SeasonStageDecision(
-            mode='ROS', selected_source='available fresh selected-expert ROS panels',
+            mode='ROS', selected_source=('available fresh selected-expert ROS panels'
+                                         if has_ros_panel else 'selected-expert ROS unavailable'),
             market_source='fresh complete market ROS ECR', usable=True, review_required=True,
-            reasons=('Partial selected-expert position coverage; unsupported player ranks stay unavailable',))
+            reasons=(('Partial selected-expert position coverage; unsupported player ranks stay unavailable'
+                      if has_ros_panel else
+                      'Selected-expert ROS coverage unavailable; only supported weekly evidence is usable'),))
     if not stage.usable:
         raise CoverageIncomplete("; ".join(stage.reasons))
 
